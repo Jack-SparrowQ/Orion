@@ -23,16 +23,14 @@ public class SymbolTable {
     }
 
     //Funcion para insertar un simbolo en la tabla de simbolos.
-    public void insertar(Symbol symbol) {
+    public boolean insertar(Symbol symbol) {
 
         if (existe(symbol.getNombre())) {
-            throw new RuntimeException(
-                "El símbolo '" + symbol.getNombre()
-                + "' ya fue declarado en este ambito."
-            );
+            return false;
         }
 
         symbols.put(symbol.getNombre(), symbol);
+        return true;
     }
 
     //Funcion para buscar un simbolo en la tabla de simbolos.
