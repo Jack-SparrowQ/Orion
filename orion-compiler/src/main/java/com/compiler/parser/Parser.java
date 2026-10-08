@@ -14,6 +14,10 @@ public class Parser {
     private final List<Token> tokens;
     private int actual = 0; // Puntero al token bajo análisis
 
+    // Excepción interna: solo sirve para abortar el parseo.
+    // El mensaje del error ya queda guardado en el ErrorHandler.
+    private static class ParseError extends RuntimeException {}
+
     public Parser(
             List<Token> tokens,
             ErrorHandler gestorErrores) {
@@ -21,6 +25,17 @@ public class Parser {
         this.gestorErrores = gestorErrores;
         this.tokens = tokens;
     }
+
+     // Registra un error sintáctico en la posición del token dado
+    private ParseError error(Token token, String code, String message) {
+        gestorErrores.agregar(code, ErrorType.SINTACTICO, message, token.line, token.column);
+        return new ParseError();
+    }
+
+     // Texto legible para mostrar el token encontrado
+     private String describir(Token token) {
+        return token.tipo == TokenType.EOF ? "End of the file": "'" + token.lexema + "'";
+     }
 
     // --- MÉTODOS DE APOYO Y NAVEGACIÓN ---
 
@@ -67,19 +82,8 @@ public class Parser {
         // Aquí capturamos el clásico error de compilación
         Token tokenError = peek();
 
-        gestorErrores.agregar(
-        "E201",
-            ErrorType.SINTACTICO,
-            mensajeError +
-            " Encontrado '" +
-            tokenError.lexema + "'.",
-        0,
-            actual
-        );
-
-        sincronizar();
-        
-        throw new RuntimeException("Error sintactico recuperable");
+        throw error(tokenError, "E201",
+         mensajeError + "found "+ describir(tokenError) + ".");
     }
     
     //Metodo principal
@@ -90,8 +94,8 @@ public class Parser {
                 program.add(sentencia());
             }
             return program;
-        } catch (RuntimeException e) {
-            sincronizar();
+        } catch (ParseError e) {
+            // El error ya fue registrado en el ErrorHandler (modo fail-fast).
         }
 
         return program;
@@ -110,7 +114,7 @@ public class Parser {
         }
         
         // Si no es ninguna de las anteriores, lanzamos error (por ahora)
-        throw new RuntimeException("Error Sintáctico: Instrucción no reconocida en el token " + peek().lexema);
+        throw error(peek(), "E2002", "Instruccion no reconocida: "+ describir(peek()) + ".");
     }
 
     // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" NUMERO ";"
@@ -179,8 +183,9 @@ public class Parser {
         if (coinciden(TokenType.NUMERO, TokenType.IDENTIFICADOR)) {
             return new NodoExpresionSimple(tokens.get(actual - 1));
         }
-        throw new RuntimeException("Error Sintáctico: Se esperaba una expresión (número o variable).");
-    }
+        throw error(peek(), "E203",
+        "Se esperaba una expresión (número o variable). Se encontró "
+                + describir(peek()) + ".");    }
 
     private void sincronizar() {
         while (!isAtEnd()) {

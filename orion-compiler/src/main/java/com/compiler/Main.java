@@ -106,13 +106,18 @@ public class Main {
          * Si el Parser devuelve null significa que ocurrió
          * algún error sintáctico.
          */
-        if (arbolAST == null) {
+        if (gestorErrores.hayErrores()) {
 
             System.err.println();
             System.err.println(
-                    "[COMPILACIÓN ABORTADA] "
-                    + "Se encontraron errores sintácticos."
+                "Se encontraron errores durante "
+                        + "el análisis sintáctico."
             );
+
+            mostrarErrores(gestorErrores);
+
+            System.err.println();
+            System.err.println("[COMPILATION ABORTED]");
 
             return;
         }
