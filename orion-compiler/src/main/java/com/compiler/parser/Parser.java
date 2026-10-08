@@ -2,14 +2,23 @@ package com.compiler.parser;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.compiler.error.ErrorHandler;
+import com.compiler.error.ErrorType;
 import com.compiler.lexer.Token;
 import com.compiler.lexer.TokenType;
 
 public class Parser {
+
+    private final ErrorHandler gestorErrores;
     private final List<Token> tokens;
     private int actual = 0; // Puntero al token bajo análisis
 
-    public Parser(List<Token> tokens) {
+    public Parser(
+            List<Token> tokens,
+            ErrorHandler gestorErrores) {
+
+        this.gestorErrores = gestorErrores;
         this.tokens = tokens;
     }
 
@@ -50,12 +59,27 @@ public class Parser {
 
     // OBLIGA a que el token actual sea del tipo esperado. Si no, lanza ERROR SINTÁCTICO.
     private Token consumir(TokenType tipo, String mensajeError) {
-        if (verificar(tipo)) return avanzar();
         
+        if(verificar(tipo)) {
+            return avanzar();
+        }
+
         // Aquí capturamos el clásico error de compilación
         Token tokenError = peek();
-        throw new RuntimeException("Error Sintáctico: " + mensajeError + 
-                " Encontrado '" + tokenError.lexema + "' en el token nro " + actual);
+
+        gestorErrores.agregar(
+        "E201",
+            ErrorType.SINTACTICO,
+            mensajeError +
+            " Encontrado '" +
+            tokenError.lexema + "'.",
+        0,
+            actual
+        );
+
+        sincronizar();
+        
+        throw new RuntimeException("Error sintactico recuperable");
     }
     
     //Metodo principal
@@ -67,9 +91,10 @@ public class Parser {
             }
             return program;
         } catch (RuntimeException e) {
-            System.err.println(e.getMessage());
-            return null;
+            sincronizar();
         }
+
+        return program;
     }
 
     // 2. El Enrutador: Decide qué regla gramatical usar viendo el token actual
@@ -155,5 +180,15 @@ public class Parser {
             return new NodoExpresionSimple(tokens.get(actual - 1));
         }
         throw new RuntimeException("Error Sintáctico: Se esperaba una expresión (número o variable).");
+    }
+
+    private void sincronizar() {
+        while (!isAtEnd()) {
+            if(verificar(TokenType.PUNTO_Y_COMA)) {
+                avanzar();
+                return;
+            }
+            avanzar();
+        }
     }
 }

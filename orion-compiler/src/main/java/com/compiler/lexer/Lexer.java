@@ -3,12 +3,21 @@ package com.compiler.lexer;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.compiler.error.ErrorHandler;
+import com.compiler.error.ErrorType;
+
 public class Lexer {
     private final String codigoFuente;
     private int posicionActual = 0; // Nuestro puntero
+    private int line = 1;           // Poscion actual
+    private int column = 1;
+    private int startLine = 1;      // posicion donde empezo  el token en curso
+    private int startColumn = 1;
 
     // Diccionario de búsqueda rápida para palabras reservadas
     private static final Map<String, TokenType> PALABRAS_RESERVADAS;
+
+    private final ErrorHandler gestorErrores;
 
     static {
         PALABRAS_RESERVADAS = new HashMap<>();
@@ -42,8 +51,9 @@ public class Lexer {
         PALABRAS_RESERVADAS.put("print", TokenType.PRINT);
     }
 
-    public Lexer(String codigoFuente) {
+    public Lexer(String codigoFuente,ErrorHandler gestorErrores) {
         this.codigoFuente = codigoFuente;
+        this.gestorErrores = gestorErrores;
     }
 
     // Método de apoyo para ver el carácter actual sin avanzar
@@ -54,6 +64,12 @@ public class Lexer {
 
     // Método de apoyo para avanzar el puntero
     private void avanzar() {
+        if(caracterActual() == '\n') {
+            line++;
+            column = 1;
+        } else {
+            column++;
+        }
         posicionActual++;
     }
 
@@ -61,6 +77,9 @@ public class Lexer {
     public Token siguienteToken() {
         while (posicionActual < codigoFuente.length()) {
             char c = caracterActual();
+
+            startLine = line;
+            startColumn = column;
 
             // 1. Ignorar espacios en blanco y saltos de línea
             if (Character.isWhitespace(c)) {
@@ -74,88 +93,88 @@ public class Lexer {
                     avanzar();
                     if (match('=')) {
                         // Si el siguiente fue '=', es un '+='
-                        return new Token(TokenType.SUMA_Y_ASIGNACION, "+=");
+                        return createToken(TokenType.SUMA_Y_ASIGNACION, "+=");
                     }
-                    return new Token(TokenType.SUMA, "+");
+                    return createToken(TokenType.SUMA, "+");
                 case '-':
                     avanzar();
                     if (match('=')) {
-                        return new Token(TokenType.RESTA_Y_ASIGNACION, "-=");
+                        return createToken(TokenType.RESTA_Y_ASIGNACION, "-=");
                     }
-                    return new Token(TokenType.RESTA, "-");
+                    return createToken(TokenType.RESTA, "-");
                 case '*':
                     avanzar();
                     if (match('=')) {
-                        return new Token(TokenType.MULTI_Y_ASIGNACION, "*=");
+                        return createToken(TokenType.MULTI_Y_ASIGNACION, "*=");
                     }
-                    return new Token(TokenType.MULTI, "*");
+                    return createToken(TokenType.MULTI, "*");
                 case '/':
                     avanzar();
                     if (match('=')) {
-                        return new Token(TokenType.DIVISION_Y_ASIGNACION, "/=");
+                        return createToken(TokenType.DIVISION_Y_ASIGNACION, "/=");
                     }
-                    return new Token(TokenType.DIVISION, "/");
+                    return createToken(TokenType.DIVISION, "/");
                 case '%':
                     avanzar();
                     if (match('=')) {
-                        return new Token(TokenType.MODULO_Y_ASIGNACION, "%=");
+                        return createToken(TokenType.MODULO_Y_ASIGNACION, "%=");
                     }
-                    return new Token(TokenType.MODULO, "%");
+                    return createToken(TokenType.MODULO, "%");
                 case '(':
                     avanzar();
-                    return new Token(TokenType.PARENTESIS_IZQ, "(");
+                    return createToken(TokenType.PARENTESIS_IZQ, "(");
                 case ')':
                     avanzar();
-                    return new Token(TokenType.PARENTESIS_DER, ")");
+                    return createToken(TokenType.PARENTESIS_DER, ")");
                 case '{':
                     avanzar();
-                    return new Token(TokenType.LLAVE_IZQ, "{");
+                    return createToken(TokenType.LLAVE_IZQ, "{");
                 case '}':
                     avanzar();
-                    return new Token(TokenType.LLAVE_DER, "}");
+                    return createToken(TokenType.LLAVE_DER, "}");
                 case '[':
                     avanzar();
-                    return new Token(TokenType.CORCHETE_DER, "[");
+                    return createToken(TokenType.CORCHETE_DER, "[");
                 case ']':
                     avanzar();
-                    return new Token(TokenType.CORCHETE_IZQ, "]");
+                    return createToken(TokenType.CORCHETE_IZQ, "]");
                 case ';':
                     avanzar();
-                    return new Token(TokenType.PUNTO_Y_COMA, ";");
+                    return createToken(TokenType.PUNTO_Y_COMA, ";");
                 case '.':
                     avanzar();
-                    return new Token(TokenType.PUNTO, ".");
+                    return createToken(TokenType.PUNTO, ".");
 
                 case '!':
                     avanzar(); // Consumimos el '!'
                     if (match('=')) {
                         // Si el siguiente fue '=', encontramos un '!='
-                        return new Token(TokenType.DIFERENTE, "!=");
+                        return createToken(TokenType.DIFERENTE, "!=");
                     }
-                    return new Token(TokenType.NEGACION_LOGICA, "!");
+                    return createToken(TokenType.NEGACION_LOGICA, "!");
                     
                 case '=':
                     avanzar(); // Consumimos el primer '='
                     if (match('=')) {
                         // Si el siguiente fue '=', es un '=='
-                        return new Token(TokenType.COMPARACION_IGUAL, "==");
+                        return createToken(TokenType.COMPARACION_IGUAL, "==");
                     }
                     // Si no, era un simple '=' de asignación
-                    return new Token(TokenType.IGUAL, "=");
+                    return createToken(TokenType.IGUAL, "=");
                     
                 case '<':
                     avanzar(); // Consumimos el '<'
                     if (match('=')) {
-                        return new Token(TokenType.MENOR_IGUAL, "<=");
+                        return createToken(TokenType.MENOR_IGUAL, "<=");
                     }
-                    return new Token(TokenType.MENOR, "<");
+                    return createToken(TokenType.MENOR, "<");
                     
                 case '>':
                     avanzar(); // Consumimos el '>'
                     if (match('=')) {
-                        return new Token(TokenType.MAYOR_IGUAL, ">=");
+                        return createToken(TokenType.MAYOR_IGUAL, ">=");
                     }
-                    return new Token(TokenType.MAYOR, ">");
+                    return createToken(TokenType.MAYOR, ">");
 
                 default:
                     break;
@@ -166,12 +185,13 @@ public class Lexer {
                 case '&':
                     avanzar();
                     if(match('&')) { 
-                        return new Token(TokenType.AND_LOGICO, "&&"); 
+                        return createToken(TokenType.AND_LOGICO, "&&"); 
                     } else {
+                        gestorErrores.agregar("E101", ErrorType.LEXICO, "Error Léxico: Se esperaba '&' después de '&'", 0, posicionActual);
                         throw new RuntimeException("Error Léxico: Se esperaba '&' después de '&'");
                     }
                 case '`':
-                    return new Token(TokenType.OR_LOGICO, "`");
+                    return createToken(TokenType.OR_LOGICO, "`");
 
                 default:
                     break;
@@ -184,7 +204,7 @@ public class Lexer {
                     numero.append(caracterActual());
                     avanzar();
                 }
-                return new Token(TokenType.NUMERO, numero.toString());
+                return createToken(TokenType.NUMERO, numero.toString());
             }
 
             // 4. DETECTAR PALABRAS (Identificadores o Palabras Reservadas)
@@ -204,19 +224,20 @@ public class Lexer {
                 // Verificamos si es una palabra reservada de Orion
                 TokenType tipoAsignado = PALABRAS_RESERVADAS.get(palabra);
                 if (tipoAsignado != null) {
-                    return new Token(tipoAsignado, palabra);
+                    return createToken(tipoAsignado, palabra);
                 }
                 
                 // Si no está en el mapa, es un identificador del usuario (ej. nombre de variable)
-                return new Token(TokenType.IDENTIFICADOR, palabra);
+                return createToken(TokenType.IDENTIFICADOR, palabra);
             }
             
             // Si llegamos aquí, hay un carácter que nuestro lenguaje no reconoce
-            throw new RuntimeException("Error Léxico: Carácter no reconocido '" + c + "' en la posición " + posicionActual);
+            gestorErrores.agregar("E100", ErrorType.LEXICO, "Carácter no reconocido '" + c + "'.",
+    0, posicionActual);
         }
 
         // Si el bucle termina, llegamos al final del archivo
-        return new Token(TokenType.EOF, "");
+        return new Token(TokenType.EOF, "",startLine,startColumn);
     }
 
     //Metodo lookahead
@@ -228,8 +249,12 @@ public class Lexer {
         if (codigoFuente.charAt(posicionActual) != esperado) return false;
         
         // ¡Coincidió! Avanzamos el puntero (consumimos el segundo carácter)
-        posicionActual++;
+        avanzar();
         return true;
+    }
+
+    private Token createToken(TokenType type, String lexema) {
+        return new Token(type, lexema, startLine, startColumn);
     }
 
 }

@@ -23,6 +23,9 @@ public class Main {
 
         String codigoOrion = """
                 let age = 10;
+                if(age) {
+                print(age);
+                }
                 """;
 
         System.out.println("=================================================");
@@ -43,7 +46,11 @@ public class Main {
 
         System.out.println("=== 1. FASE DE ANÁLISIS LÉXICO ===");
 
-        Lexer lexer = new Lexer(codigoOrion);
+        ErrorHandler gestorErrores = new ErrorHandler();
+        Lexer lexer = new Lexer(
+                codigoOrion,
+                gestorErrores
+        );
 
         List<Token> listaTokens = new ArrayList<>();
 
@@ -56,9 +63,11 @@ public class Main {
 
             System.out.println(
                     String.format(
-                            "Token: %-15s Lexema: '%s'",
+                            "Token: %-15s Lexema: '%s' [%d:%d]",
                             token.tipo,
-                            token.lexema
+                            token.lexema,
+                            token.line,
+                            token.column
                     )
             );
 
@@ -80,7 +89,10 @@ public class Main {
 
         System.out.println("=== 2. FASE DE ANÁLISIS SINTÁCTICO ===");
 
-        Parser parser = new Parser(listaTokens);
+        Parser parser = new Parser(
+                listaTokens,
+                gestorErrores
+        );
 
         List<ElementoAST> arbolAST = parser.parsear();
 
@@ -129,8 +141,6 @@ public class Main {
         System.out.println("=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===");
 
         SymbolTable tablaSimbolos = new SymbolTable();
-
-        ErrorHandler gestorErrores = new ErrorHandler();
 
         analizarSimbolos(
                 arbolAST,
