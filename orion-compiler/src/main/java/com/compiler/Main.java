@@ -70,14 +70,7 @@ public class Main {
 
         } while (token.tipo != TokenType.EOF);
 
-        if(gestorErrores.hayErrores()) {
-                System.err.println();
-                System.err.println("Errors were found during lexical analysis");
-
-                mostrarErrores(gestorErrores);
-                System.err.println();
-                System.err.println("Compilation aborted");
-
+        if(reportarSiHayErrores(gestorErrores, "lexico")) {
                 return;
         }
 
@@ -106,19 +99,7 @@ public class Main {
          * Si el Parser devuelve null significa que ocurrió
          * algún error sintáctico.
          */
-        if (gestorErrores.hayErrores()) {
-
-            System.err.println();
-            System.err.println(
-                "Se encontraron errores durante "
-                        + "el análisis sintáctico."
-            );
-
-            mostrarErrores(gestorErrores);
-
-            System.err.println();
-            System.err.println("[COMPILATION ABORTED]");
-
+        if (reportarSiHayErrores(gestorErrores, "sintactic")) {
             return;
         }
 
@@ -176,21 +157,7 @@ public class Main {
                 gestorErrores
         );
 
-        if (gestorErrores.hayErrores()) {
-
-            System.err.println();
-            System.err.println(
-                    "Se encontraron errores durante "
-                            + "el análisis semántico."
-            );
-
-            mostrarErrores(gestorErrores);
-
-            System.err.println();
-            System.err.println(
-                    "[COMPILACIÓN ABORTADA]"
-            );
-
+        if (reportarSiHayErrores(gestorErrores, "Semantic")) {
             return;
         }
 
@@ -329,14 +296,17 @@ public class Main {
 
                 if (!insertado) {
 
+                    Symbol previo = tablaSimbolos.buscar(nombre);
+
                     gestorErrores.agregar(
-                            "E002",
+                            "E302",
                             ErrorType.SEMANTICO,
                             "El identificador '"
                                     + nombre
-                                    + "' ya fue declarado.",
-                            0,
-                            0
+                                    + "' ya fue declarado (primera declaracion en la linea "
+                                    + previo.getLinea() + ").",
+                            declaracion.identificador.line,
+                            declaracion.identificador.column
                     );
                 }
             }
@@ -396,13 +366,13 @@ public class Main {
                 if (simbolo == null) {
 
                     gestorErrores.agregar(
-                            "E001",
+                            "E301",
                             ErrorType.SEMANTICO,
                             "El identificador '"
                                     + nombre
-                                    + "' no está declarado.",
-                            0,
-                            0
+                                    + "' no ha sido declarado.",
+                            declaracion.identificador.line,
+                            declaracion.identificador.column
                     );
 
                     continue;
@@ -494,8 +464,8 @@ public class Main {
                                 "El identificador '"
                                         + valor
                                         + "' no ha sido declarado.",
-                                0,
-                                0
+                                expresion.valor.line,
+                                expresion.valor.column
                         );
                     }
                 }
@@ -586,28 +556,27 @@ public class Main {
     // MOSTRAR ERRORES
     // ================================================================
 
-    private static void mostrarErrores(
-            ErrorHandler gestorErrores) {
+    // Si la fase dejó errores en el gestor, los muestra y devuelve true
+    // para que main() aborte la compilación.
+    private static boolean reportarSiHayErrores(
+        ErrorHandler gestorErrores,
+        String phase
+    ) {
+        if(!gestorErrores.hayErrores()) {
+                return false;
+        }
 
         System.err.println();
         System.err.println(
-                "---------------- ERRORES ----------------"
+                "Se encontraron errores durante el análisis " + phase + "."
         );
 
-        for (CompilationError error :
-                gestorErrores.obtenerErrores()) {
+        gestorErrores.mostrarErrores();
 
-            System.err.println(error);
-        }
+        System.err.println();
+        System.err.println("[COMPILACIÓN ABORTADA]");
 
-        System.err.println(
-                "------------------------------------------"
-        );
-
-        System.err.println(
-                "Total de errores: "
-                        + gestorErrores.obtenerErrores().size()
-        );
+        return true;
     }
 
 

@@ -41,8 +41,14 @@ public class ErrorHandler {
 
     public void mostrarErrores() {
 
+        System.err.println();
+        System.err.println("---------------- ERRORES ----------------");
+
         for (CompilationError error : errores) {
             System.out.println(error);
         }
+
+        System.err.println("------------------------------------------");
+        System.err.println("Total de errores: " + errores.size());
     }
 }

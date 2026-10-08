@@ -34,7 +34,7 @@ public class CompilationError {
         return code;
     }
 
-    public int getline() {
+    public int getLine() {
         return line;
     }
 
