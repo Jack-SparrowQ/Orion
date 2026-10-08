@@ -91,7 +91,7 @@ orion-compiler/
 1. Clona el repositorio:
 
    ```bash
-   git clone <URL_DEL_REPOSITORIO>
+   git clone <https://github.com/Jack-SparrowQ/Orion.git>
    ```
 
 2. Accede al directorio del proyecto:
