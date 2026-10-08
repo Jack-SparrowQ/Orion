@@ -1,6 +1,6 @@
-package main.java.com.compiler.parser;
+package com.compiler.parser;
 
-import main.java.com.compiler.lexer.Token;
+import com.compiler.lexer.Token;
 
 public class NodoExpresionSimple extends ElementoAST {
     public final Token valor;

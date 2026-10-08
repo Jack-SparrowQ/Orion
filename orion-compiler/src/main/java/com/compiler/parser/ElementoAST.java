@@ -1,4 +1,4 @@
-package main.java.com.compiler.parser;
+package com.compiler.parser;
 
 public abstract class ElementoAST {
     

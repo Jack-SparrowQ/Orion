@@ -1,4 +1,4 @@
-package main.java.com.compiler.error;
+package com.compiler.error;
 
 import java.util.ArrayList;
 import java.util.List;

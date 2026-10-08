@@ -1,4 +1,4 @@
-package main.java.com.compiler.parser;
+package com.compiler.parser;
 
 public class NodoImprimir extends ElementoAST {
     public final ElementoAST expresion; // Lo que va adentro de los paréntesis

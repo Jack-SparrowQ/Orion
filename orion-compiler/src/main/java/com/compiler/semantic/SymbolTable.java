@@ -1,4 +1,4 @@
-package main.java.com.compiler.semantic;
+package com.compiler.semantic;
 
 import java.util.HashMap;
 import java.util.Map;

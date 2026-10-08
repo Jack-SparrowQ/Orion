@@ -1,9 +1,9 @@
-package main.java.com.compiler.parser;
+package com.compiler.parser;
 
 import java.util.ArrayList;
 import java.util.List;
-import main.java.com.compiler.lexer.Token;
-import main.java.com.compiler.lexer.TokenType;
+import com.compiler.lexer.Token;
+import com.compiler.lexer.TokenType;
 
 public class Parser {
     private final List<Token> tokens;

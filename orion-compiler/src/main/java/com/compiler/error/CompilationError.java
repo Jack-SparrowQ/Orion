@@ -1,4 +1,4 @@
-package main.java.com.compiler.error;
+package com.compiler.error;
 
 public class CompilationError {
     

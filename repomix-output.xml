@@ -1,0 +1,1706 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+orion-compiler/
+  .vscode/
+    settings.json
+  bin/
+    main/
+      java/
+        com/
+          compiler/
+            App.class
+  src/
+    main/
+      java/
+        com/
+          compiler/
+            error/
+              CompilationError.java
+              ErrorHandler.java
+              ErrorType.java
+            lexer/
+              Lexer.java
+              Token.java
+              TokenType.java
+            parser/
+              ElementoAST.java
+              NodoBloque.java
+              NodoDeclaracion.java
+              NodoExpresionSimple.java
+              NodoIf.java
+              NodoImprimir.java
+              Parser.java
+            semantic/
+              Symbol.java
+              SymbolCategory.java
+              SymbolTable.java
+              Type.java
+            util/
+              JSGenerator.java
+            Main.java
+  README.md
+programa.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="orion-compiler/.vscode/settings.json">
+{
+    "java.project.sourcePaths": ["src"],
+    "java.project.outputPath": "bin",
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ]
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/error/CompilationError.java">
+package main.java.com.compiler.error;
+
+public class CompilationError {
+    
+    private final String code;
+    private final ErrorType type;
+    private final String mensaje;
+    private final int line;
+    private  final int columna;
+
+    public CompilationError(
+            String code,
+            ErrorType tipo,
+            String mensaje,
+            int line,
+            int columna) {
+
+        this.code = code;
+        this.type = tipo;
+        this.mensaje = mensaje;
+        this.line = line;
+        this.columna = columna;
+    }
+
+        public ErrorType getTipo() {
+        return type;
+    }
+
+    public String getMensaje() {
+        return mensaje;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public int getline() {
+        return line;
+    }
+
+    public int getColumna() {
+        return columna;
+    }
+
+    @Override
+    public String toString() {
+
+        return code + "[" + type + "] "
+                + "Línea " + line
+                + ", columna " + columna
+                + ": " + mensaje;
+    }
+
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/error/ErrorHandler.java">
+package main.java.com.compiler.error;
+
+import java.util.ArrayList;
+import java.util.List;
+
+//Esta clase permite que el compilador encuentre
+//varios errores en una sola ejecucion.
+public class ErrorHandler {
+
+    private final List<CompilationError> errores;
+
+    public ErrorHandler() {
+        errores = new ArrayList<>();
+    }
+
+    public void agregar(
+            String code,
+            ErrorType tipo,
+            String mensaje,
+            int linea,
+            int columna) {
+
+        errores.add(
+            new CompilationError(
+                code,
+                tipo,
+                mensaje,
+                linea,
+                columna
+            )
+        );
+    }
+
+    public boolean hayErrores() {
+        return !errores.isEmpty();
+    }
+
+    public List<CompilationError> obtenerErrores() {
+        return errores;
+    }
+
+    public void mostrarErrores() {
+
+        for (CompilationError error : errores) {
+            System.out.println(error);
+        }
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/error/ErrorType.java">
+package main.java.com.compiler.error;
+
+//Definicion de los tipos de errores.
+public enum ErrorType {
+
+    LEXICO,
+    SINTACTICO,
+    SEMANTICO
+    
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/lexer/Lexer.java">
+package main.java.com.compiler.lexer;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class Lexer {
+    private final String codigoFuente;
+    private int posicionActual = 0; // Nuestro puntero
+
+    // Diccionario de búsqueda rápida para palabras reservadas
+    private static final Map<String, TokenType> PALABRAS_RESERVADAS;
+
+    static {
+        PALABRAS_RESERVADAS = new HashMap<>();
+        // Control y flujo
+        PALABRAS_RESERVADAS.put("if", TokenType.IF);
+        PALABRAS_RESERVADAS.put("else", TokenType.ELSE);
+        PALABRAS_RESERVADAS.put("while", TokenType.WHILE);
+        PALABRAS_RESERVADAS.put("for", TokenType.FOR);
+        PALABRAS_RESERVADAS.put("in", TokenType.IN);
+        PALABRAS_RESERVADAS.put("break", TokenType.BREAK);
+        PALABRAS_RESERVADAS.put("continue", TokenType.CONTINUE);
+        PALABRAS_RESERVADAS.put("return", TokenType.RETURN);
+        
+        // Declaraciones
+        PALABRAS_RESERVADAS.put("let", TokenType.LET);
+        PALABRAS_RESERVADAS.put("const", TokenType.CONST);
+        PALABRAS_RESERVADAS.put("fn", TokenType.FN);
+        
+        // Valores lógicos y especiales
+        PALABRAS_RESERVADAS.put("true", TokenType.TRUE);
+        PALABRAS_RESERVADAS.put("false", TokenType.FALSE);
+        PALABRAS_RESERVADAS.put("null", TokenType.NULL);
+        PALABRAS_RESERVADAS.put("void", TokenType.VOID);
+        
+        // Módulos
+        PALABRAS_RESERVADAS.put("import", TokenType.IMPORT);
+        PALABRAS_RESERVADAS.put("from", TokenType.FROM);
+        PALABRAS_RESERVADAS.put("export", TokenType.EXPORT);
+        
+        // Otros
+        PALABRAS_RESERVADAS.put("print", TokenType.PRINT);
+    }
+
+    public Lexer(String codigoFuente) {
+        this.codigoFuente = codigoFuente;
+    }
+
+    // Método de apoyo para ver el carácter actual sin avanzar
+    private char caracterActual() {
+        if (posicionActual >= codigoFuente.length()) return '\0'; // Fin de cadena
+        return codigoFuente.charAt(posicionActual);
+    }
+
+    // Método de apoyo para avanzar el puntero
+    private void avanzar() {
+        posicionActual++;
+    }
+
+    // La función principal de tu analizador léxico
+    public Token siguienteToken() {
+        while (posicionActual < codigoFuente.length()) {
+            char c = caracterActual();
+
+            // 1. Ignorar espacios en blanco y saltos de línea
+            if (Character.isWhitespace(c)) {
+                avanzar();
+                continue;
+            }
+
+            // 2. Detectar Operadores (Ejemplo con el símbolo '=')
+            switch (c) {
+                case '+':
+                    avanzar();
+                    if (match('=')) {
+                        // Si el siguiente fue '=', es un '+='
+                        return new Token(TokenType.SUMA_Y_ASIGNACION, "+=");
+                    }
+                    return new Token(TokenType.SUMA, "+");
+                case '-':
+                    avanzar();
+                    if (match('=')) {
+                        return new Token(TokenType.RESTA_Y_ASIGNACION, "-=");
+                    }
+                    return new Token(TokenType.RESTA, "-");
+                case '*':
+                    avanzar();
+                    if (match('=')) {
+                        return new Token(TokenType.MULTI_Y_ASIGNACION, "*=");
+                    }
+                    return new Token(TokenType.MULTI, "*");
+                case '/':
+                    avanzar();
+                    if (match('=')) {
+                        return new Token(TokenType.DIVISION_Y_ASIGNACION, "/=");
+                    }
+                    return new Token(TokenType.DIVISION, "/");
+                case '%':
+                    avanzar();
+                    if (match('=')) {
+                        return new Token(TokenType.MODULO_Y_ASIGNACION, "%=");
+                    }
+                    return new Token(TokenType.MODULO, "%");
+                case '(':
+                    avanzar();
+                    return new Token(TokenType.PARENTESIS_IZQ, "(");
+                case ')':
+                    avanzar();
+                    return new Token(TokenType.PARENTESIS_DER, ")");
+                case '{':
+                    avanzar();
+                    return new Token(TokenType.LLAVE_IZQ, "{");
+                case '}':
+                    avanzar();
+                    return new Token(TokenType.LLAVE_DER, "}");
+                case '[':
+                    avanzar();
+                    return new Token(TokenType.CORCHETE_DER, "[");
+                case ']':
+                    avanzar();
+                    return new Token(TokenType.CORCHETE_IZQ, "]");
+                case ';':
+                    avanzar();
+                    return new Token(TokenType.PUNTO_Y_COMA, ";");
+                case '.':
+                    avanzar();
+                    return new Token(TokenType.PUNTO, ".");
+
+                case '!':
+                    avanzar(); // Consumimos el '!'
+                    if (match('=')) {
+                        // Si el siguiente fue '=', encontramos un '!='
+                        return new Token(TokenType.DIFERENTE, "!=");
+                    }
+                    return new Token(TokenType.NEGACION_LOGICA, "!");
+                    
+                case '=':
+                    avanzar(); // Consumimos el primer '='
+                    if (match('=')) {
+                        // Si el siguiente fue '=', es un '=='
+                        return new Token(TokenType.COMPARACION_IGUAL, "==");
+                    }
+                    // Si no, era un simple '=' de asignación
+                    return new Token(TokenType.IGUAL, "=");
+                    
+                case '<':
+                    avanzar(); // Consumimos el '<'
+                    if (match('=')) {
+                        return new Token(TokenType.MENOR_IGUAL, "<=");
+                    }
+                    return new Token(TokenType.MENOR, "<");
+                    
+                case '>':
+                    avanzar(); // Consumimos el '>'
+                    if (match('=')) {
+                        return new Token(TokenType.MAYOR_IGUAL, ">=");
+                    }
+                    return new Token(TokenType.MAYOR, ">");
+
+                default:
+                    break;
+            }
+
+            // Detectar Operadores logicos
+            switch (c) {
+                case '&':
+                    avanzar();
+                    if(match('&')) { 
+                        return new Token(TokenType.AND_LOGICO, "&&"); 
+                    } else {
+                        throw new RuntimeException("Error Léxico: Se esperaba '&' después de '&'");
+                    }
+                case '`':
+                    return new Token(TokenType.OR_LOGICO, "`");
+
+                default:
+                    break;
+            }
+
+            // 3. Detectar Números
+            if (Character.isDigit(c)) {
+                StringBuilder numero = new StringBuilder();
+                while (posicionActual < codigoFuente.length() && Character.isDigit(caracterActual())) {
+                    numero.append(caracterActual());
+                    avanzar();
+                }
+                return new Token(TokenType.NUMERO, numero.toString());
+            }
+
+            // 4. DETECTAR PALABRAS (Identificadores o Palabras Reservadas)
+            // Un identificador suele empezar con una letra o guion bajo (_)
+            if (Character.isLetter(c) || c == '_') {
+                StringBuilder buffer = new StringBuilder();
+                
+                // Mientras sean letras, números o guiones bajos, forma parte de la palabra
+                while (posicionActual < codigoFuente.length() && 
+                      (Character.isLetterOrDigit(caracterActual()) || caracterActual() == '_')) {
+                    buffer.append(caracterActual());
+                    avanzar();
+                }
+                
+                String palabra = buffer.toString();
+                
+                // Verificamos si es una palabra reservada de Orion
+                TokenType tipoAsignado = PALABRAS_RESERVADAS.get(palabra);
+                if (tipoAsignado != null) {
+                    return new Token(tipoAsignado, palabra);
+                }
+                
+                // Si no está en el mapa, es un identificador del usuario (ej. nombre de variable)
+                return new Token(TokenType.IDENTIFICADOR, palabra);
+            }
+            
+            // Si llegamos aquí, hay un carácter que nuestro lenguaje no reconoce
+            throw new RuntimeException("Error Léxico: Carácter no reconocido '" + c + "' en la posición " + posicionActual);
+        }
+
+        // Si el bucle termina, llegamos al final del archivo
+        return new Token(TokenType.EOF, "");
+    }
+
+    //Metodo lookahead
+    private boolean match(char esperado) {
+        // Si ya llegamos al final del archivo, no puede coincidir
+        if (posicionActual >= codigoFuente.length()) return false;
+        
+        // Si el carácter actual no es el que esperamos, no avanzamos
+        if (codigoFuente.charAt(posicionActual) != esperado) return false;
+        
+        // ¡Coincidió! Avanzamos el puntero (consumimos el segundo carácter)
+        posicionActual++;
+        return true;
+    }
+
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/lexer/Token.java">
+package main.java.com.compiler.lexer;
+
+public class Token {
+    public final TokenType tipo;
+    public final String lexema;
+
+    public Token(TokenType tipo, String lexema) {
+        this.tipo = tipo;
+        this.lexema = lexema;
+    }
+
+    public TokenType getTokenType() { return tipo;}
+
+    @Override
+    public String toString() {
+        return "[" + tipo + " : '" + lexema + "']";
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/lexer/TokenType.java">
+package main.java.com.compiler.lexer;
+
+public enum TokenType {
+    
+    //Control y flujo
+    IF, ELSE, WHILE, FOR, IN, BREAK, CONTINUE, RETURN,
+
+    //Declaraciones
+    LET, CONST, FN,
+
+    //Valores logicos y especiales
+    TRUE, FALSE, NULL, VOID,
+
+    //Modulos
+    IMPORT, FROM, EXPORT,
+
+    //Otros
+    PRINT,
+
+    //Literales e identificadores
+    IDENTIFICADOR,
+    NUMERO,
+
+    //Operadores y delimitadores
+    IGUAL, SUMA, RESTA,MULTI, DIVISION,
+    MODULO, POTENCIA,
+    PARENTESIS_IZQ,   // (
+    PARENTESIS_DER,   // )
+    LLAVE_IZQ,        // {
+    LLAVE_DER,        // }
+    CORCHETE_DER,     // [
+    CORCHETE_IZQ,     // ]
+    PUNTO_Y_COMA,     // ;
+    PUNTO,             // .
+
+    //Operadores de comparacion
+    COMPARACION_IGUAL,// ==
+    DIFERENTE,        // !=
+    MENOR,            // <
+    MENOR_IGUAL,      // <=
+    MAYOR,            // >
+    MAYOR_IGUAL,      // >=
+
+    //Operadores Logicos
+    AND_LOGICO, //&&
+    OR_LOGICO, // `
+    NEGACION_LOGICA, //!
+
+    //Operadores de asignacion
+    SUMA_Y_ASIGNACION, //+=
+    RESTA_Y_ASIGNACION, //-=
+    MULTI_Y_ASIGNACION, // *=
+    DIVISION_Y_ASIGNACION, // /=
+    MODULO_Y_ASIGNACION, //%=
+
+
+    EOF // Fin de archivo
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/ElementoAST.java">
+package main.java.com.compiler.parser;
+
+public abstract class ElementoAST {
+    
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/NodoBloque.java">
+package main.java.com.compiler.parser;
+
+import java.util.List;
+
+public class NodoBloque extends ElementoAST {
+    public final List<ElementoAST> sentencias;
+
+    public NodoBloque(List<ElementoAST> sentencias) {
+        this.sentencias = sentencias;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/NodoDeclaracion.java">
+package main.java.com.compiler.parser;
+
+import main.java.com.compiler.lexer.Token;
+
+public class NodoDeclaracion extends ElementoAST {
+    public final Token palabraClave; // 'let' o 'const'
+    public final Token identificador; // El nombre de la variable (ej. 'x')
+    public final Token valorNumero;   // El valor asignado (ej. '5')
+
+    public NodoDeclaracion(Token palabraClave, Token identificador, Token valorNumero) {
+        this.palabraClave = palabraClave;
+        this.identificador = identificador;
+        this.valorNumero = valorNumero;
+    }
+
+    
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/NodoExpresionSimple.java">
+package main.java.com.compiler.parser;
+
+import main.java.com.compiler.lexer.Token;
+
+public class NodoExpresionSimple extends ElementoAST {
+    public final Token valor;
+    public NodoExpresionSimple(Token valor) { this.valor = valor; }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/NodoIf.java">
+package main.java.com.compiler.parser;
+
+public class NodoIf extends ElementoAST {
+    public final ElementoAST condicion;
+    public final NodoBloque bloqueTrue;
+
+    public NodoIf(ElementoAST condicion, NodoBloque bloqueTrue) {
+        this.condicion = condicion;
+        this.bloqueTrue = bloqueTrue;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/NodoImprimir.java">
+package main.java.com.compiler.parser;
+
+public class NodoImprimir extends ElementoAST {
+    public final ElementoAST expresion; // Lo que va adentro de los paréntesis
+
+    public NodoImprimir(ElementoAST expresion) {
+        this.expresion = expresion;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/Parser.java">
+package main.java.com.compiler.parser;
+
+import java.util.ArrayList;
+import java.util.List;
+import main.java.com.compiler.lexer.Token;
+import main.java.com.compiler.lexer.TokenType;
+
+public class Parser {
+    private final List<Token> tokens;
+    private int actual = 0; // Puntero al token bajo análisis
+
+    public Parser(List<Token> tokens) {
+        this.tokens = tokens;
+    }
+
+    // --- MÉTODOS DE APOYO Y NAVEGACIÓN ---
+
+    // Mira el token actual sin consumirlo
+    private Token peek() {
+        return tokens.get(actual);
+    }
+
+    // Verifica si ya terminamos de leer todos los tokens
+    private boolean isAtEnd() {
+        return peek().tipo == TokenType.EOF;
+    }
+
+    // Avanza al siguiente token y devuelve el anterior
+    private Token avanzar() {
+        if (!isAtEnd()) actual++;
+        return tokens.get(actual - 1);
+    }
+
+    // Comprueba si el token actual es de un tipo específico
+    private boolean verificar(TokenType tipo) {
+        if (isAtEnd()) return false;
+        return peek().tipo == tipo;
+    }
+
+    // Si el token actual coincide con alguno de los tipos, lo consume y avanza
+    private boolean coinciden(TokenType... tipos) {
+        for (TokenType tipo : tipos) {
+            if (verificar(tipo)) {
+                avanzar();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // OBLIGA a que el token actual sea del tipo esperado. Si no, lanza ERROR SINTÁCTICO.
+    private Token consumir(TokenType tipo, String mensajeError) {
+        if (verificar(tipo)) return avanzar();
+        
+        // Aquí capturamos el clásico error de compilación
+        Token tokenError = peek();
+        throw new RuntimeException("Error Sintáctico: " + mensajeError + 
+                " Encontrado '" + tokenError.lexema + "' en el token nro " + actual);
+    }
+    
+    //Metodo principal
+    public List<ElementoAST> parsear() {
+        List<ElementoAST> program = new ArrayList<>();
+        try {
+            while (!isAtEnd()) {
+                program.add(sentencia());
+            }
+            return program;
+        } catch (RuntimeException e) {
+            System.err.println(e.getMessage());
+            return null;
+        }
+    }
+
+    // 2. El Enrutador: Decide qué regla gramatical usar viendo el token actual
+    private ElementoAST sentencia() {
+        if (verificar(TokenType.LET) || verificar(TokenType.CONST)) {
+            return declaracionVariable(); 
+        }
+        if (coinciden(TokenType.PRINT)) {
+            return declaracionImprimir();
+        }
+        if (coinciden(TokenType.IF)) {
+            return declaracionIf();
+        }
+        
+        // Si no es ninguna de las anteriores, lanzamos error (por ahora)
+        throw new RuntimeException("Error Sintáctico: Instrucción no reconocida en el token " + peek().lexema);
+    }
+
+    // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" NUMERO ";"
+    private ElementoAST declaracionVariable() {
+        // 1. Como ya verificamos en el paso anterior, avanzamos de forma segura y guardamos si fue 'let' o 'const'
+        Token palabraClave = avanzar(); 
+        
+        // 2. Obligatoriamente debe seguir el nombre de la variable
+        Token identificador = consumir(TokenType.IDENTIFICADOR, "Se esperaba el nombre de la variable.");
+        
+        // 3. Obligatoriamente debe seguir un signo '='
+        consumir(TokenType.IGUAL, "Se esperaba '=' después del nombre de la variable.");
+        
+        // 4. Obligatoriamente debe seguir un número literal
+        Token valor = consumir(TokenType.NUMERO, "Se esperaba un valor numérico.");
+        
+        // 5. Obligatoriamente debe cerrar con ';'
+        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la sentencia.");
+        
+        return new NodoDeclaracion(palabraClave, identificador, valor);
+    }
+
+    // Regla: "print" "(" expresion ")" ";"
+    private ElementoAST declaracionImprimir() {
+        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'print'.");
+        
+        ElementoAST valorAImprimir = expresion(); // Leemos lo que está adentro
+        
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después del valor a imprimir.");
+        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la instrucción print.");
+        
+        return new NodoImprimir(valorAImprimir);
+    }
+
+    // Regla: "if" "(" expresion ")" "{" sentencias "}"
+    private ElementoAST declaracionIf() {
+        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'if'.");
+        
+        ElementoAST condicion = expresion(); // Leemos la condición
+        
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la condición del if.");
+        
+        // El 'if' requiere un bloque de código
+        consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' antes del bloque del if.");
+        NodoBloque cuerpo = parsearBloque();
+        
+        return new NodoIf(condicion, cuerpo);
+    }
+
+    // Regla auxiliar para leer todo lo que está dentro de { }
+    private NodoBloque parsearBloque() {
+        List<ElementoAST> sentenciasInternas = new ArrayList<>();
+        
+        // Seguimos leyendo sentencias hasta encontrar la llave derecha '}' o el EOF
+        while (!verificar(TokenType.LLAVE_DER) && !isAtEnd()) {
+            sentenciasInternas.add(sentencia());
+        }
+        
+        consumir(TokenType.LLAVE_DER, "Se esperaba '}' al final del bloque.");
+        return new NodoBloque(sentenciasInternas);
+    }
+
+    // Regla temporal para las expresiones (matemáticas o variables)
+    private ElementoAST expresion() {
+        // Por ahora, para no complicarlo, asumimos que la expresión es solo un número o un identificador
+        if (coinciden(TokenType.NUMERO, TokenType.IDENTIFICADOR)) {
+            return new NodoExpresionSimple(tokens.get(actual - 1));
+        }
+        throw new RuntimeException("Error Sintáctico: Se esperaba una expresión (número o variable).");
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/semantic/Symbol.java">
+package main.java.com.compiler.semantic;
+
+public class Symbol {
+
+    private String nombre;
+    private Type tipo;
+    private SymbolCategory categoria;
+
+    private int linea;
+    private int columna;
+
+    public Symbol(
+            String nombre,
+            Type tipo,
+            SymbolCategory categoria,
+            int linea,
+            int columna) {
+
+        this.nombre = nombre;
+        this.tipo = tipo;
+        this.categoria = categoria;
+        this.linea = linea;
+        this.columna = columna;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public Type getTipo() {
+        return tipo;
+    }
+
+    public SymbolCategory getCategoria() {
+        return categoria;
+    }
+
+    public int getLinea() {
+        return linea;
+    }
+
+    public int getColumna() {
+        return columna;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/semantic/SymbolCategory.java">
+package main.java.com.compiler.semantic;
+
+public enum SymbolCategory {
+    VARIABLE,
+    CONSTANTE,
+    FUNCION,
+    PARAMETRO,
+    TIPO
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/semantic/Type.java">
+package main.java.com.compiler.semantic;
+
+public enum Type {
+    INT,
+    FLOAT,
+    CHAR,
+    STRING,
+    BOOL,
+    NULL,
+    VOID
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/util/JSGenerator.java">
+package main.java.com.compiler.util;
+
+import java.util.List;
+
+import main.java.com.compiler.parser.*;
+
+public class JSGenerator {
+
+    public String generar(List<ElementoAST> programa) {
+        StringBuilder codigoJS = new StringBuilder();
+        
+        // Recorremos la lista de sentencias del programa
+        for (ElementoAST nodo : programa) {
+            codigoJS.append(visitarNodo(nodo, 0));
+        }
+        
+        return codigoJS.toString();
+    }
+
+    // El método central que decide qué código JavaScript generar dependiendo del nodo
+    private String visitarNodo(ElementoAST nodo, int nivelIndentacion) {
+        String indentacion = crearIndentacion(nivelIndentacion);
+
+        // 1. Traducir una Declaración (let x = 5;)
+        if (nodo instanceof NodoDeclaracion) {
+            NodoDeclaracion dec = (NodoDeclaracion) nodo;
+            return indentacion + dec.palabraClave.lexema + " " + 
+                   dec.identificador.lexema + " = " + dec.valorNumero.lexema + ";\n";
+        }
+        
+        // 2. Traducir una Impresión (print(x) -> console.log(x))
+        if (nodo instanceof NodoImprimir) {
+            NodoImprimir imp = (NodoImprimir) nodo;
+            String valor = ((NodoExpresionSimple) imp.expresion).valor.lexema; // Por ahora es simple
+            return indentacion + "console.log(" + valor + ");\n";
+        }
+
+        // 3. Traducir un IF
+        if (nodo instanceof NodoIf) {
+            NodoIf nIf = (NodoIf) nodo;
+            String condicion = ((NodoExpresionSimple) nIf.condicion).valor.lexema;
+            
+            StringBuilder jsIf = new StringBuilder();
+            jsIf.append(indentacion).append("if (").append(condicion).append(") {\n");
+            
+            // Si el bloque del if tiene cosas adentro, las visitamos recursivamente
+            // aumentándole un nivel a la indentación
+            if (nIf.bloqueTrue != null) {
+                for (ElementoAST sentenciaInterna : nIf.bloqueTrue.sentencias) {
+                    jsIf.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
+                }
+            }
+            
+            jsIf.append(indentacion).append("}\n");
+            return jsIf.toString();
+        }
+
+        return "";
+    }
+
+    // Método auxiliar para que el código JS generado se vea bonito
+    private String crearIndentacion(int nivel) {
+        return "    ".repeat(Math.max(0, nivel)); // 4 espacios por nivel
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/Main.java">
+package main.java.com.compiler;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.io.FileWriter;
+import java.io.IOException;
+
+import main.java.com.compiler.error.CompilationError;
+import main.java.com.compiler.error.ErrorHandler;
+import main.java.com.compiler.error.ErrorType;
+import main.java.com.compiler.lexer.*;
+import main.java.com.compiler.parser.*;
+import main.java.com.compiler.semantic.*;
+import main.java.com.compiler.util.JSGenerator;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        // ============================================================
+        // CÓDIGO FUENTE
+        // ============================================================
+
+        String codigoOrion = """
+                let age = 10;
+                """;
+
+        System.out.println("=================================================");
+        System.out.println("              COMPILADOR ORION");
+        System.out.println("=================================================");
+        System.out.println();
+
+        System.out.println("Código fuente:");
+        System.out.println("-----------------------------------------");
+        System.out.println(codigoOrion);
+        System.out.println("-----------------------------------------");
+        System.out.println();
+
+
+        // ============================================================
+        // 1. ANÁLISIS LÉXICO
+        // ============================================================
+
+        System.out.println("=== 1. FASE DE ANÁLISIS LÉXICO ===");
+
+        Lexer lexer = new Lexer(codigoOrion);
+
+        List<Token> listaTokens = new ArrayList<>();
+
+        Token token;
+
+        do {
+
+            token = lexer.siguienteToken();
+            listaTokens.add(token);
+
+            System.out.println(
+                    String.format(
+                            "Token: %-15s Lexema: '%s'",
+                            token.tipo,
+                            token.lexema
+                    )
+            );
+
+        } while (token.tipo != TokenType.EOF);
+
+        System.out.println();
+
+        System.out.println(
+                "Total de tokens reconocidos: "
+                        + listaTokens.size()
+        );
+
+        System.out.println();
+
+
+        // ============================================================
+        // 2. ANÁLISIS SINTÁCTICO
+        // ============================================================
+
+        System.out.println("=== 2. FASE DE ANÁLISIS SINTÁCTICO ===");
+
+        Parser parser = new Parser(listaTokens);
+
+        List<ElementoAST> arbolAST = parser.parsear();
+
+        /*
+         * Si el Parser devuelve null significa que ocurrió
+         * algún error sintáctico.
+         */
+        if (arbolAST == null) {
+
+            System.err.println();
+            System.err.println(
+                    "[COMPILACIÓN ABORTADA] "
+                    + "Se encontraron errores sintácticos."
+            );
+
+            return;
+        }
+
+        System.out.println(
+                "✓ Análisis sintáctico completado correctamente."
+        );
+
+        System.out.println(
+                "Número de nodos principales: "
+                        + arbolAST.size()
+        );
+
+        System.out.println();
+
+
+        // ============================================================
+        // 3. VISUALIZACIÓN DEL AST
+        // ============================================================
+
+        System.out.println("=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===");
+
+        visualizarAST(arbolAST, "");
+
+        System.out.println();
+
+
+        // ============================================================
+        // 4. TABLA DE SÍMBOLOS
+        // ============================================================
+
+        System.out.println("=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===");
+
+        SymbolTable tablaSimbolos = new SymbolTable();
+
+        ErrorHandler gestorErrores = new ErrorHandler();
+
+        analizarSimbolos(
+                arbolAST,
+                tablaSimbolos,
+                gestorErrores
+        );
+
+        //tablaSimbolos.mostrar();
+
+        System.out.println();
+
+
+        // ============================================================
+        // 5. ANÁLISIS SEMÁNTICO
+        // ============================================================
+
+        System.out.println("=== 5. ANÁLISIS SEMÁNTICO ===");
+
+        analizarSemantica(
+                arbolAST,
+                tablaSimbolos,
+                gestorErrores
+        );
+
+        if (gestorErrores.hayErrores()) {
+
+            System.err.println();
+            System.err.println(
+                    "Se encontraron errores durante "
+                            + "el análisis semántico."
+            );
+
+            mostrarErrores(gestorErrores);
+
+            System.err.println();
+            System.err.println(
+                    "[COMPILACIÓN ABORTADA]"
+            );
+
+            return;
+        }
+
+        System.out.println(
+                "✓ Análisis semántico completado correctamente."
+        );
+
+        System.out.println();
+
+
+        // ============================================================
+        // 6. GENERACIÓN DE CÓDIGO
+        // ============================================================
+
+        System.out.println("=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===");
+
+        JSGenerator generador = new JSGenerator();
+
+        String codigoJavaScript =
+                generador.generar(arbolAST);
+
+        System.out.println();
+        System.out.println(
+                "Código JavaScript generado:"
+        );
+
+        System.out.println("-----------------------------------------");
+        System.out.println(codigoJavaScript);
+        System.out.println("-----------------------------------------");
+
+        System.out.println();
+
+
+        // ============================================================
+        // 7. GENERACIÓN DEL ARCHIVO
+        // ============================================================
+
+        System.out.println("=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===");
+
+        String archivoSalida = "programa.js";
+
+        try (FileWriter writer =
+                     new FileWriter(archivoSalida)) {
+
+            writer.write(codigoJavaScript);
+
+            System.out.println(
+                    "✓ Archivo generado correctamente: "
+                            + archivoSalida
+            );
+
+        } catch (IOException e) {
+
+            System.err.println(
+                    "[ERROR] No se pudo generar el archivo."
+            );
+
+            System.err.println(
+                    "Detalle: " + e.getMessage()
+            );
+
+            return;
+        }
+
+
+        // ============================================================
+        // FIN
+        // ============================================================
+
+        System.out.println();
+        System.out.println("=================================================");
+        System.out.println("       COMPILACIÓN FINALIZADA CORRECTAMENTE");
+        System.out.println("=================================================");
+    }
+
+
+    // ================================================================
+    // CONSTRUCCIÓN DE TABLA DE SÍMBOLOS
+    // ================================================================
+
+    private static void analizarSimbolos(
+            List<ElementoAST> nodos,
+            SymbolTable tablaSimbolos,
+            ErrorHandler gestorErrores) {
+
+        for (ElementoAST nodo : nodos) {
+
+            // --------------------------------------------------------
+            // DECLARACIÓN DE VARIABLE
+            // --------------------------------------------------------
+
+            if (nodo instanceof NodoDeclaracion) {
+
+                NodoDeclaracion declaracion =
+                        (NodoDeclaracion) nodo;
+
+                String nombre =
+                        declaracion.identificador.lexema;
+
+
+                /*
+                 * Por ahora determinamos el tipo a partir
+                 * del valor de la declaración.
+                 *
+                 * Ejemplo:
+                 *
+                 * let age = 10;
+                 *
+                 * age -> int
+                 */
+
+                Type tipo =
+                        determinarTipo(
+                                declaracion.valorNumero.lexema
+                        );
+
+
+                Symbol simbolo =
+                        new Symbol(
+                                nombre,
+                                tipo,
+                                SymbolCategory.VARIABLE,
+                                0,
+                                0
+                        );
+
+
+                /*
+                 * Intentamos insertar el símbolo.
+                 *
+                 * Si ya existe, tenemos una redeclaración.
+                 */
+
+                boolean insertado =
+                        tablaSimbolos.insertar(simbolo);
+
+                if (!insertado) {
+
+                    gestorErrores.agregar(
+                            "E002",
+                            ErrorType.SEMANTICO,
+                            "El identificador '"
+                                    + nombre
+                                    + "' ya fue declarado.",
+                            0,
+                            0
+                    );
+                }
+            }
+
+
+            // --------------------------------------------------------
+            // IF
+            // --------------------------------------------------------
+
+            else if (nodo instanceof NodoIf) {
+
+                NodoIf nodoIf =
+                        (NodoIf) nodo;
+
+                /*
+                 * El bloque interno también puede contener
+                 * declaraciones.
+                 */
+
+                analizarSimbolos(
+                        nodoIf.bloqueTrue.sentencias,
+                        tablaSimbolos,
+                        gestorErrores
+                );
+            }
+        }
+    }
+
+
+    // ================================================================
+    // ANÁLISIS SEMÁNTICO
+    // ================================================================
+
+    private static void analizarSemantica(
+            List<ElementoAST> nodos,
+            SymbolTable tablaSimbolos,
+            ErrorHandler gestorErrores) {
+
+        for (ElementoAST nodo : nodos) {
+
+            // --------------------------------------------------------
+            // DECLARACIÓN
+            // --------------------------------------------------------
+
+            if (nodo instanceof NodoDeclaracion) {
+
+                NodoDeclaracion declaracion =
+                        (NodoDeclaracion) nodo;
+
+                String nombre =
+                        declaracion.identificador.lexema;
+
+                Symbol simbolo =
+                        tablaSimbolos.buscar(nombre);
+
+
+                if (simbolo == null) {
+
+                    gestorErrores.agregar(
+                            "E001",
+                            ErrorType.SEMANTICO,
+                            "El identificador '"
+                                    + nombre
+                                    + "' no está declarado.",
+                            0,
+                            0
+                    );
+
+                    continue;
+                }
+
+
+                /*
+                 * Aquí posteriormente puedes agregar
+                 * las reglas reales de compatibilidad
+                 * de tipos.
+                 *
+                 * Ejemplo:
+                 *
+                 * int + int       -> int
+                 * int + float     -> float
+                 * float + float   -> float
+                 * string + string -> string
+                 */
+
+                System.out.println(
+                        "✓ Símbolo validado: "
+                                + nombre
+                                + " -> "
+                                + simbolo.getTipo()
+                );
+            }
+
+
+            // --------------------------------------------------------
+            // IF
+            // --------------------------------------------------------
+
+            else if (nodo instanceof NodoIf) {
+
+                NodoIf nodoIf =
+                        (NodoIf) nodo;
+
+
+                /*
+                 * Aquí posteriormente validarás que la
+                 * condición sea de tipo bool.
+                 */
+
+                analizarSemantica(
+                        nodoIf.bloqueTrue.sentencias,
+                        tablaSimbolos,
+                        gestorErrores
+                );
+            }
+
+
+            // --------------------------------------------------------
+            // PRINT
+            // --------------------------------------------------------
+
+            else if (nodo instanceof NodoImprimir) {
+
+                NodoImprimir imprimir =
+                        (NodoImprimir) nodo;
+
+
+                /*
+                 * Aquí posteriormente puedes comprobar
+                 * que la expresión utilizada por print
+                 * sea válida.
+                 */
+
+                if (imprimir.expresion
+                        instanceof NodoExpresionSimple) {
+
+                    NodoExpresionSimple expresion =
+                            (NodoExpresionSimple)
+                                    imprimir.expresion;
+
+                    String valor =
+                            expresion.valor.lexema;
+
+                    /*
+                     * Si el valor es un identificador,
+                     * verificamos que exista.
+                     */
+
+                    if (esIdentificador(valor)
+                            && !tablaSimbolos.existe(valor)) {
+
+                        gestorErrores.agregar(
+                                "E001",
+                                ErrorType.SEMANTICO,
+                                "El identificador '"
+                                        + valor
+                                        + "' no ha sido declarado.",
+                                0,
+                                0
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+
+    // ================================================================
+    // DETERMINACIÓN SIMPLE DE TIPO
+    // ================================================================
+
+    private static Type determinarTipo(String valor) {
+
+        if (valor == null) {
+            return Type.NULL;
+        }
+
+
+        // Entero
+
+        if (valor.matches("-?\\d+")) {
+            return Type.INT;
+        }
+
+
+        // Real
+
+        if (valor.matches("-?\\d+\\.\\d+")) {
+            return Type.FLOAT;
+        }
+
+
+        // Booleano
+
+        if (valor.equals("true")
+                || valor.equals("false")) {
+
+            return Type.BOOL;
+        }
+
+
+        // Carácter
+
+        if (valor.length() >= 3
+                && valor.startsWith("'")
+                && valor.endsWith("'")) {
+
+            return Type.CHAR;
+        }
+
+
+        // Cadena
+
+        if (valor.length() >= 2
+                && valor.startsWith("\"")
+                && valor.endsWith("\"")) {
+
+            return Type.STRING;
+        }
+
+
+        /*
+         * Si todavía no sabemos qué tipo es,
+         * dejamos que el análisis semántico
+         * posterior lo determine.
+         */
+
+        return null;
+    }
+
+
+    // ================================================================
+    // COMPROBAR SI ES IDENTIFICADOR
+    // ================================================================
+
+    private static boolean esIdentificador(String valor) {
+
+        if (valor == null || valor.isEmpty()) {
+            return false;
+        }
+
+        return valor.matches("[a-zA-Z_][a-zA-Z0-9_]*");
+    }
+
+
+    // ================================================================
+    // MOSTRAR ERRORES
+    // ================================================================
+
+    private static void mostrarErrores(
+            ErrorHandler gestorErrores) {
+
+        System.err.println();
+        System.err.println(
+                "---------------- ERRORES ----------------"
+        );
+
+        for (CompilationError error :
+                gestorErrores.obtenerErrores()) {
+
+            System.err.println(error);
+        }
+
+        System.err.println(
+                "------------------------------------------"
+        );
+
+        System.err.println(
+                "Total de errores: "
+                        + gestorErrores.obtenerErrores().size()
+        );
+    }
+
+
+    // ================================================================
+    // VISUALIZACIÓN DEL AST
+    // ================================================================
+
+    private static void visualizarAST(
+            List<ElementoAST> nodos,
+            String prefijo) {
+
+        for (ElementoAST nodo : nodos) {
+
+            // --------------------------------------------------------
+            // DECLARACIÓN
+            // --------------------------------------------------------
+
+            if (nodo instanceof NodoDeclaracion) {
+
+                NodoDeclaracion d =
+                        (NodoDeclaracion) nodo;
+
+                System.out.println(
+                        prefijo
+                                + "├── [Declaración Variable]: "
+                                + d.palabraClave.lexema
+                                + " "
+                                + d.identificador.lexema
+                                + " = "
+                                + d.valorNumero.lexema
+                );
+            }
+
+
+            // --------------------------------------------------------
+            // IF
+            // --------------------------------------------------------
+
+            else if (nodo instanceof NodoIf) {
+
+                NodoIf nIf =
+                        (NodoIf) nodo;
+
+                System.out.println(
+                        prefijo
+                                + "├── [Estructura Control IF]"
+                );
+
+
+                String condText =
+                        (nIf.condicion
+                                instanceof NodoExpresionSimple)
+
+                                ? ((NodoExpresionSimple)
+                                        nIf.condicion)
+                                        .valor.lexema
+
+                                : "Expresión compleja";
+
+
+                System.out.println(
+                        prefijo
+                                + "│   ├── Condición: ("
+                                + condText
+                                + ")"
+                );
+
+
+                System.out.println(
+                        prefijo
+                                + "│   └── Cuerpo del Bloque:"
+                );
+
+
+                visualizarAST(
+                        nIf.bloqueTrue.sentencias,
+                        prefijo + "│       "
+                );
+            }
+
+
+            // --------------------------------------------------------
+            // PRINT
+            // --------------------------------------------------------
+
+            else if (nodo instanceof NodoImprimir) {
+
+                NodoImprimir imp =
+                        (NodoImprimir) nodo;
+
+
+                String valText =
+                        (imp.expresion
+                                instanceof NodoExpresionSimple)
+
+                                ? ((NodoExpresionSimple)
+                                        imp.expresion)
+                                        .valor.lexema
+
+                                : "Expresión";
+
+
+                System.out.println(
+                        prefijo
+                                + "├── [Instrucción Imprimir]: print("
+                                + valText
+                                + ")"
+                );
+            }
+        }
+    }
+}
+</file>
+
+<file path="orion-compiler/README.md">
+## Getting Started
+
+Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+
+## Folder Structure
+
+The workspace contains two folders by default, where:
+
+- `src`: the folder to maintain sources
+- `lib`: the folder to maintain dependencies
+
+Meanwhile, the compiled output files will be generated in the `bin` folder by default.
+
+> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
+
+## Dependency Management
+
+The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+</file>
+
+<file path="programa.js">
+let age = 10;
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/semantic/SymbolTable.java">
+package main.java.com.compiler.semantic;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class SymbolTable {
+
+    private final Map<String, Symbol> symbols;
+    private final SymbolTable father;
+
+    public SymbolTable() {
+        this(null);
+    }
+
+    public SymbolTable(SymbolTable father) {
+        this.father = father;
+        this.symbols = new HashMap<>();
+    }
+
+    //Funcion que comprueba si existe un simbolo en la tabla de simbolos.
+    public boolean existe(String nombre) {
+        return symbols.containsKey(nombre);
+    }
+
+    //Funcion para insertar un simbolo en la tabla de simbolos.
+    public boolean insertar(Symbol symbol) {
+
+        if (existe(symbol.getNombre())) {
+            return false;
+        }
+
+        symbols.put(symbol.getNombre(), symbol);
+        return true;
+    }
+
+    //Funcion para buscar un simbolo en la tabla de simbolos.
+    public Symbol buscar(String nombre) {
+        if(symbols.containsKey(nombre)) {
+            return symbols.get(nombre);
+        }
+
+        if(father != null) {
+            return father.buscar(nombre);
+        }
+        return  null;
+    }
+
+    //Funcion para eleiminar un simbolo en la tabla de simbolos
+    public void eliminar(String nombre) {
+        symbols.remove(nombre);
+    }
+}
+</file>
+
+</files>

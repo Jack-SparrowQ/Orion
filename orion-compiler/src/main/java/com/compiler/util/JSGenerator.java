@@ -1,8 +1,8 @@
-package main.java.com.compiler.util;
+package com.compiler.util;
 
 import java.util.List;
 
-import main.java.com.compiler.parser.*;
+import com.compiler.parser.*;
 
 public class JSGenerator {
 

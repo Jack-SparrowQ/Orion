@@ -1,17 +1,17 @@
-package main.java.com.compiler;
+package com.compiler;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import main.java.com.compiler.error.CompilationError;
-import main.java.com.compiler.error.ErrorHandler;
-import main.java.com.compiler.error.ErrorType;
-import main.java.com.compiler.lexer.*;
-import main.java.com.compiler.parser.*;
-import main.java.com.compiler.semantic.*;
-import main.java.com.compiler.util.JSGenerator;
+import com.compiler.error.CompilationError;
+import com.compiler.error.ErrorHandler;
+import com.compiler.error.ErrorType;
+import com.compiler.lexer.*;
+import com.compiler.parser.*;
+import com.compiler.semantic.*;
+import com.compiler.util.JSGenerator;
 
 public class Main {
 

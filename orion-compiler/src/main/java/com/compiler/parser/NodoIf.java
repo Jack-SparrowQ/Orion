@@ -1,4 +1,4 @@
-package main.java.com.compiler.parser;
+package com.compiler.parser;
 
 public class NodoIf extends ElementoAST {
     public final ElementoAST condicion;
