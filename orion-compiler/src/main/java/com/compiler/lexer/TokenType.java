@@ -43,7 +43,7 @@ public enum TokenType {
 
     //Operadores Logicos
     AND_LOGICO, //&&
-    OR_LOGICO, // `
+    OR_LOGICO, // ||
     NEGACION_LOGICA, //!
 
     //Operadores de asignacion

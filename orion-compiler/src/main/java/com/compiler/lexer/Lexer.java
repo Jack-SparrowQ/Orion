@@ -186,12 +186,17 @@ public class Lexer {
                     avanzar();
                     if(match('&')) { 
                         return createToken(TokenType.AND_LOGICO, "&&"); 
-                    } else {
-                        gestorErrores.agregar("E101", ErrorType.LEXICO, "Error Léxico: Se esperaba '&' después de '&'", 0, posicionActual);
-                        throw new RuntimeException("Error Léxico: Se esperaba '&' después de '&'");
                     }
-                case '`':
-                    return createToken(TokenType.OR_LOGICO, "`");
+                    gestorErrores.agregar("E101", ErrorType.LEXICO, "Error Léxico: Se esperaba '&' después de '&'", startLine, startColumn);
+                    continue;
+                case '|':
+                    avanzar();
+                    if(match('|')) {
+                        return createToken(TokenType.OR_LOGICO, "||");
+                    }
+                    gestorErrores.agregar("E102",
+                    ErrorType.LEXICO, "Operador incompleto: se esperaba '||'", startLine, startColumn);
+                    continue;
 
                 default:
                     break;
@@ -232,8 +237,12 @@ public class Lexer {
             }
             
             // Si llegamos aquí, hay un carácter que nuestro lenguaje no reconoce
-            gestorErrores.agregar("E100", ErrorType.LEXICO, "Carácter no reconocido '" + c + "'.",
-    0, posicionActual);
+            gestorErrores.agregar("E100", 
+                ErrorType.LEXICO, 
+                "Carácter no reconocido '" + c + "'.",
+                startLine, startColumn);
+
+            avanzar(); //We skip the invalid character; otherwise, this would cause an infinite loop.
         }
 
         // Si el bucle termina, llegamos al final del archivo

@@ -23,9 +23,6 @@ public class Main {
 
         String codigoOrion = """
                 let age = 10;
-                if(age) {
-                print(age);
-                }
                 """;
 
         System.out.println("=================================================");
@@ -73,7 +70,16 @@ public class Main {
 
         } while (token.tipo != TokenType.EOF);
 
-        System.out.println();
+        if(gestorErrores.hayErrores()) {
+                System.err.println();
+                System.err.println("Errors were found during lexical analysis");
+
+                mostrarErrores(gestorErrores);
+                System.err.println();
+                System.err.println("Compilation aborted");
+
+                return;
+        }
 
         System.out.println(
                 "Total de tokens reconocidos: "
