@@ -91,7 +91,7 @@ orion-compiler/
 1. Clona el repositorio:
 
    ```bash
-   git clone <https://github.com/Jack-SparrowQ/Orion.git>
+   git clone https://github.com/Jack-SparrowQ/Orion.git
    ```
 
 2. Accede al directorio del proyecto:
@@ -150,4 +150,3 @@ Las mejoras, correcciones y nuevas funcionalidades pueden desarrollarse mediante
 
 ## Licencia
 
-Añade aquí la licencia del proyecto cuando hayas definido cómo deseas distribuirlo.
