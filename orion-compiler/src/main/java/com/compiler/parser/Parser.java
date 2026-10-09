@@ -7,6 +7,11 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
 import com.compiler.lexer.Token;
 import com.compiler.lexer.TokenType;
+import com.compiler.parser.Nodes.NodoBloque;
+import com.compiler.parser.Nodes.NodoDeclaracion;
+import com.compiler.parser.Nodes.NodoExpresionSimple;
+import com.compiler.parser.Nodes.NodoIf;
+import com.compiler.parser.Nodes.NodoImprimir;
 
 public class Parser {
 

@@ -10,6 +10,10 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
+import com.compiler.parser.Nodes.NodoDeclaracion;
+import com.compiler.parser.Nodes.NodoExpresionSimple;
+import com.compiler.parser.Nodes.NodoIf;
+import com.compiler.parser.Nodes.NodoImprimir;
 import com.compiler.semantic.*;
 import com.compiler.util.JSGenerator;
 

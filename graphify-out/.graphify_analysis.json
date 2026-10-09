@@ -1,0 +1,322 @@
+{
+  "communities": {
+    "0": [
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_and_logico",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_break",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_comparacion_igual",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_const",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_continue",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_corchete_der",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_corchete_izq",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_diferente",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_division",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_division_y_asignacion",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_else",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_eof",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_export",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_false",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_fn",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_for",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_from",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_identificador",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_if",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_igual",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_import",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_in",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_let",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_llave_der",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_llave_izq",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_mayor",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_mayor_igual",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_menor",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_menor_igual",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_modulo",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_modulo_y_asignacion",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_multi",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_multi_y_asignacion",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_negacion_logica",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_null",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_numero",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_or_logico",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_parentesis_der",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_parentesis_izq",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_potencia",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_print",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_punto",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_punto_y_coma",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_resta",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_resta_y_asignacion",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_return",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_suma",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_suma_y_asignacion",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_true",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_void",
+      "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype_while"
+    ],
+    "1": [
+      "arraylist",
+      "filewriter",
+      "hashmap",
+      "ioexception",
+      "list",
+      "map",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror_compilationerror",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror_getcode",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror_getcolumna",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror_getline",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror_getmensaje",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror_gettipo",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror_tostring",
+      "orion_compiler_src_main_java_com_compiler_error_compilationerror_java_override",
+      "orion_compiler_src_main_java_com_compiler_error_errorhandler",
+      "orion_compiler_src_main_java_com_compiler_error_errorhandler_errorhandler_agregar",
+      "orion_compiler_src_main_java_com_compiler_error_errorhandler_errorhandler_obtenererrores",
+      "orion_compiler_src_main_java_com_compiler_error_errortype",
+      "orion_compiler_src_main_java_com_compiler_error_errortype_errortype",
+      "orion_compiler_src_main_java_com_compiler_error_errortype_errortype_lexico",
+      "orion_compiler_src_main_java_com_compiler_error_errortype_errortype_semantico",
+      "orion_compiler_src_main_java_com_compiler_error_errortype_errortype_sintactico",
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer",
+      "orion_compiler_src_main_java_com_compiler_main",
+      "orion_compiler_src_main_java_com_compiler_parser_parser",
+      "orion_compiler_src_main_java_com_compiler_semantic_symboltable",
+      "orion_compiler_src_main_java_com_compiler_util_jsgenerator",
+      "semantic"
+    ],
+    "2": [
+      "orion_compiler_src_main_java_com_compiler_main_main_determinartipo",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol_getcategoria",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol_getcolumna",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol_getlinea",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol_gettipo",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol_symbol",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory_symbolcategory",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory_symbolcategory_constante",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory_symbolcategory_funcion",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory_symbolcategory_parametro",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory_symbolcategory_tipo",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory_symbolcategory_variable",
+      "orion_compiler_src_main_java_com_compiler_semantic_type",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type_bool",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type_char",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type_float",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type_int",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type_null",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type_string",
+      "orion_compiler_src_main_java_com_compiler_semantic_type_type_void"
+    ],
+    "3": [
+      "orion_compiler_src_main_java_com_compiler_error_errorhandler_errorhandler",
+      "orion_compiler_src_main_java_com_compiler_error_errorhandler_errorhandler_errorhandler",
+      "orion_compiler_src_main_java_com_compiler_error_errorhandler_errorhandler_hayerrores",
+      "orion_compiler_src_main_java_com_compiler_error_errorhandler_errorhandler_mostrarerrores",
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer_lexer",
+      "orion_compiler_src_main_java_com_compiler_main_main",
+      "orion_compiler_src_main_java_com_compiler_main_main_analizarsemantica",
+      "orion_compiler_src_main_java_com_compiler_main_main_analizarsimbolos",
+      "orion_compiler_src_main_java_com_compiler_main_main_esidentificador",
+      "orion_compiler_src_main_java_com_compiler_main_main_main",
+      "orion_compiler_src_main_java_com_compiler_main_main_reportarsihayerrores",
+      "orion_compiler_src_main_java_com_compiler_main_main_visualizarast",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_parser",
+      "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol_getnombre",
+      "orion_compiler_src_main_java_com_compiler_semantic_symboltable_symboltable",
+      "orion_compiler_src_main_java_com_compiler_semantic_symboltable_symboltable_buscar",
+      "orion_compiler_src_main_java_com_compiler_semantic_symboltable_symboltable_eliminar",
+      "orion_compiler_src_main_java_com_compiler_semantic_symboltable_symboltable_existe",
+      "orion_compiler_src_main_java_com_compiler_semantic_symboltable_symboltable_insertar",
+      "orion_compiler_src_main_java_com_compiler_semantic_symboltable_symboltable_symboltable"
+    ],
+    "4": [
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer",
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer_avanzar",
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer_caracteractual",
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer_createtoken",
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer_match",
+      "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer_siguientetoken",
+      "orion_compiler_src_main_java_com_compiler_lexer_token",
+      "orion_compiler_src_main_java_com_compiler_lexer_token_java_override",
+      "orion_compiler_src_main_java_com_compiler_lexer_token_token",
+      "orion_compiler_src_main_java_com_compiler_lexer_token_token_gettokentype",
+      "orion_compiler_src_main_java_com_compiler_lexer_token_token_token",
+      "orion_compiler_src_main_java_com_compiler_lexer_token_token_tostring",
+      "orion_compiler_src_main_java_com_compiler_parser_nododeclaracion",
+      "orion_compiler_src_main_java_com_compiler_parser_nododeclaracion_nododeclaracion",
+      "orion_compiler_src_main_java_com_compiler_parser_nododeclaracion_nododeclaracion_nododeclaracion",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoexpresionsimple",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoexpresionsimple_nodoexpresionsimple",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoexpresionsimple_nodoexpresionsimple_nodoexpresionsimple"
+    ],
+    "5": [
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parseerror",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_avanzar",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_coinciden",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_consumir",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_declaracionif",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_declaracionimprimir",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_declaracionvariable",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_describir",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_error",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_expresion",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_isatend",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_parsear",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_parsearbloque",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_peek",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_sentencia",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_sincronizar",
+      "orion_compiler_src_main_java_com_compiler_parser_parser_parser_verificar"
+    ],
+    "6": [
+      "orion_compiler_src_main_java_com_compiler_parser_elementoast",
+      "orion_compiler_src_main_java_com_compiler_parser_elementoast_elementoast",
+      "orion_compiler_src_main_java_com_compiler_parser_nodobloque",
+      "orion_compiler_src_main_java_com_compiler_parser_nodobloque_nodobloque",
+      "orion_compiler_src_main_java_com_compiler_parser_nodobloque_nodobloque_nodobloque",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoif",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoif_nodoif",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoif_nodoif_nodoif",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoimprimir",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoimprimir_nodoimprimir",
+      "orion_compiler_src_main_java_com_compiler_parser_nodoimprimir_nodoimprimir_nodoimprimir",
+      "orion_compiler_src_main_java_com_compiler_util_jsgenerator_jsgenerator",
+      "orion_compiler_src_main_java_com_compiler_util_jsgenerator_jsgenerator_crearindentacion",
+      "orion_compiler_src_main_java_com_compiler_util_jsgenerator_jsgenerator_generar",
+      "orion_compiler_src_main_java_com_compiler_util_jsgenerator_jsgenerator_visitarnodo"
+    ],
+    "7": [
+      "programa"
+    ]
+  },
+  "cohesion": {
+    "0": 0.03773584905660377,
+    "1": 0.09885057471264368,
+    "2": 0.09782608695652174,
+    "3": 0.18421052631578946,
+    "4": 0.1830065359477124,
+    "5": 0.37254901960784315,
+    "6": 0.20952380952380953,
+    "7": 1.0
+  },
+  "gods": [
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_lexer_tokentype_tokentype",
+      "label": "TokenType",
+      "degree": 60
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_lexer_token_token",
+      "label": "Token",
+      "degree": 21
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_parser_parser_parser",
+      "label": "Parser",
+      "degree": 21
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_parser_elementoast_elementoast",
+      "label": "ElementoAST",
+      "degree": 20
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_error_errorhandler_errorhandler",
+      "label": "ErrorHandler",
+      "degree": 18
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_error_compilationerror_compilationerror",
+      "label": "CompilationError",
+      "degree": 12
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_semantic_symbol_symbol",
+      "label": "Symbol",
+      "degree": 12
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_error_errortype_errortype",
+      "label": "ErrorType",
+      "degree": 11
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_lexer_lexer_lexer",
+      "label": "Lexer",
+      "degree": 9
+    },
+    {
+      "id": "orion_compiler_src_main_java_com_compiler_semantic_symbolcategory_symbolcategory",
+      "label": "SymbolCategory",
+      "degree": 9
+    }
+  ],
+  "surprises": [
+    {
+      "source": "ErrorHandler",
+      "target": "CompilationError",
+      "source_files": [
+        "orion-compiler/src/main/java/com/compiler/error/ErrorHandler.java",
+        "orion-compiler/src/main/java/com/compiler/error/CompilationError.java"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "Lexer",
+      "target": "ErrorHandler",
+      "source_files": [
+        "orion-compiler/src/main/java/com/compiler/lexer/Lexer.java",
+        "orion-compiler/src/main/java/com/compiler/error/ErrorHandler.java"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "Parser",
+      "target": "ErrorHandler",
+      "source_files": [
+        "orion-compiler/src/main/java/com/compiler/parser/Parser.java",
+        "orion-compiler/src/main/java/com/compiler/error/ErrorHandler.java"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "Lexer",
+      "target": "TokenType",
+      "source_files": [
+        "orion-compiler/src/main/java/com/compiler/lexer/Lexer.java",
+        "orion-compiler/src/main/java/com/compiler/lexer/TokenType.java"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    },
+    {
+      "source": "Token",
+      "target": "TokenType",
+      "source_files": [
+        "orion-compiler/src/main/java/com/compiler/lexer/Token.java",
+        "orion-compiler/src/main/java/com/compiler/lexer/TokenType.java"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

@@ -1,6 +1,7 @@
-package com.compiler.parser;
+package com.compiler.parser.Nodes;
 
 import com.compiler.lexer.Token;
+import com.compiler.parser.ElementoAST;
 
 public class NodoDeclaracion extends ElementoAST {
     public final Token palabraClave; // 'let' o 'const'

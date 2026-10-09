@@ -3,6 +3,10 @@ package com.compiler.util;
 import java.util.List;
 
 import com.compiler.parser.*;
+import com.compiler.parser.Nodes.NodoDeclaracion;
+import com.compiler.parser.Nodes.NodoExpresionSimple;
+import com.compiler.parser.Nodes.NodoIf;
+import com.compiler.parser.Nodes.NodoImprimir;
 
 public class JSGenerator {
 
