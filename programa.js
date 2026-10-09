@@ -1,1 +1,2 @@
-let age = 10;
+let y = 10;
+console.log(y);

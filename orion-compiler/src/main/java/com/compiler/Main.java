@@ -5,15 +5,17 @@ import java.util.List;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import com.compiler.error.CompilationError;
 import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
+import com.compiler.parser.Nodes.NodoAgrupacion;
+import com.compiler.parser.Nodes.NodoBinario;
 import com.compiler.parser.Nodes.NodoDeclaracion;
 import com.compiler.parser.Nodes.NodoExpresionSimple;
 import com.compiler.parser.Nodes.NodoIf;
 import com.compiler.parser.Nodes.NodoImprimir;
+import com.compiler.parser.Nodes.NodoUnario;
 import com.compiler.semantic.*;
 import com.compiler.util.JSGenerator;
 
@@ -26,7 +28,9 @@ public class Main {
         // ============================================================
 
         String codigoOrion = """
-                let age = 10;
+                if(z) {
+                print(1);
+                }
                 """;
 
         System.out.println("=================================================");
@@ -325,10 +329,13 @@ public class Main {
                 NodoIf nodoIf =
                         (NodoIf) nodo;
 
+                // La condición también puede usar identificadores
+                validarExpresion(nodoIf.condicion, tablaSimbolos, gestorErrores);
+
                 /*
-                 * El bloque interno también puede contener
-                 * declaraciones.
-                 */
+                * Aquí posteriormente se validara que la
+                * condición sea de tipo bool.
+                */ 
 
                 analizarSimbolos(
                         nodoIf.bloqueTrue.sentencias,
@@ -447,35 +454,57 @@ public class Main {
                 if (imprimir.expresion
                         instanceof NodoExpresionSimple) {
 
-                    NodoExpresionSimple expresion =
-                            (NodoExpresionSimple)
-                                    imprimir.expresion;
-
-                    String valor =
-                            expresion.valor.lexema;
-
-                    /*
-                     * Si el valor es un identificador,
-                     * verificamos que exista.
-                     */
-
-                    if (esIdentificador(valor)
-                            && !tablaSimbolos.existe(valor)) {
-
-                        gestorErrores.agregar(
-                                "E001",
-                                ErrorType.SEMANTICO,
-                                "El identificador '"
-                                        + valor
-                                        + "' no ha sido declarado.",
-                                expresion.valor.line,
-                                expresion.valor.column
-                        );
-                    }
+                    NodoImprimir print = 
+                                (NodoImprimir) nodo;
+                                
+                        validarExpresion(imprimir.expresion, tablaSimbolos, gestorErrores);
                 }
             }
         }
     }
+
+    // ================================================================
+// VALIDACIÓN DE EXPRESIONES (recursiva)
+// ================================================================
+
+// Recorre la expresión y comprueba que cada identificador esté declarado.
+private static void validarExpresion(
+        ElementoAST expresion,
+        SymbolTable tablaSimbolos,
+        ErrorHandler gestorErrores) {
+
+    if (expresion instanceof NodoExpresionSimple) {
+        Token valor = ((NodoExpresionSimple) expresion).valor;
+
+        // Se decide por el tipo de token, no por el texto:
+        // 'true' y 'false' también "parecen" identificadores.
+        if (valor.tipo == TokenType.IDENTIFICADOR
+                && !tablaSimbolos.existe(valor.lexema)) {
+
+            gestorErrores.agregar(
+                    "E301",
+                    ErrorType.SEMANTICO,
+                    "El identificador '" + valor.lexema
+                            + "' no ha sido declarado.",
+                    valor.line,
+                    valor.column
+            );
+        }
+    }
+    else if (expresion instanceof NodoBinario) {
+        NodoBinario b = (NodoBinario) expresion;
+        validarExpresion(b.izquierda, tablaSimbolos, gestorErrores);
+        validarExpresion(b.derecha, tablaSimbolos, gestorErrores);
+    }
+    else if (expresion instanceof NodoUnario) {
+        validarExpresion(((NodoUnario) expresion).operando,
+                tablaSimbolos, gestorErrores);
+    }
+    else if (expresion instanceof NodoAgrupacion) {
+        validarExpresion(((NodoAgrupacion) expresion).expresion,
+                tablaSimbolos, gestorErrores);
+    }
+}
 
 
     // ================================================================
@@ -540,21 +569,6 @@ public class Main {
 
         return null;
     }
-
-
-    // ================================================================
-    // COMPROBAR SI ES IDENTIFICADOR
-    // ================================================================
-
-    private static boolean esIdentificador(String valor) {
-
-        if (valor == null || valor.isEmpty()) {
-            return false;
-        }
-
-        return valor.matches("[a-zA-Z_][a-zA-Z0-9_]*");
-    }
-
 
     // ================================================================
     // MOSTRAR ERRORES
@@ -626,26 +640,8 @@ public class Main {
 
                 System.out.println(
                         prefijo
-                                + "├── [Estructura Control IF]"
-                );
-
-
-                String condText =
-                        (nIf.condicion
-                                instanceof NodoExpresionSimple)
-
-                                ? ((NodoExpresionSimple)
-                                        nIf.condicion)
-                                        .valor.lexema
-
-                                : "Expresión compleja";
-
-
-                System.out.println(
-                        prefijo
-                                + "│   ├── Condición: ("
-                                + condText
-                                + ")"
+                                + "├── Condition: "
+                                + nIf.condicion
                 );
 
 
@@ -672,22 +668,10 @@ public class Main {
                         (NodoImprimir) nodo;
 
 
-                String valText =
-                        (imp.expresion
-                                instanceof NodoExpresionSimple)
-
-                                ? ((NodoExpresionSimple)
-                                        imp.expresion)
-                                        .valor.lexema
-
-                                : "Expresión";
-
-
                 System.out.println(
                         prefijo
-                                + "├── [Instrucción Imprimir]: print("
-                                + valText
-                                + ")"
+                                + "├── [Instrucción Imprimir]: "
+                                + imp.expresion
                 );
             }
         }
