@@ -33,13 +33,7 @@ public class Main {
                let a = 10;
                 let b = 3;
                 let c = a + b * 2;
-                if (c > 5 && !false) {
-                print(c);
-                if (a != b) {
-                        print(a - b);
-                }
-                }
-                print((a + b) * 2);
+                const ok = true;
                 """;
 
         System.out.println("=================================================");
@@ -329,8 +323,8 @@ public class Main {
                                 nombre,
                                 tipo,
                                 SymbolCategory.VARIABLE,
-                                0,
-                                0
+                                declaracion.identificador.line,
+                                declaracion.identificador.column
                         );
 
 

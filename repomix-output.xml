@@ -86,6 +86,9 @@ orion-compiler/
       java/
         com/
           compiler/
+            codegen/
+              Cuadrupla.java
+              GeneradorCodigoIntermedio.java
             error/
               CompilationError.java
               ErrorHandler.java
@@ -95,12 +98,16 @@ orion-compiler/
               Token.java
               TokenType.java
             parser/
+              Nodes/
+                NodoAgrupacion.java
+                NodoBinario.java
+                NodoBloque.java
+                NodoDeclaracion.java
+                NodoExpresionSimple.java
+                NodoIf.java
+                NodoImprimir.java
+                NodoUnario.java
               ElementoAST.java
-              NodoBloque.java
-              NodoDeclaracion.java
-              NodoExpresionSimple.java
-              NodoIf.java
-              NodoImprimir.java
               Parser.java
             semantic/
               Symbol.java
@@ -112,6 +119,7 @@ orion-compiler/
             Main.java
   README.md
 programa.js
+programa.tac
 </directory_structure>
 
 <files>
@@ -6798,6 +6806,279 @@ network.on('afterDrawing', function(ctx) {
 }
 </file>
 
+<file path="orion-compiler/src/main/java/com/compiler/codegen/Cuadrupla.java">
+package com.compiler.codegen;
+
+// Una instrucción de código intermedio: (op, arg1, arg2, resultado)
+//
+//   (=,       10, _,  a )   ->  a = 10
+//   (+,       a,  t1, t2)   ->  t2 = a + t1
+//   (!,       b,  _,  t3)   ->  t3 = !b
+//   (print,   a,  _,  _ )   ->  print a
+//   (ifFalse, t2, _,  L1)   ->  ifFalse t2 goto L1
+//   (label,   _,  _,  L1)   ->  L1:
+public class Cuadrupla {
+    public final String op;
+    public final String arg1;
+    public final String arg2;
+    public final String resultado;
+
+    public Cuadrupla(String op, String arg1, String arg2, String resultado) {
+        this.op = op;
+        this.arg1 = arg1;
+        this.arg2 = arg2;
+        this.resultado = resultado;
+    }
+
+    // Formato de tres direcciones: t1 = a + b
+    @Override
+    public String toString() {
+        switch (op) {
+            case "label":
+                return resultado + ":";
+            case "print":
+                return "print " + arg1;
+            case "ifFalse":
+                return "ifFalse " + arg1 + " goto " + resultado;
+            case "=":
+                return resultado + " = " + arg1;
+            default:
+                if (arg2 == null) { // operador unario
+                    return resultado + " = " + op + arg1;
+                }
+                return resultado + " = " + arg1 + " " + op + " " + arg2;
+        }
+    }
+
+    // Formato de cuádrupla: (op, arg1, arg2, resultado)
+    public String comoTupla() {
+        return "(" + op + ", " + vacio(arg1) + ", " + vacio(arg2) + ", " + vacio(resultado) + ")";
+    }
+
+    private static String vacio(String s) {
+        return s == null ? "_" : s;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/codegen/GeneradorCodigoIntermedio.java">
+package com.compiler.codegen;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.compiler.parser.Nodes.*;
+import com.compiler.parser.ElementoAST;
+
+// Traduce el AST a código de tres direcciones (lista de cuádruplas).
+public class GeneradorCodigoIntermedio {
+
+    private final List<Cuadrupla> codigo = new ArrayList<>();
+    private int contadorTemporales = 0;
+    private int contadorEtiquetas = 0;
+
+    public List<Cuadrupla> generar(List<ElementoAST> programa) {
+        codigo.clear();
+        contadorTemporales = 0;
+        contadorEtiquetas = 0;
+
+        for (ElementoAST nodo : programa) {
+            generarSentencia(nodo);
+        }
+        return new ArrayList<>(codigo);
+    }
+
+    // Texto listo para mostrar o guardar (las etiquetas sin sangría)
+    public static String aTexto(List<Cuadrupla> codigo) {
+        StringBuilder sb = new StringBuilder();
+        for (Cuadrupla c : codigo) {
+            if (!c.op.equals("label")) {
+                sb.append("    ");
+            }
+            sb.append(c).append("\n");
+        }
+        return sb.toString();
+    }
+
+    // ---------------- SENTENCIAS ----------------
+
+    private void generarSentencia(ElementoAST nodo) {
+
+        if (nodo instanceof NodoDeclaracion) {
+            NodoDeclaracion dec = (NodoDeclaracion) nodo;
+            String valor = generarExpresion(dec.valorNumero
+            );
+            emitir("=", valor, null, dec.identificador.lexema);
+        }
+        else if (nodo instanceof NodoImprimir) {
+            String valor = generarExpresion(((NodoImprimir) nodo).expresion);
+            emitir("print", valor, null, null);
+        }
+        else if (nodo instanceof NodoIf) {
+            NodoIf nIf = (NodoIf) nodo;
+
+            String condicion = generarExpresion(nIf.condicion);
+            String etiquetaFin = nuevaEtiqueta();
+
+            emitir("ifFalse", condicion, null, etiquetaFin);
+            for (ElementoAST interna : nIf.bloqueTrue.sentencias) {
+                generarSentencia(interna);
+            }
+            emitir("label", null, null, etiquetaFin);
+        }
+        else {
+            throw new IllegalArgumentException(
+                    "Sentencia desconocida: " + nodo.getClass().getSimpleName());
+        }
+    }
+
+    // ---------------- EXPRESIONES ----------------
+
+    // Genera las cuádruplas de la expresión y devuelve dónde queda su valor:
+    // un literal, una variable o un temporal (t1, t2, ...).
+    private String generarExpresion(ElementoAST expr) {
+
+        if (expr instanceof NodoExpresionSimple) {
+            return ((NodoExpresionSimple) expr).valor.lexema;
+        }
+
+        if (expr instanceof NodoBinario) {
+            NodoBinario b = (NodoBinario) expr;
+            String izquierda = generarExpresion(b.izquierda);
+            String derecha = generarExpresion(b.derecha);
+            String temporal = nuevoTemporal(); // después de los hijos
+            emitir(b.operador.lexema, izquierda, derecha, temporal);
+            return temporal;
+        }
+
+        if (expr instanceof NodoUnario) {
+            NodoUnario u = (NodoUnario) expr;
+            String operando = generarExpresion(u.operando);
+            String temporal = nuevoTemporal();
+            emitir(u.operador.lexema, operando, null, temporal);
+            return temporal;
+        }
+
+        if (expr instanceof NodoAgrupacion) {
+            // Los paréntesis ya quedaron reflejados en la estructura del árbol
+            return generarExpresion(((NodoAgrupacion) expr).expresion);
+        }
+
+        throw new IllegalArgumentException(
+                "Expresión desconocida: " + expr.getClass().getSimpleName());
+    }
+
+    // ---------------- AUXILIARES ----------------
+
+    private void emitir(String op, String arg1, String arg2, String resultado) {
+        codigo.add(new Cuadrupla(op, arg1, arg2, resultado));
+    }
+
+    private String nuevoTemporal() {
+        return "t" + (++contadorTemporales);
+    }
+
+    private String nuevaEtiqueta() {
+        return "L" + (++contadorEtiquetas);
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoBinario.java">
+package com.compiler.parser.Nodes;
+
+import com.compiler.lexer.Token;
+import com.compiler.parser.ElementoAST;
+
+public class NodoBinario extends ElementoAST{
+
+    public final ElementoAST izquierda;
+    public final Token operador;
+    public final ElementoAST derecha;
+
+    public NodoBinario(ElementoAST izquierda, Token operador, ElementoAST derecha) {
+        this.izquierda = izquierda;
+        this.operador = operador;
+        this.derecha = derecha;
+    }
+
+    @Override 
+    public String toString() {
+        return "(" + izquierda + " " + operador.lexema + " " + derecha + ")";
+    }
+    
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoBloque.java">
+package com.compiler.parser.Nodes;
+
+import java.util.List;
+
+import com.compiler.parser.ElementoAST;
+
+public class NodoBloque extends ElementoAST {
+    public final List<ElementoAST> sentencias;
+
+    public NodoBloque(List<ElementoAST> sentencias) {
+        this.sentencias = sentencias;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoIf.java">
+package com.compiler.parser.Nodes;
+
+import com.compiler.parser.ElementoAST;
+
+public class NodoIf extends ElementoAST {
+    public final ElementoAST condicion;
+    public final NodoBloque bloqueTrue;
+
+    public NodoIf(ElementoAST condicion, NodoBloque bloqueTrue) {
+        this.condicion = condicion;
+        this.bloqueTrue = bloqueTrue;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoImprimir.java">
+package com.compiler.parser.Nodes;
+
+import com.compiler.parser.ElementoAST;
+
+public class NodoImprimir extends ElementoAST {
+    public final ElementoAST expresion; // Lo que va adentro de los paréntesis
+
+    public NodoImprimir(ElementoAST expresion) {
+        this.expresion = expresion;
+    }
+}
+</file>
+
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoUnario.java">
+package com.compiler.parser.Nodes;
+
+import com.compiler.lexer.Token;
+import com.compiler.parser.ElementoAST;
+
+// Operación con un solo operando: !activo, -5
+public class NodoUnario extends ElementoAST {
+    public final Token operador;
+    public final ElementoAST operando;
+
+    public NodoUnario(Token operador, ElementoAST operando) {
+        this.operador = operador;
+        this.operando = operando;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + operador.lexema + operando + ")";
+    }
+}
+</file>
+
 <file path="orion-compiler/README.md">
 ## Getting Started
 
@@ -6817,6 +7098,15 @@ Meanwhile, the compiled output files will be generated in the `bin` folder by de
 ## Dependency Management
 
 The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+</file>
+
+<file path="programa.tac">
+a = 10
+    b = 3
+    t1 = b * 2
+    t2 = a + t1
+    c = t2
+    ok = true
 </file>
 
 <file path="orion-compiler/.vscode/settings.json">
@@ -6840,39 +7130,38 @@ public enum ErrorType {
 }
 </file>
 
-<file path="orion-compiler/src/main/java/com/compiler/parser/ElementoAST.java">
-package com.compiler.parser;
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoAgrupacion.java">
+package com.compiler.parser.Nodes;
 
-public abstract class ElementoAST {
-    
-}
-</file>
+import com.compiler.parser.ElementoAST;
 
-<file path="orion-compiler/src/main/java/com/compiler/parser/NodoBloque.java">
-package com.compiler.parser;
+// Expresión entre paréntesis escrita por el programador: (a + b)
+public class NodoAgrupacion extends ElementoAST {
+    public final ElementoAST expresion;
 
-import java.util.List;
+    public NodoAgrupacion(ElementoAST expresion) {
+        this.expresion = expresion;
+    }
 
-public class NodoBloque extends ElementoAST {
-    public final List<ElementoAST> sentencias;
-
-    public NodoBloque(List<ElementoAST> sentencias) {
-        this.sentencias = sentencias;
+    @Override
+    public String toString() {
+        return "group(" + expresion + ")";
     }
 }
 </file>
 
-<file path="orion-compiler/src/main/java/com/compiler/parser/NodoDeclaracion.java">
-package com.compiler.parser;
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoDeclaracion.java">
+package com.compiler.parser.Nodes;
 
 import com.compiler.lexer.Token;
+import com.compiler.parser.ElementoAST;
 
 public class NodoDeclaracion extends ElementoAST {
     public final Token palabraClave; // 'let' o 'const'
     public final Token identificador; // El nombre de la variable (ej. 'x')
-    public final Token valorNumero;   // El valor asignado (ej. '5')
+    public final ElementoAST valorNumero;   // El valor asignado (ej. '5')
 
-    public NodoDeclaracion(Token palabraClave, Token identificador, Token valorNumero) {
+    public NodoDeclaracion(Token palabraClave, Token identificador, ElementoAST valorNumero) {
         this.palabraClave = palabraClave;
         this.identificador = identificador;
         this.valorNumero = valorNumero;
@@ -6882,40 +7171,29 @@ public class NodoDeclaracion extends ElementoAST {
 }
 </file>
 
-<file path="orion-compiler/src/main/java/com/compiler/parser/NodoExpresionSimple.java">
-package com.compiler.parser;
+<file path="orion-compiler/src/main/java/com/compiler/parser/Nodes/NodoExpresionSimple.java">
+package com.compiler.parser.Nodes;
 
 import com.compiler.lexer.Token;
+import com.compiler.parser.ElementoAST;
 
+// Valor simple: número, identificador, true o false
 public class NodoExpresionSimple extends ElementoAST {
     public final Token valor;
     public NodoExpresionSimple(Token valor) { this.valor = valor; }
-}
-</file>
 
-<file path="orion-compiler/src/main/java/com/compiler/parser/NodoIf.java">
-package com.compiler.parser;
-
-public class NodoIf extends ElementoAST {
-    public final ElementoAST condicion;
-    public final NodoBloque bloqueTrue;
-
-    public NodoIf(ElementoAST condicion, NodoBloque bloqueTrue) {
-        this.condicion = condicion;
-        this.bloqueTrue = bloqueTrue;
+    @Override 
+    public String toString() {
+        return valor.lexema;
     }
 }
 </file>
 
-<file path="orion-compiler/src/main/java/com/compiler/parser/NodoImprimir.java">
+<file path="orion-compiler/src/main/java/com/compiler/parser/ElementoAST.java">
 package com.compiler.parser;
 
-public class NodoImprimir extends ElementoAST {
-    public final ElementoAST expresion; // Lo que va adentro de los paréntesis
-
-    public NodoImprimir(ElementoAST expresion) {
-        this.expresion = expresion;
-    }
+public abstract class ElementoAST {
+    
 }
 </file>
 
@@ -6990,74 +7268,6 @@ public enum Type {
     BOOL,
     NULL,
     VOID
-}
-</file>
-
-<file path="orion-compiler/src/main/java/com/compiler/util/JSGenerator.java">
-package com.compiler.util;
-
-import java.util.List;
-
-import com.compiler.parser.*;
-
-public class JSGenerator {
-
-    public String generar(List<ElementoAST> programa) {
-        StringBuilder codigoJS = new StringBuilder();
-        
-        // Recorremos la lista de sentencias del programa
-        for (ElementoAST nodo : programa) {
-            codigoJS.append(visitarNodo(nodo, 0));
-        }
-        
-        return codigoJS.toString();
-    }
-
-    // El método central que decide qué código JavaScript generar dependiendo del nodo
-    private String visitarNodo(ElementoAST nodo, int nivelIndentacion) {
-        String indentacion = crearIndentacion(nivelIndentacion);
-
-        // 1. Traducir una Declaración (let x = 5;)
-        if (nodo instanceof NodoDeclaracion) {
-            NodoDeclaracion dec = (NodoDeclaracion) nodo;
-            return indentacion + dec.palabraClave.lexema + " " + 
-                   dec.identificador.lexema + " = " + dec.valorNumero.lexema + ";\n";
-        }
-        
-        // 2. Traducir una Impresión (print(x) -> console.log(x))
-        if (nodo instanceof NodoImprimir) {
-            NodoImprimir imp = (NodoImprimir) nodo;
-            String valor = ((NodoExpresionSimple) imp.expresion).valor.lexema; // Por ahora es simple
-            return indentacion + "console.log(" + valor + ");\n";
-        }
-
-        // 3. Traducir un IF
-        if (nodo instanceof NodoIf) {
-            NodoIf nIf = (NodoIf) nodo;
-            String condicion = ((NodoExpresionSimple) nIf.condicion).valor.lexema;
-            
-            StringBuilder jsIf = new StringBuilder();
-            jsIf.append(indentacion).append("if (").append(condicion).append(") {\n");
-            
-            // Si el bloque del if tiene cosas adentro, las visitamos recursivamente
-            // aumentándole un nivel a la indentación
-            if (nIf.bloqueTrue != null) {
-                for (ElementoAST sentenciaInterna : nIf.bloqueTrue.sentencias) {
-                    jsIf.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
-                }
-            }
-            
-            jsIf.append(indentacion).append("}\n");
-            return jsIf.toString();
-        }
-
-        return "";
-    }
-
-    // Método auxiliar para que el código JS generado se vea bonito
-    private String crearIndentacion(int nivel) {
-        return "    ".repeat(Math.max(0, nivel)); // 4 espacios por nivel
-    }
 }
 </file>
 
@@ -7269,12 +7479,12 @@ public enum TokenType {
 <file path="orion-compiler/src/main/java/com/compiler/semantic/SymbolTable.java">
 package com.compiler.semantic;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class SymbolTable {
 
-    private final Map<String, Symbol> symbols;
+    private final LinkedHashMap<String, Symbol> symbols;
     private final SymbolTable father;
 
     public SymbolTable() {
@@ -7283,7 +7493,7 @@ public class SymbolTable {
 
     public SymbolTable(SymbolTable father) {
         this.father = father;
-        this.symbols = new HashMap<>();
+        this.symbols = new LinkedHashMap<>();
     }
 
     //Funcion que comprueba si existe un simbolo en la tabla de simbolos.
@@ -7318,11 +7528,43 @@ public class SymbolTable {
     public void eliminar(String nombre) {
         symbols.remove(nombre);
     }
-}
-</file>
 
-<file path="programa.js">
-let age = 10;
+// Muestra la tabla en formato tabular, en orden de declaración
+public void mostrar() {
+    if (symbols.isEmpty()) {
+        System.out.println("(La tabla de símbolos está vacía)");
+        return;
+    }
+
+    // El ancho de la columna Nombre se ajusta al identificador más largo
+    int anchoNombre = "Nombre".length();
+    for (Symbol s : symbols.values()) {
+        anchoNombre = Math.max(anchoNombre, s.getNombre().length());
+    }
+
+    String formato = "| %-" + anchoNombre + "s | %-6s | %-9s | %5s | %7s |%n";
+    String separador = "+" + "-".repeat(anchoNombre + 2)
+            + "+" + "-".repeat(8)
+            + "+" + "-".repeat(11)
+            + "+" + "-".repeat(7)
+            + "+" + "-".repeat(9) + "+";
+
+    System.out.println(separador);
+    System.out.printf(formato, "Nombre", "Tipo", "Categoría", "Línea", "Columna");
+    System.out.println(separador);
+
+    for (Symbol s : symbols.values()) {
+        System.out.printf(formato,
+                s.getNombre(),
+                String.valueOf(s.getTipo()),
+                String.valueOf(s.getCategoria()),
+                String.valueOf(s.getLinea()),
+                String.valueOf(s.getColumna()));
+    }
+
+    System.out.println(separador);
+}
+}
 </file>
 
 <file path="orion-compiler/src/main/java/com/compiler/lexer/Lexer.java">
@@ -7597,6 +7839,114 @@ public class Lexer {
 }
 </file>
 
+<file path="orion-compiler/src/main/java/com/compiler/util/JSGenerator.java">
+package com.compiler.util;
+
+import java.util.List;
+
+import com.compiler.parser.*;
+import com.compiler.parser.Nodes.NodoAgrupacion;
+import com.compiler.parser.Nodes.NodoBinario;
+import com.compiler.parser.Nodes.NodoDeclaracion;
+import com.compiler.parser.Nodes.NodoExpresionSimple;
+import com.compiler.parser.Nodes.NodoIf;
+import com.compiler.parser.Nodes.NodoImprimir;
+import com.compiler.parser.Nodes.NodoUnario;
+import com.compiler.parser.Nodes.NodoAgrupacion;
+
+public class JSGenerator {
+
+    public String generar(List<ElementoAST> programa) {
+        StringBuilder codigoJS = new StringBuilder();
+        
+        // Recorremos la lista de sentencias del programa
+        for (ElementoAST nodo : programa) {
+            codigoJS.append(visitarNodo(nodo, 0));
+        }
+        
+        return codigoJS.toString();
+    }
+
+    // El método central que decide qué código JavaScript generar dependiendo del nodo
+    private String visitarNodo(ElementoAST nodo, int nivelIndentacion) {
+        String indentacion = crearIndentacion(nivelIndentacion);
+
+        // 1. Traducir una Declaración (let x = 5;)
+        if (nodo instanceof NodoDeclaracion) {
+            NodoDeclaracion dec = (NodoDeclaracion) nodo;
+            return indentacion + dec.palabraClave.lexema + " " +
+                dec.identificador.lexema + " = " + generarExpresion(dec.valorNumero) + ";\n";
+        }
+        
+        // 2. Traducir una Impresión (print(x) -> console.log(x))
+        if (nodo instanceof NodoImprimir) {
+            NodoImprimir imp = (NodoImprimir) nodo;
+            String valor = generarExpresion(imp.expresion); // Por ahora es simple
+            return indentacion + "console.log(" + valor + ");\n";
+        }
+
+        // 3. Traducir un IF
+        if (nodo instanceof NodoIf) {
+            NodoIf nIf = (NodoIf) nodo;
+            String condicion = generarExpresion(nIf.condicion);
+            
+            StringBuilder jsIf = new StringBuilder();
+            jsIf.append(indentacion).append("if (").append(condicion).append(") {\n");
+            
+            // Si el bloque del if tiene cosas adentro, las visitamos recursivamente
+            // aumentándole un nivel a la indentación
+            if (nIf.bloqueTrue != null) {
+                for (ElementoAST sentenciaInterna : nIf.bloqueTrue.sentencias) {
+                    jsIf.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
+                }
+            }
+            
+            jsIf.append(indentacion).append("}\n");
+            return jsIf.toString();
+        }
+
+        return "";
+    }
+
+    // Método auxiliar para que el código JS generado se vea bonito
+    private String crearIndentacion(int nivel) {
+        return "    ".repeat(Math.max(0, nivel)); // 4 espacios por nivel
+    }
+
+    // Traduce una expresión (recursivamente) a su texto en JavaScript.
+    // La precedencia de Orion es la misma que la de JS, así que no se
+    // reordena nada: solo se conservan los paréntesis que escribió el programador.
+    private String generarExpresion(ElementoAST expr) {
+        if (expr instanceof NodoExpresionSimple) {
+            return ((NodoExpresionSimple) expr).valor.lexema;
+        }
+
+        if (expr instanceof NodoBinario) {
+            NodoBinario b = (NodoBinario) expr;
+            return generarExpresion(b.izquierda) + " " + b.operador.lexema
+                    + " " + generarExpresion(b.derecha);
+        }
+
+        if (expr instanceof NodoUnario) {
+            NodoUnario u = (NodoUnario) expr;
+            String operando = generarExpresion(u.operando);
+            // Evita que "- -x" se convierta en "--x", que en JS es un decremento
+            if (u.operador.lexema.equals("-") && operando.startsWith("-")) {
+                operando = " " + operando;
+            }
+            return u.operador.lexema + operando;
+        }
+
+        if (expr instanceof NodoAgrupacion) {
+            return "(" + generarExpresion(((NodoAgrupacion) expr).expresion) + ")";
+        }
+
+        throw new IllegalArgumentException(
+                "Expresión desconocida: " + expr.getClass().getSimpleName());
+    }
+}
+</file>
+
 <file path="orion-compiler/src/main/java/com/compiler/parser/Parser.java">
 package com.compiler.parser;
 
@@ -7607,6 +7957,14 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
 import com.compiler.lexer.Token;
 import com.compiler.lexer.TokenType;
+import com.compiler.parser.Nodes.NodoAgrupacion;
+import com.compiler.parser.Nodes.NodoBinario;
+import com.compiler.parser.Nodes.NodoBloque;
+import com.compiler.parser.Nodes.NodoDeclaracion;
+import com.compiler.parser.Nodes.NodoExpresionSimple;
+import com.compiler.parser.Nodes.NodoIf;
+import com.compiler.parser.Nodes.NodoImprimir;
+import com.compiler.parser.Nodes.NodoUnario;
 
 public class Parser {
 
@@ -7652,6 +8010,11 @@ public class Parser {
     // Avanza al siguiente token y devuelve el anterior
     private Token avanzar() {
         if (!isAtEnd()) actual++;
+        return tokens.get(actual - 1);
+    }
+
+    // Devuelve el último token consumido
+    private Token anterior() {
         return tokens.get(actual - 1);
     }
 
@@ -7717,7 +8080,7 @@ public class Parser {
         throw error(peek(), "E2002", "Instruccion no reconocida: "+ describir(peek()) + ".");
     }
 
-    // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" NUMERO ";"
+    // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
     private ElementoAST declaracionVariable() {
         // 1. Como ya verificamos en el paso anterior, avanzamos de forma segura y guardamos si fue 'let' o 'const'
         Token palabraClave = avanzar(); 
@@ -7729,8 +8092,7 @@ public class Parser {
         consumir(TokenType.IGUAL, "Se esperaba '=' después del nombre de la variable.");
         
         // 4. Obligatoriamente debe seguir un número literal
-        Token valor = consumir(TokenType.NUMERO, "Se esperaba un valor numérico.");
-        
+        ElementoAST valor = expresion();        
         // 5. Obligatoriamente debe cerrar con ';'
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la sentencia.");
         
@@ -7777,15 +8139,109 @@ public class Parser {
         return new NodoBloque(sentenciasInternas);
     }
 
-    // Regla temporal para las expresiones (matemáticas o variables)
-    private ElementoAST expresion() {
-        // Por ahora, para no complicarlo, asumimos que la expresión es solo un número o un identificador
-        if (coinciden(TokenType.NUMERO, TokenType.IDENTIFICADOR)) {
-            return new NodoExpresionSimple(tokens.get(actual - 1));
-        }
-        throw error(peek(), "E203",
-        "Se esperaba una expresión (número o variable). Se encontró "
-                + describir(peek()) + ".");    }
+    // ================================================================
+// EXPRESIONES (de menor a mayor precedencia, igual que en JavaScript)
+// ================================================================
+
+// expresion -> logicoOr
+private ElementoAST expresion() {
+    return logicoOr();
+}
+
+// logicoOr -> logicoAnd ( "||" logicoAnd )*
+private ElementoAST logicoOr() {
+    ElementoAST izquierda = logicoAnd();
+    while (coinciden(TokenType.OR_LOGICO)) {
+        Token operador = anterior();
+        ElementoAST derecha = logicoAnd();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// logicoAnd -> igualdad ( "&&" igualdad )*
+private ElementoAST logicoAnd() {
+    ElementoAST izquierda = igualdad();
+    while (coinciden(TokenType.AND_LOGICO)) {
+        Token operador = anterior();
+        ElementoAST derecha = igualdad();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// igualdad -> comparacion ( ("==" | "!=") comparacion )*
+private ElementoAST igualdad() {
+    ElementoAST izquierda = comparacion();
+    while (coinciden(TokenType.COMPARACION_IGUAL, TokenType.DIFERENTE)) {
+        Token operador = anterior();
+        ElementoAST derecha = comparacion();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// comparacion -> termino ( ("<" | "<=" | ">" | ">=") termino )*
+private ElementoAST comparacion() {
+    ElementoAST izquierda = termino();
+    while (coinciden(TokenType.MENOR, TokenType.MENOR_IGUAL,
+                     TokenType.MAYOR, TokenType.MAYOR_IGUAL)) {
+        Token operador = anterior();
+        ElementoAST derecha = termino();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// termino -> factor ( ("+" | "-") factor )*
+private ElementoAST termino() {
+    ElementoAST izquierda = factor();
+    while (coinciden(TokenType.SUMA, TokenType.RESTA)) {
+        Token operador = anterior();
+        ElementoAST derecha = factor();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// factor -> unario ( ("*" | "/" | "%") unario )*
+private ElementoAST factor() {
+    ElementoAST izquierda = unario();
+    while (coinciden(TokenType.MULTI, TokenType.DIVISION, TokenType.MODULO)) {
+        Token operador = anterior();
+        ElementoAST derecha = unario();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// unario -> ("!" | "-") unario | primario
+private ElementoAST unario() {
+    if (coinciden(TokenType.NEGACION_LOGICA, TokenType.RESTA)) {
+        Token operador = anterior();
+        ElementoAST operando = unario();
+        return new NodoUnario(operador, operando);
+    }
+    return primario();
+}
+
+// primario -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+private ElementoAST primario() {
+    if (coinciden(TokenType.NUMERO, TokenType.IDENTIFICADOR,
+                  TokenType.TRUE, TokenType.FALSE)) {
+        return new NodoExpresionSimple(anterior());
+    }
+
+    if (coinciden(TokenType.PARENTESIS_IZQ)) {
+        ElementoAST interior = expresion();
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la expresión.");
+        return new NodoAgrupacion(interior);
+    }
+
+    throw error(peek(), "E203",
+            "Se esperaba una expresión (número, variable, true/false o '('). Se encontró "
+                    + describir(peek()) + ".");
+}
 
     private void sincronizar() {
         while (!isAtEnd()) {
@@ -7799,6 +8255,13 @@ public class Parser {
 }
 </file>
 
+<file path="programa.js">
+let a = 10;
+let b = 3;
+let c = a + b * 2;
+const ok = true;
+</file>
+
 <file path="orion-compiler/src/main/java/com/compiler/Main.java">
 package com.compiler;
 
@@ -7807,13 +8270,21 @@ import java.util.List;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import com.compiler.error.CompilationError;
 import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
+import com.compiler.parser.Nodes.NodoAgrupacion;
+import com.compiler.parser.Nodes.NodoBinario;
+import com.compiler.parser.Nodes.NodoDeclaracion;
+import com.compiler.parser.Nodes.NodoExpresionSimple;
+import com.compiler.parser.Nodes.NodoIf;
+import com.compiler.parser.Nodes.NodoImprimir;
+import com.compiler.parser.Nodes.NodoUnario;
 import com.compiler.semantic.*;
 import com.compiler.util.JSGenerator;
+import com.compiler.codegen.Cuadrupla;
+import com.compiler.codegen.GeneradorCodigoIntermedio;
 
 public class Main {
 
@@ -7824,7 +8295,10 @@ public class Main {
         // ============================================================
 
         String codigoOrion = """
-                let age = 10;
+               let a = 10;
+                let b = 3;
+                let c = a + b * 2;
+                const ok = true;
                 """;
 
         System.out.println("=================================================");
@@ -7942,7 +8416,7 @@ public class Main {
                 gestorErrores
         );
 
-        //tablaSimbolos.mostrar();
+        tablaSimbolos.mostrar();
 
         System.out.println();
 
@@ -7969,9 +8443,41 @@ public class Main {
 
         System.out.println();
 
+        // ============================================================
+        // 6. GENERACIÓN DE CÓDIGO INTERMEDIO
+        // ============================================================
+
+        System.out.println("=== 6. GENERACIÓN DE CÓDIGO INTERMEDIO ===");
+
+        GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
+        List<Cuadrupla> codigoIntermedio = generadorIR.generar(arbolAST);
+        String textoTAC = GeneradorCodigoIntermedio.aTexto(codigoIntermedio);
+
+        System.out.println();
+        System.out.println("Código de tres direcciones:");
+        System.out.println("-----------------------------------------");
+        System.out.println(textoTAC);
+        System.out.println("-----------------------------------------");
+        System.out.println();
+
+        System.out.println("Cuádruplas (op, arg1, arg2, resultado):");
+        for (int i = 0; i < codigoIntermedio.size(); i++) {
+        System.out.println(String.format("%3d  %s", i, codigoIntermedio.get(i).comoTupla()));
+        }
+        System.out.println();
+
+        try (FileWriter writer = new FileWriter("programa.tac")) {
+        writer.write(textoTAC);
+        System.out.println("✓ Archivo generado correctamente: programa.tac");
+        } catch (IOException e) {
+        // No es fatal: el resto de la compilación continúa
+        System.err.println("[AVISO] No se pudo generar programa.tac: " + e.getMessage());
+        }
+        System.out.println();
+
 
         // ============================================================
-        // 6. GENERACIÓN DE CÓDIGO
+        // 7. GENERACIÓN DE CÓDIGO JS
         // ============================================================
 
         System.out.println("=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===");
@@ -7994,7 +8500,7 @@ public class Main {
 
 
         // ============================================================
-        // 7. GENERACIÓN DEL ARCHIVO
+        // 8. GENERACIÓN DEL ARCHIVO
         // ============================================================
 
         System.out.println("=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===");
@@ -8072,8 +8578,8 @@ public class Main {
                  */
 
                 Type tipo =
-                        determinarTipo(
-                                declaracion.valorNumero.lexema
+                        determinarTipoExpresion(
+                                declaracion.valorNumero
                         );
 
 
@@ -8082,8 +8588,8 @@ public class Main {
                                 nombre,
                                 tipo,
                                 SymbolCategory.VARIABLE,
-                                0,
-                                0
+                                declaracion.identificador.line,
+                                declaracion.identificador.column
                         );
 
 
@@ -8123,10 +8629,13 @@ public class Main {
                 NodoIf nodoIf =
                         (NodoIf) nodo;
 
+                // La condición también puede usar identificadores
+                validarExpresion(nodoIf.condicion, tablaSimbolos, gestorErrores);
+
                 /*
-                 * El bloque interno también puede contener
-                 * declaraciones.
-                 */
+                * Aquí posteriormente se validara que la
+                * condición sea de tipo bool.
+                */ 
 
                 analizarSimbolos(
                         nodoIf.bloqueTrue.sentencias,
@@ -8160,6 +8669,8 @@ public class Main {
 
                 String nombre =
                         declaracion.identificador.lexema;
+
+                validarExpresion(declaracion.valorNumero, tablaSimbolos, gestorErrores);
 
                 Symbol simbolo =
                         tablaSimbolos.buscar(nombre);
@@ -8245,35 +8756,57 @@ public class Main {
                 if (imprimir.expresion
                         instanceof NodoExpresionSimple) {
 
-                    NodoExpresionSimple expresion =
-                            (NodoExpresionSimple)
-                                    imprimir.expresion;
-
-                    String valor =
-                            expresion.valor.lexema;
-
-                    /*
-                     * Si el valor es un identificador,
-                     * verificamos que exista.
-                     */
-
-                    if (esIdentificador(valor)
-                            && !tablaSimbolos.existe(valor)) {
-
-                        gestorErrores.agregar(
-                                "E001",
-                                ErrorType.SEMANTICO,
-                                "El identificador '"
-                                        + valor
-                                        + "' no ha sido declarado.",
-                                expresion.valor.line,
-                                expresion.valor.column
-                        );
-                    }
+                    NodoImprimir print = 
+                                (NodoImprimir) nodo;
+                                
+                        validarExpresion(imprimir.expresion, tablaSimbolos, gestorErrores);
                 }
             }
         }
     }
+
+    // ================================================================
+// VALIDACIÓN DE EXPRESIONES (recursiva)
+// ================================================================
+
+// Recorre la expresión y comprueba que cada identificador esté declarado.
+private static void validarExpresion(
+        ElementoAST expresion,
+        SymbolTable tablaSimbolos,
+        ErrorHandler gestorErrores) {
+
+    if (expresion instanceof NodoExpresionSimple) {
+        Token valor = ((NodoExpresionSimple) expresion).valor;
+
+        // Se decide por el tipo de token, no por el texto:
+        // 'true' y 'false' también "parecen" identificadores.
+        if (valor.tipo == TokenType.IDENTIFICADOR
+                && !tablaSimbolos.existe(valor.lexema)) {
+
+            gestorErrores.agregar(
+                    "E301",
+                    ErrorType.SEMANTICO,
+                    "El identificador '" + valor.lexema
+                            + "' no ha sido declarado.",
+                    valor.line,
+                    valor.column
+            );
+        }
+    }
+    else if (expresion instanceof NodoBinario) {
+        NodoBinario b = (NodoBinario) expresion;
+        validarExpresion(b.izquierda, tablaSimbolos, gestorErrores);
+        validarExpresion(b.derecha, tablaSimbolos, gestorErrores);
+    }
+    else if (expresion instanceof NodoUnario) {
+        validarExpresion(((NodoUnario) expresion).operando,
+                tablaSimbolos, gestorErrores);
+    }
+    else if (expresion instanceof NodoAgrupacion) {
+        validarExpresion(((NodoAgrupacion) expresion).expresion,
+                tablaSimbolos, gestorErrores);
+    }
+}
 
 
     // ================================================================
@@ -8339,20 +8872,24 @@ public class Main {
         return null;
     }
 
+    // Tipo provisional de una expresión de inicialización.
+        private static Type determinarTipoExpresion(ElementoAST expresion) {
 
-    // ================================================================
-    // COMPROBAR SI ES IDENTIFICADOR
-    // ================================================================
+        if (expresion instanceof NodoExpresionSimple) {
+                Token valor = ((NodoExpresionSimple) expresion).valor;
 
-    private static boolean esIdentificador(String valor) {
-
-        if (valor == null || valor.isEmpty()) {
-            return false;
+                // Literales: el tipo se deduce del propio valor, como hasta ahora
+                if (valor.tipo == TokenType.NUMERO
+                        || valor.tipo == TokenType.TRUE
+                        || valor.tipo == TokenType.FALSE) {
+                return determinarTipo(valor.lexema);
+                }
         }
 
-        return valor.matches("[a-zA-Z_][a-zA-Z0-9_]*");
-    }
-
+        // TODO (Tarea 7): calcular el tipo real de identificadores y de
+        // expresiones compuestas (int + float -> float, a > b -> bool, ...).
+        return Type.NULL;
+        }
 
     // ================================================================
     // MOSTRAR ERRORES
@@ -8408,7 +8945,7 @@ public class Main {
                                 + " "
                                 + d.identificador.lexema
                                 + " = "
-                                + d.valorNumero.lexema
+                                + d.valorNumero
                 );
             }
 
@@ -8424,26 +8961,8 @@ public class Main {
 
                 System.out.println(
                         prefijo
-                                + "├── [Estructura Control IF]"
-                );
-
-
-                String condText =
-                        (nIf.condicion
-                                instanceof NodoExpresionSimple)
-
-                                ? ((NodoExpresionSimple)
-                                        nIf.condicion)
-                                        .valor.lexema
-
-                                : "Expresión compleja";
-
-
-                System.out.println(
-                        prefijo
-                                + "│   ├── Condición: ("
-                                + condText
-                                + ")"
+                                + "├── Condition: "
+                                + nIf.condicion
                 );
 
 
@@ -8470,22 +8989,10 @@ public class Main {
                         (NodoImprimir) nodo;
 
 
-                String valText =
-                        (imp.expresion
-                                instanceof NodoExpresionSimple)
-
-                                ? ((NodoExpresionSimple)
-                                        imp.expresion)
-                                        .valor.lexema
-
-                                : "Expresión";
-
-
                 System.out.println(
                         prefijo
-                                + "├── [Instrucción Imprimir]: print("
-                                + valText
-                                + ")"
+                                + "├── [Instrucción Imprimir]: "
+                                + imp.expresion
                 );
             }
         }
