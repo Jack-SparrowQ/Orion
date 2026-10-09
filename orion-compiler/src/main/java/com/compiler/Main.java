@@ -30,10 +30,7 @@ public class Main {
         // ============================================================
 
         String codigoOrion = """
-               let a = 10;
-                let b = 3;
-                let c = a + b * 2;
-                const ok = true;
+                print(1/0);
                 """;
 
         System.out.println("=================================================");
@@ -428,11 +425,7 @@ public class Main {
 
 
                 /*
-                 * Aquí posteriormente puedes agregar
-                 * las reglas reales de compatibilidad
-                 * de tipos.
                  *
-                 * Ejemplo:
                  *
                  * int + int       -> int
                  * int + float     -> float
@@ -459,10 +452,7 @@ public class Main {
                         (NodoIf) nodo;
 
 
-                /*
-                 * Aquí posteriormente validarás que la
-                 * condición sea de tipo bool.
-                 */
+                validarExpresion(nodoIf, tablaSimbolos, gestorErrores);
 
                 analizarSemantica(
                         nodoIf.bloqueTrue.sentencias,
@@ -481,7 +471,7 @@ public class Main {
                 NodoImprimir imprimir =
                         (NodoImprimir) nodo;
 
-
+                validarExpresion(imprimir.expresion, tablaSimbolos, gestorErrores);
                 /*
                  * Aquí posteriormente puedes comprobar
                  * que la expresión utilizada por print
@@ -532,6 +522,19 @@ private static void validarExpresion(
         NodoBinario b = (NodoBinario) expresion;
         validarExpresion(b.izquierda, tablaSimbolos, gestorErrores);
         validarExpresion(b.derecha, tablaSimbolos, gestorErrores);
+
+        if (b.operador.tipo == TokenType.DIVISION
+            && esCeroConstante(b.derecha)) {
+
+        gestorErrores.agregar(
+                "E304",
+                ErrorType.SEMANTICO,
+                "División entre cero: el divisor de la "
+                        + "operación no puede ser 0.",
+                b.operador.line,
+                b.operador.column
+        );
+    }
     }
     else if (expresion instanceof NodoUnario) {
         validarExpresion(((NodoUnario) expresion).operando,
@@ -542,6 +545,112 @@ private static void validarExpresion(
                 tablaSimbolos, gestorErrores);
     }
 }
+
+
+/**
+ * Comprueba si una expresión representa una constante numérica
+ * cuyo resultado es cero.
+ *
+ * Devuelve false cuando no puede determinarse estáticamente
+ * el valor de la expresión.
+ */
+private static boolean esCeroConstante(ElementoAST expresion) {
+    Double valor = evaluarConstanteNumerica(expresion);
+
+    return valor != null && valor == 0.0;
+}
+
+/**
+ * Evalúa expresiones aritméticas compuestas únicamente por
+ * números, operadores aritméticos, agrupaciones y signos unarios.
+ *
+ * Devuelve null si la expresión contiene variables, operadores
+ * no aritméticos o una operación cuyo resultado no puede
+ * determinarse de forma segura.
+ */
+private static Double evaluarConstanteNumerica(
+        ElementoAST expresion) {
+
+    if (expresion instanceof NodoExpresionSimple) {
+        Token token = ((NodoExpresionSimple) expresion).valor;
+
+        if (token.tipo != TokenType.NUMERO) {
+            return null;
+        }
+
+        try {
+            return Double.parseDouble(token.lexema);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    if (expresion instanceof NodoAgrupacion) {
+        return evaluarConstanteNumerica(
+                ((NodoAgrupacion) expresion).expresion
+        );
+    }
+
+    if (expresion instanceof NodoUnario) {
+        NodoUnario unario = (NodoUnario) expresion;
+
+        Double operando =
+                evaluarConstanteNumerica(unario.operando);
+
+        if (operando == null) {
+            return null;
+        }
+
+        if (unario.operador.tipo == TokenType.RESTA) {
+            return -operando;
+        }
+
+        return null;
+    }
+
+    if (expresion instanceof NodoBinario) {
+        NodoBinario binario = (NodoBinario) expresion;
+
+        Double izquierda =
+                evaluarConstanteNumerica(binario.izquierda);
+
+        Double derecha =
+                evaluarConstanteNumerica(binario.derecha);
+
+        if (izquierda == null || derecha == null) {
+            return null;
+        }
+
+        switch (binario.operador.tipo) {
+            case SUMA:
+                return izquierda + derecha;
+
+            case RESTA:
+                return izquierda - derecha;
+
+            case MULTI:
+                return izquierda * derecha;
+
+            case DIVISION:
+                if (derecha == 0.0) {
+                    return null;
+                }
+                return izquierda / derecha;
+
+            case MODULO:
+                if (derecha == 0.0) {
+                    return null;
+                }
+                return izquierda % derecha;
+
+            default:
+                return null;
+        }
+    }
+
+    return null;
+}
+
 
 
     // ================================================================
