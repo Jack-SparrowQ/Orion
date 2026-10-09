@@ -18,6 +18,8 @@ import com.compiler.parser.Nodes.NodoImprimir;
 import com.compiler.parser.Nodes.NodoUnario;
 import com.compiler.semantic.*;
 import com.compiler.util.JSGenerator;
+import com.compiler.codegen.Cuadrupla;
+import com.compiler.codegen.GeneradorCodigoIntermedio;
 
 public class Main {
 
@@ -28,7 +30,16 @@ public class Main {
         // ============================================================
 
         String codigoOrion = """
-               let x = y + 1;
+               let a = 10;
+                let b = 3;
+                let c = a + b * 2;
+                if (c > 5 && !false) {
+                print(c);
+                if (a != b) {
+                        print(a - b);
+                }
+                }
+                print((a + b) * 2);
                 """;
 
         System.out.println("=================================================");
@@ -146,7 +157,7 @@ public class Main {
                 gestorErrores
         );
 
-        //tablaSimbolos.mostrar();
+        tablaSimbolos.mostrar();
 
         System.out.println();
 
@@ -173,9 +184,41 @@ public class Main {
 
         System.out.println();
 
+        // ============================================================
+        // 6. GENERACIÓN DE CÓDIGO INTERMEDIO
+        // ============================================================
+
+        System.out.println("=== 6. GENERACIÓN DE CÓDIGO INTERMEDIO ===");
+
+        GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
+        List<Cuadrupla> codigoIntermedio = generadorIR.generar(arbolAST);
+        String textoTAC = GeneradorCodigoIntermedio.aTexto(codigoIntermedio);
+
+        System.out.println();
+        System.out.println("Código de tres direcciones:");
+        System.out.println("-----------------------------------------");
+        System.out.println(textoTAC);
+        System.out.println("-----------------------------------------");
+        System.out.println();
+
+        System.out.println("Cuádruplas (op, arg1, arg2, resultado):");
+        for (int i = 0; i < codigoIntermedio.size(); i++) {
+        System.out.println(String.format("%3d  %s", i, codigoIntermedio.get(i).comoTupla()));
+        }
+        System.out.println();
+
+        try (FileWriter writer = new FileWriter("programa.tac")) {
+        writer.write(textoTAC);
+        System.out.println("✓ Archivo generado correctamente: programa.tac");
+        } catch (IOException e) {
+        // No es fatal: el resto de la compilación continúa
+        System.err.println("[AVISO] No se pudo generar programa.tac: " + e.getMessage());
+        }
+        System.out.println();
+
 
         // ============================================================
-        // 6. GENERACIÓN DE CÓDIGO
+        // 7. GENERACIÓN DE CÓDIGO JS
         // ============================================================
 
         System.out.println("=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===");
@@ -198,7 +241,7 @@ public class Main {
 
 
         // ============================================================
-        // 7. GENERACIÓN DEL ARCHIVO
+        // 8. GENERACIÓN DEL ARCHIVO
         // ============================================================
 
         System.out.println("=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===");
