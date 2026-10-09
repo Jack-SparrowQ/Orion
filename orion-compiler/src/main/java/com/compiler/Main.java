@@ -28,9 +28,7 @@ public class Main {
         // ============================================================
 
         String codigoOrion = """
-                if(z) {
-                print(1);
-                }
+               let x = y + 1;
                 """;
 
         System.out.println("=================================================");
@@ -278,8 +276,8 @@ public class Main {
                  */
 
                 Type tipo =
-                        determinarTipo(
-                                declaracion.valorNumero.lexema
+                        determinarTipoExpresion(
+                                declaracion.valorNumero
                         );
 
 
@@ -369,6 +367,8 @@ public class Main {
 
                 String nombre =
                         declaracion.identificador.lexema;
+
+                validarExpresion(declaracion.valorNumero, tablaSimbolos, gestorErrores);
 
                 Symbol simbolo =
                         tablaSimbolos.buscar(nombre);
@@ -570,6 +570,25 @@ private static void validarExpresion(
         return null;
     }
 
+    // Tipo provisional de una expresión de inicialización.
+        private static Type determinarTipoExpresion(ElementoAST expresion) {
+
+        if (expresion instanceof NodoExpresionSimple) {
+                Token valor = ((NodoExpresionSimple) expresion).valor;
+
+                // Literales: el tipo se deduce del propio valor, como hasta ahora
+                if (valor.tipo == TokenType.NUMERO
+                        || valor.tipo == TokenType.TRUE
+                        || valor.tipo == TokenType.FALSE) {
+                return determinarTipo(valor.lexema);
+                }
+        }
+
+        // TODO (Tarea 7): calcular el tipo real de identificadores y de
+        // expresiones compuestas (int + float -> float, a > b -> bool, ...).
+        return Type.NULL;
+        }
+
     // ================================================================
     // MOSTRAR ERRORES
     // ================================================================
@@ -624,7 +643,7 @@ private static void validarExpresion(
                                 + " "
                                 + d.identificador.lexema
                                 + " = "
-                                + d.valorNumero.lexema
+                                + d.valorNumero
                 );
             }
 

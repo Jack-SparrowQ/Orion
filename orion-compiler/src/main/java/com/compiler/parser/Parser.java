@@ -7,11 +7,14 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
 import com.compiler.lexer.Token;
 import com.compiler.lexer.TokenType;
+import com.compiler.parser.Nodes.NodoAgrupacion;
+import com.compiler.parser.Nodes.NodoBinario;
 import com.compiler.parser.Nodes.NodoBloque;
 import com.compiler.parser.Nodes.NodoDeclaracion;
 import com.compiler.parser.Nodes.NodoExpresionSimple;
 import com.compiler.parser.Nodes.NodoIf;
 import com.compiler.parser.Nodes.NodoImprimir;
+import com.compiler.parser.Nodes.NodoUnario;
 
 public class Parser {
 
@@ -57,6 +60,11 @@ public class Parser {
     // Avanza al siguiente token y devuelve el anterior
     private Token avanzar() {
         if (!isAtEnd()) actual++;
+        return tokens.get(actual - 1);
+    }
+
+    // Devuelve el último token consumido
+    private Token anterior() {
         return tokens.get(actual - 1);
     }
 
@@ -122,7 +130,7 @@ public class Parser {
         throw error(peek(), "E2002", "Instruccion no reconocida: "+ describir(peek()) + ".");
     }
 
-    // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" NUMERO ";"
+    // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
     private ElementoAST declaracionVariable() {
         // 1. Como ya verificamos en el paso anterior, avanzamos de forma segura y guardamos si fue 'let' o 'const'
         Token palabraClave = avanzar(); 
@@ -134,8 +142,7 @@ public class Parser {
         consumir(TokenType.IGUAL, "Se esperaba '=' después del nombre de la variable.");
         
         // 4. Obligatoriamente debe seguir un número literal
-        Token valor = consumir(TokenType.NUMERO, "Se esperaba un valor numérico.");
-        
+        ElementoAST valor = expresion();        
         // 5. Obligatoriamente debe cerrar con ';'
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la sentencia.");
         
@@ -182,15 +189,109 @@ public class Parser {
         return new NodoBloque(sentenciasInternas);
     }
 
-    // Regla temporal para las expresiones (matemáticas o variables)
-    private ElementoAST expresion() {
-        // Por ahora, para no complicarlo, asumimos que la expresión es solo un número o un identificador
-        if (coinciden(TokenType.NUMERO, TokenType.IDENTIFICADOR)) {
-            return new NodoExpresionSimple(tokens.get(actual - 1));
-        }
-        throw error(peek(), "E203",
-        "Se esperaba una expresión (número o variable). Se encontró "
-                + describir(peek()) + ".");    }
+    // ================================================================
+// EXPRESIONES (de menor a mayor precedencia, igual que en JavaScript)
+// ================================================================
+
+// expresion -> logicoOr
+private ElementoAST expresion() {
+    return logicoOr();
+}
+
+// logicoOr -> logicoAnd ( "||" logicoAnd )*
+private ElementoAST logicoOr() {
+    ElementoAST izquierda = logicoAnd();
+    while (coinciden(TokenType.OR_LOGICO)) {
+        Token operador = anterior();
+        ElementoAST derecha = logicoAnd();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// logicoAnd -> igualdad ( "&&" igualdad )*
+private ElementoAST logicoAnd() {
+    ElementoAST izquierda = igualdad();
+    while (coinciden(TokenType.AND_LOGICO)) {
+        Token operador = anterior();
+        ElementoAST derecha = igualdad();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// igualdad -> comparacion ( ("==" | "!=") comparacion )*
+private ElementoAST igualdad() {
+    ElementoAST izquierda = comparacion();
+    while (coinciden(TokenType.COMPARACION_IGUAL, TokenType.DIFERENTE)) {
+        Token operador = anterior();
+        ElementoAST derecha = comparacion();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// comparacion -> termino ( ("<" | "<=" | ">" | ">=") termino )*
+private ElementoAST comparacion() {
+    ElementoAST izquierda = termino();
+    while (coinciden(TokenType.MENOR, TokenType.MENOR_IGUAL,
+                     TokenType.MAYOR, TokenType.MAYOR_IGUAL)) {
+        Token operador = anterior();
+        ElementoAST derecha = termino();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// termino -> factor ( ("+" | "-") factor )*
+private ElementoAST termino() {
+    ElementoAST izquierda = factor();
+    while (coinciden(TokenType.SUMA, TokenType.RESTA)) {
+        Token operador = anterior();
+        ElementoAST derecha = factor();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// factor -> unario ( ("*" | "/" | "%") unario )*
+private ElementoAST factor() {
+    ElementoAST izquierda = unario();
+    while (coinciden(TokenType.MULTI, TokenType.DIVISION, TokenType.MODULO)) {
+        Token operador = anterior();
+        ElementoAST derecha = unario();
+        izquierda = new NodoBinario(izquierda, operador, derecha);
+    }
+    return izquierda;
+}
+
+// unario -> ("!" | "-") unario | primario
+private ElementoAST unario() {
+    if (coinciden(TokenType.NEGACION_LOGICA, TokenType.RESTA)) {
+        Token operador = anterior();
+        ElementoAST operando = unario();
+        return new NodoUnario(operador, operando);
+    }
+    return primario();
+}
+
+// primario -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+private ElementoAST primario() {
+    if (coinciden(TokenType.NUMERO, TokenType.IDENTIFICADOR,
+                  TokenType.TRUE, TokenType.FALSE)) {
+        return new NodoExpresionSimple(anterior());
+    }
+
+    if (coinciden(TokenType.PARENTESIS_IZQ)) {
+        ElementoAST interior = expresion();
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la expresión.");
+        return new NodoAgrupacion(interior);
+    }
+
+    throw error(peek(), "E203",
+            "Se esperaba una expresión (número, variable, true/false o '('). Se encontró "
+                    + describir(peek()) + ".");
+}
 
     private void sincronizar() {
         while (!isAtEnd()) {

@@ -32,8 +32,8 @@ public class JSGenerator {
         // 1. Traducir una Declaración (let x = 5;)
         if (nodo instanceof NodoDeclaracion) {
             NodoDeclaracion dec = (NodoDeclaracion) nodo;
-            return indentacion + dec.palabraClave.lexema + " " + 
-                   dec.identificador.lexema + " = " + dec.valorNumero.lexema + ";\n";
+            return indentacion + dec.palabraClave.lexema + " " +
+                dec.identificador.lexema + " = " + generarExpresion(dec.valorNumero) + ";\n";
         }
         
         // 2. Traducir una Impresión (print(x) -> console.log(x))
