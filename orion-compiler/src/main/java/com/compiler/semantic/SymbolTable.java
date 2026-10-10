@@ -1,6 +1,5 @@
 package com.compiler.semantic;
 
-import java.util.Map;
 import java.util.LinkedHashMap;
 
 public class SymbolTable {
