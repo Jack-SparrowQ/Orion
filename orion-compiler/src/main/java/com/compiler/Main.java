@@ -16,6 +16,9 @@ import com.compiler.codegen.GeneradorCodigoIntermedio;
 
 public class Main {
 
+        private static final String TAC_FILE = "program.tac";
+        private static final String JS_FILE = "program.js";
+
     public static void main(String[] args) {
 
         // ============================================================
@@ -23,8 +26,8 @@ public class Main {
         // ============================================================
 
         String codigoOrion = """
-                let a = b;
-                b = 1;
+                let a = "hola";
+                print(a);
                 """;
 
         System.out.println("=================================================");
@@ -192,12 +195,12 @@ public class Main {
         }
         System.out.println();
 
-        try (FileWriter writer = new FileWriter("programa.tac")) {
-        writer.write(textoTAC);
-        System.out.println("✓ Archivo generado correctamente: programa.tac");
+        try {
+                writeFile(TAC_FILE, textoTAC);
+                System.out.println("✓ Archivo generado correctamente: programa.tac");
         } catch (IOException e) {
         // No es fatal: el resto de la compilación continúa
-        System.err.println("[AVISO] No se pudo generar programa.tac: " + e.getMessage());
+                System.err.println("[AVISO] No se pudo generar programa.tac: " + e.getMessage());
         }
         System.out.println();
 
@@ -231,16 +234,13 @@ public class Main {
 
         System.out.println("=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===");
 
-        String archivoSalida = "program.js";
+        try {
 
-        try (FileWriter writer =
-                     new FileWriter(archivoSalida)) {
-
-            writer.write(codigoJavaScript);
+            writeFile(JS_FILE, codigoJavaScript);
 
             System.out.println(
                     "Archivo generado correctamente: "
-                            + archivoSalida
+                            + JS_FILE
             );
 
         } catch (IOException e) {
@@ -271,8 +271,13 @@ public class Main {
     // MOSTRAR ERRORES
     // ================================================================
 
-    // Si la fase dejó errores en el gestor, los muestra y devuelve true
-    // para que main() aborte la compilación.
+    /**
+     * Si la fase dejó errores en el gestor, los muestra y devuelve true
+     * para que main() aborte la compilación.
+     * @param gestorErrores
+     * @param phase
+     * @return
+     */
     private static boolean reportarSiHayErrores(
         ErrorHandler gestorErrores,
         String phase
@@ -294,4 +299,19 @@ public class Main {
         return true;
     }
 
+    /**
+     * Escribe el contenido en la ruta indicada y cierra el archivo.
+     * Cada llamador decide qué hacer si falla (la política no vive aquí).
+     * @param route
+     * @param content
+     * @throws IOException
+     */
+    private static void writeFile(
+        String route,
+        String content
+    ) throws IOException {
+        try (FileWriter writer = new FileWriter(route)) {
+                writer.write(content);
+        }
+    }
 }
