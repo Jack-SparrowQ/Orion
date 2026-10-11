@@ -6,17 +6,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import com.compiler.error.ErrorHandler;
-import com.compiler.error.ErrorType;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
-import com.compiler.parser.Nodes.NodoAgrupacion;
-import com.compiler.parser.Nodes.NodoBinario;
-import com.compiler.parser.Nodes.NodoDeclaracion;
-import com.compiler.parser.Nodes.NodoExpresionSimple;
-import com.compiler.parser.Nodes.NodoIf;
-import com.compiler.parser.Nodes.NodoImprimir;
-import com.compiler.parser.Nodes.NodoUnario;
 import com.compiler.semantic.*;
+import com.compiler.util.ASTPrinter;
 import com.compiler.util.JSGenerator;
 import com.compiler.codegen.Cuadrupla;
 import com.compiler.codegen.GeneradorCodigoIntermedio;
@@ -130,7 +123,7 @@ public class Main {
 
         System.out.println("=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===");
 
-        visualizarAST(arbolAST, "");
+        ASTPrinter.printAST(arbolAST, codigoOrion);
 
         System.out.println();
 
@@ -301,83 +294,4 @@ public class Main {
         return true;
     }
 
-
-    // ================================================================
-    // VISUALIZACIÓN DEL AST
-    // ================================================================
-
-    private static void visualizarAST(
-            List<ElementoAST> nodos,
-            String prefijo) {
-
-        for (ElementoAST nodo : nodos) {
-
-            // --------------------------------------------------------
-            // DECLARACIÓN
-            // --------------------------------------------------------
-
-            if (nodo instanceof NodoDeclaracion) {
-
-                NodoDeclaracion d =
-                        (NodoDeclaracion) nodo;
-
-                System.out.println(
-                        prefijo
-                                + "├── [Declaración Variable]: "
-                                + d.palabraClave.lexema
-                                + " "
-                                + d.identificador.lexema
-                                + " = "
-                                + d.valorNumero
-                );
-            }
-
-
-            // --------------------------------------------------------
-            // IF
-            // --------------------------------------------------------
-
-            else if (nodo instanceof NodoIf) {
-
-                NodoIf nIf =
-                        (NodoIf) nodo;
-
-                System.out.println(
-                        prefijo
-                                + "├── Condition: "
-                                + nIf.condicion
-                );
-
-
-                System.out.println(
-                        prefijo
-                                + "│   └── Cuerpo del Bloque:"
-                );
-
-
-                visualizarAST(
-                        nIf.bloqueTrue.sentencias,
-                        prefijo + "│       "
-                );
-            }
-
-
-            // --------------------------------------------------------
-            // PRINT
-            // --------------------------------------------------------
-
-            else if (nodo instanceof NodoImprimir) {
-
-                NodoImprimir imp =
-                        (NodoImprimir) nodo;
-
-
-                System.out.println(
-                        prefijo
-                                + "├── [Instrucción Imprimir]: "
-                                + imp.expresion
-                );
-            }
-        }
-    }
 }
