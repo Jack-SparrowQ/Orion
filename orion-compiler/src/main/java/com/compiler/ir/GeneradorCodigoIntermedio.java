@@ -1,4 +1,4 @@
-package com.compiler.codegen;
+package com.compiler.ir;
 
 import java.util.ArrayList;
 import java.util.List;

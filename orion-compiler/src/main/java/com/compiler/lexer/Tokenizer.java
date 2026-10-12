@@ -7,7 +7,7 @@ import java.util.List;
  * @author Carlos Rivera
  * LexerAnalyzer
  */
-public class LexerAnalyzer {
+public class Tokenizer {
     
     private List<Token> tokensList;
     private Lexer lexer;
@@ -17,7 +17,7 @@ public class LexerAnalyzer {
      * LexerAnalyzer constructor.
      * @param lexer
      */
-    public LexerAnalyzer(Lexer lexer) {
+    public Tokenizer(Lexer lexer) {
         this.lexer = lexer;
         
         tokensList = new ArrayList<>();

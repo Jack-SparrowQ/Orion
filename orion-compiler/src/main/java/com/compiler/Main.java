@@ -5,13 +5,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 
 import com.compiler.error.ErrorHandler;
+import com.compiler.ir.Cuadrupla;
+import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
 import com.compiler.semantic.*;
 import com.compiler.util.ASTPrinter;
 import com.compiler.util.JSGenerator;
-import com.compiler.codegen.Cuadrupla;
-import com.compiler.codegen.GeneradorCodigoIntermedio;
 
 public class Main {
 
@@ -52,7 +52,7 @@ public class Main {
                 gestorErrores
         );
 
-        LexerAnalyzer lexerAnalyzer = new LexerAnalyzer(lexer);
+        Tokenizer lexerAnalyzer = new Tokenizer(lexer);
 
         lexerAnalyzer.run();
 

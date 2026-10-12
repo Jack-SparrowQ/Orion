@@ -1,4 +1,4 @@
-package com.compiler.codegen;
+package com.compiler.ir;
 
 // Una instrucción de código intermedio: (op, arg1, arg2, resultado)
 //
