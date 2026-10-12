@@ -1,6 +1,5 @@
 package com.compiler;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -26,8 +25,7 @@ public class Main {
         // ============================================================
 
         String codigoOrion = """
-                let a = "hola";
-                print(a);
+                let a = ;
                 """;
 
         System.out.println("=================================================");
@@ -54,26 +52,9 @@ public class Main {
                 gestorErrores
         );
 
-        List<Token> listaTokens = new ArrayList<>();
+        LexerAnalyzer lexerAnalyzer = new LexerAnalyzer(lexer);
 
-        Token token;
-
-        do {
-
-            token = lexer.siguienteToken();
-            listaTokens.add(token);
-
-            System.out.println(
-                    String.format(
-                            "Token: %-15s Lexema: '%s' [%d:%d]",
-                            token.tipo,
-                            token.lexema,
-                            token.line,
-                            token.column
-                    )
-            );
-
-        } while (token.tipo != TokenType.EOF);
+        lexerAnalyzer.run();
 
         if(reportarSiHayErrores(gestorErrores, "lexico")) {
                 return;
@@ -81,7 +62,7 @@ public class Main {
 
         System.out.println(
                 "Total de tokens reconocidos: "
-                        + listaTokens.size()
+                        + lexerAnalyzer.getNumTokens()
         );
 
         System.out.println();
@@ -92,6 +73,8 @@ public class Main {
         // ============================================================
 
         System.out.println("=== 2. FASE DE ANÁLISIS SINTÁCTICO ===");
+
+        List<Token> listaTokens = lexerAnalyzer.getTokensList();
 
         Parser parser = new Parser(
                 listaTokens,
