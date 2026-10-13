@@ -1,0 +1,50 @@
+=== STDOUT ===
+=================================================
+              COMPILADOR ORION
+=================================================
+
+Código fuente:
+-----------------------------------------
+let c = desconocida + 1;
+
+-----------------------------------------
+
+=== 1. FASE DE ANÁLISIS LÉXICO ===
+Token: LET             Lexema: 'let' [1:1]
+Token: IDENTIFICADOR   Lexema: 'c' [1:5]
+Token: IGUAL           Lexema: '=' [1:7]
+Token: IDENTIFICADOR   Lexema: 'desconocida' [1:9]
+Token: SUMA            Lexema: '+' [1:21]
+Token: NUMERO          Lexema: '1' [1:23]
+Token: PUNTO_Y_COMA    Lexema: ';' [1:24]
+Token: EOF             Lexema: '' [1:25]
+Total de tokens reconocidos: 8
+
+=== 2. FASE DE ANÁLISIS SINTÁCTICO ===
+✓ Análisis sintáctico completado correctamente.
+Número de nodos principales: 1
+
+=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===
+├── [Declaración Variable]: let c = (desconocida + 1)
+
+=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===
++--------+--------+-----------+-------+---------+
+| Nombre | Tipo   | Categoría | Línea | Columna |
++--------+--------+-----------+-------+---------+
+| c      | NULL   | VARIABLE  |     1 |       5 |
++--------+--------+-----------+-------+---------+
+
+=== 5. ANÁLISIS SEMÁNTICO ===
+✓ Símbolo validado: c -> NULL
+E301[SEMANTICO] Línea 1, columna 9: El identificador 'desconocida' no ha sido declarado.
+=== STDERR ===
+
+Se encontraron errores durante el análisis Semantic.
+
+---------------- ERRORES ----------------
+------------------------------------------
+Total de errores: 1
+
+[COMPILACIÓN ABORTADA]
+=== FILES ===
+(ninguno)

@@ -1,0 +1,136 @@
+=== STDOUT ===
+=================================================
+              COMPILADOR ORION
+=================================================
+
+Código fuente:
+-----------------------------------------
+let a = 1;
+if (a > 0) {
+ let b = 2;
+ print(b);
+ print(a);
+}
+
+-----------------------------------------
+
+=== 1. FASE DE ANÁLISIS LÉXICO ===
+Token: LET             Lexema: 'let' [1:1]
+Token: IDENTIFICADOR   Lexema: 'a' [1:5]
+Token: IGUAL           Lexema: '=' [1:7]
+Token: NUMERO          Lexema: '1' [1:9]
+Token: PUNTO_Y_COMA    Lexema: ';' [1:10]
+Token: IF              Lexema: 'if' [2:1]
+Token: PARENTESIS_IZQ  Lexema: '(' [2:4]
+Token: IDENTIFICADOR   Lexema: 'a' [2:5]
+Token: MAYOR           Lexema: '>' [2:7]
+Token: NUMERO          Lexema: '0' [2:9]
+Token: PARENTESIS_DER  Lexema: ')' [2:10]
+Token: LLAVE_IZQ       Lexema: '{' [2:12]
+Token: LET             Lexema: 'let' [3:2]
+Token: IDENTIFICADOR   Lexema: 'b' [3:6]
+Token: IGUAL           Lexema: '=' [3:8]
+Token: NUMERO          Lexema: '2' [3:10]
+Token: PUNTO_Y_COMA    Lexema: ';' [3:11]
+Token: PRINT           Lexema: 'print' [4:2]
+Token: PARENTESIS_IZQ  Lexema: '(' [4:7]
+Token: IDENTIFICADOR   Lexema: 'b' [4:8]
+Token: PARENTESIS_DER  Lexema: ')' [4:9]
+Token: PUNTO_Y_COMA    Lexema: ';' [4:10]
+Token: PRINT           Lexema: 'print' [5:2]
+Token: PARENTESIS_IZQ  Lexema: '(' [5:7]
+Token: IDENTIFICADOR   Lexema: 'a' [5:8]
+Token: PARENTESIS_DER  Lexema: ')' [5:9]
+Token: PUNTO_Y_COMA    Lexema: ';' [5:10]
+Token: LLAVE_DER       Lexema: '}' [6:1]
+Token: EOF             Lexema: '' [6:2]
+Total de tokens reconocidos: 29
+
+=== 2. FASE DE ANÁLISIS SINTÁCTICO ===
+✓ Análisis sintáctico completado correctamente.
+Número de nodos principales: 2
+
+=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===
+├── [Declaración Variable]: let a = 1
+├── Condition: (a > 0)
+│   └── Cuerpo del Bloque:
+│       ├── [Declaración Variable]: let b = 2
+│       ├── [Instrucción Imprimir]: b
+│       ├── [Instrucción Imprimir]: a
+
+=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===
++--------+--------+-----------+-------+---------+
+| Nombre | Tipo   | Categoría | Línea | Columna |
++--------+--------+-----------+-------+---------+
+| a      | INT    | VARIABLE  |     1 |       5 |
+| b      | INT    | VARIABLE  |     3 |       6 |
++--------+--------+-----------+-------+---------+
+
+=== 5. ANÁLISIS SEMÁNTICO ===
+✓ Símbolo validado: a -> INT
+✓ Símbolo validado: b -> INT
+✓ Análisis semántico completado correctamente.
+
+=== 6. GENERACIÓN DE CÓDIGO INTERMEDIO ===
+
+Código de tres direcciones:
+-----------------------------------------
+    a = 1
+    t1 = a > 0
+    ifFalse t1 goto L1
+    b = 2
+    print b
+    print a
+L1:
+
+-----------------------------------------
+
+Cuádruplas (op, arg1, arg2, resultado):
+  0  (=, 1, _, a)
+  1  (>, a, 0, t1)
+  2  (ifFalse, t1, _, L1)
+  3  (=, 2, _, b)
+  4  (print, b, _, _)
+  5  (print, a, _, _)
+  6  (label, _, _, L1)
+
+✓ Archivo generado correctamente: programa.tac
+
+=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===
+
+Código JavaScript generado:
+-----------------------------------------
+let a = 1;
+if (a > 0) {
+    let b = 2;
+    console.log(b);
+    console.log(a);
+}
+
+-----------------------------------------
+
+=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===
+Archivo generado correctamente: program.js
+
+=================================================
+       COMPILACIÓN FINALIZADA CORRECTAMENTE
+=================================================
+=== STDERR ===
+=== FILES ===
+--- program.js ---
+let a = 1;
+if (a > 0) {
+    let b = 2;
+    console.log(b);
+    console.log(a);
+}
+
+--- programa.tac ---
+    a = 1
+    t1 = a > 0
+    ifFalse t1 goto L1
+    b = 2
+    print b
+    print a
+L1:
+

@@ -1,0 +1,29 @@
+=== STDOUT ===
+=================================================
+              COMPILADOR ORION
+=================================================
+
+Código fuente:
+-----------------------------------------
+let a = @;
+
+-----------------------------------------
+
+=== 1. FASE DE ANÁLISIS LÉXICO ===
+Token: LET             Lexema: 'let' [1:1]
+Token: IDENTIFICADOR   Lexema: 'a' [1:5]
+Token: IGUAL           Lexema: '=' [1:7]
+Token: PUNTO_Y_COMA    Lexema: ';' [1:10]
+Token: EOF             Lexema: '' [1:11]
+E100[LEXICO] Línea 1, columna 9: Carácter no reconocido '@'.
+=== STDERR ===
+
+Se encontraron errores durante el análisis lexico.
+
+---------------- ERRORES ----------------
+------------------------------------------
+Total de errores: 1
+
+[COMPILACIÓN ABORTADA]
+=== FILES ===
+(ninguno)

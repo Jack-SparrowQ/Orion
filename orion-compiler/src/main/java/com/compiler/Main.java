@@ -3,6 +3,7 @@ package com.compiler;
 import java.util.List;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 
 import com.compiler.error.ErrorHandler;
 import com.compiler.ir.Cuadrupla;
@@ -15,18 +16,19 @@ import com.compiler.util.JSGenerator;
 
 public class Main {
 
-        private static final String TAC_FILE = "program.tac";
+        private static final String TAC_FILE = "programa.tac";
         private static final String JS_FILE = "program.js";
 
-    public static void main(String[] args) {
-
-        // ============================================================
-        // CÓDIGO FUENTE
-        // ============================================================
-
-        String codigoOrion = """
+        private static final String ORION_CODE = """
                 let a = ;
                 """;
+
+
+    public static void main(String[] args) {
+        compile(ORION_CODE, Path.of(""));
+    }
+
+    static void compile(String orionCode, Path output) {
 
         System.out.println("=================================================");
         System.out.println("              COMPILADOR ORION");
@@ -35,7 +37,7 @@ public class Main {
 
         System.out.println("Código fuente:");
         System.out.println("-----------------------------------------");
-        System.out.println(codigoOrion);
+        System.out.println(orionCode);
         System.out.println("-----------------------------------------");
         System.out.println();
 
@@ -48,7 +50,7 @@ public class Main {
 
         ErrorHandler gestorErrores = new ErrorHandler();
         Lexer lexer = new Lexer(
-                codigoOrion,
+                orionCode,
                 gestorErrores
         );
 
@@ -109,7 +111,7 @@ public class Main {
 
         System.out.println("=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===");
 
-        ASTPrinter.printAST(arbolAST, codigoOrion);
+        ASTPrinter.printAST(arbolAST, "");
 
         System.out.println();
 
@@ -249,6 +251,8 @@ public class Main {
         System.out.println("       COMPILACIÓN FINALIZADA CORRECTAMENTE");
         System.out.println("=================================================");
     }
+
+
 
     // ================================================================
     // MOSTRAR ERRORES

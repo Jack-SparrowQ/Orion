@@ -2,11 +2,9 @@ com\compiler\lexer\Token.class
 com\compiler\semantic\SemanticAnalyzer.class
 com\compiler\lexer\Lexer.class
 com\compiler\semantic\Symbol.class
-com\compiler\codegen\GeneradorCodigoIntermedio.class
 com\compiler\error\CompilationError.class
 com\compiler\semantic\SymbolCategory.class
 com\compiler\semantic\SemanticAnalyzer$1.class
-com\compiler\Calculator.class
 com\compiler\semantic\SymbolTable.class
 com\compiler\Main.class
 com\compiler\util\JSGenerator.class
@@ -24,6 +22,5 @@ com\compiler\parser\Nodes\NodoUnario.class
 com\compiler\parser\Nodes\NodoExpresionSimple.class
 com\compiler\parser\Nodes\NodoAgrupacion.class
 com\compiler\parser\Parser$ParseError.class
-com\compiler\codegen\Cuadrupla.class
 com\compiler\parser\Parser.class
 com\compiler\util\ASTPrinter.class

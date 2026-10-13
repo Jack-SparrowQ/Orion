@@ -1,0 +1,44 @@
+=== STDOUT ===
+=================================================
+              COMPILADOR ORION
+=================================================
+
+Código fuente:
+-----------------------------------------
+print(x);
+
+-----------------------------------------
+
+=== 1. FASE DE ANÁLISIS LÉXICO ===
+Token: PRINT           Lexema: 'print' [1:1]
+Token: PARENTESIS_IZQ  Lexema: '(' [1:6]
+Token: IDENTIFICADOR   Lexema: 'x' [1:7]
+Token: PARENTESIS_DER  Lexema: ')' [1:8]
+Token: PUNTO_Y_COMA    Lexema: ';' [1:9]
+Token: EOF             Lexema: '' [1:10]
+Total de tokens reconocidos: 6
+
+=== 2. FASE DE ANÁLISIS SINTÁCTICO ===
+✓ Análisis sintáctico completado correctamente.
+Número de nodos principales: 1
+
+=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===
+├── [Instrucción Imprimir]: x
+
+=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===
+(La tabla de símbolos está vacía)
+
+=== 5. ANÁLISIS SEMÁNTICO ===
+E301[SEMANTICO] Línea 1, columna 7: El identificador 'x' no ha sido declarado.
+E301[SEMANTICO] Línea 1, columna 7: El identificador 'x' no ha sido declarado.
+=== STDERR ===
+
+Se encontraron errores durante el análisis Semantic.
+
+---------------- ERRORES ----------------
+------------------------------------------
+Total de errores: 2
+
+[COMPILACIÓN ABORTADA]
+=== FILES ===
+(ninguno)
