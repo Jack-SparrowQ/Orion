@@ -1,6 +1,7 @@
 package com.compiler;
 
 import java.util.List;
+import java.util.Optional;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -13,6 +14,8 @@ import com.compiler.parser.*;
 import com.compiler.semantic.*;
 import com.compiler.util.ASTPrinter;
 import com.compiler.util.JSGenerator;
+
+import com.compiler.util.ConsoleColors;
 
 public class Main {
 
@@ -48,17 +51,17 @@ public class Main {
 
         System.out.println("=== 1. FASE DE ANÁLISIS LÉXICO ===");
 
-        ErrorHandler gestorErrores = new ErrorHandler();
+        ErrorHandler errorHandler = new ErrorHandler();
         Lexer lexer = new Lexer(
                 orionCode,
-                gestorErrores
+                errorHandler
         );
 
         Tokenizer lexerAnalyzer = new Tokenizer(lexer);
 
         lexerAnalyzer.run();
 
-        if(reportarSiHayErrores(gestorErrores, "lexico")) {
+        if(reportarSiHayErrores(errorHandler, "lexico")) {
                 return;
         }
 
@@ -76,11 +79,11 @@ public class Main {
 
         System.out.println("=== 2. FASE DE ANÁLISIS SINTÁCTICO ===");
 
-        List<Token> listaTokens = lexerAnalyzer.getTokensList();
+        List<Token> tokensList = lexerAnalyzer.getTokensList();
 
         Parser parser = new Parser(
-                listaTokens,
-                gestorErrores
+                tokensList,
+                errorHandler
         );
 
         List<ElementoAST> arbolAST = parser.parsear();
@@ -89,7 +92,7 @@ public class Main {
          * Si el Parser devuelve null significa que ocurrió
          * algún error sintáctico.
          */
-        if (reportarSiHayErrores(gestorErrores, "sintactic")) {
+        if (reportarSiHayErrores(errorHandler, "sintactic")) {
             return;
         }
 
@@ -122,15 +125,15 @@ public class Main {
 
         System.out.println("=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===");
 
-        SymbolTable tablaSimbolos = new SymbolTable();
+        SymbolTable symbolsTable = new SymbolTable();
 
         SemanticAnalyzer.analyzeSymbols(
                 arbolAST, 
-                tablaSimbolos, 
-                gestorErrores
+                symbolsTable, 
+                errorHandler
         );
 
-        tablaSimbolos.mostrar();
+        symbolsTable.mostrar();
 
         System.out.println();
 
@@ -143,11 +146,11 @@ public class Main {
 
         SemanticAnalyzer.analyzeSemantic(
                 arbolAST, 
-                tablaSimbolos, 
-                gestorErrores
+                symbolsTable, 
+                errorHandler
         );
 
-        if (reportarSiHayErrores(gestorErrores, "Semantic")) {
+        if (reportarSiHayErrores(errorHandler, "Semantic")) {
             return;
         }
 
@@ -198,7 +201,7 @@ public class Main {
 
         JSGenerator generador = new JSGenerator();
 
-        String codigoJavaScript =
+        String JavaScriptCode =
                 generador.generar(arbolAST);
 
         System.out.println();
@@ -207,7 +210,7 @@ public class Main {
         );
 
         System.out.println("-----------------------------------------");
-        System.out.println(codigoJavaScript);
+        System.out.println(JavaScriptCode);
         System.out.println("-----------------------------------------");
 
         System.out.println();
@@ -221,7 +224,7 @@ public class Main {
 
         try {
 
-            writeFile(JS_FILE, codigoJavaScript);
+            writeFile(JS_FILE, JavaScriptCode);
 
             System.out.println(
                     "Archivo generado correctamente: "
@@ -261,15 +264,15 @@ public class Main {
     /**
      * Si la fase dejó errores en el gestor, los muestra y devuelve true
      * para que main() aborte la compilación.
-     * @param gestorErrores
+     * @param errorHandler
      * @param phase
      * @return
      */
     private static boolean reportarSiHayErrores(
-        ErrorHandler gestorErrores,
+        ErrorHandler errorHandler,
         String phase
     ) {
-        if(!gestorErrores.hayErrores()) {
+        if(!errorHandler.hayErrores()) {
                 return false;
         }
 
@@ -278,7 +281,7 @@ public class Main {
                 "Se encontraron errores durante el análisis " + phase + "."
         );
 
-        gestorErrores.mostrarErrores();
+        errorHandler.mostrarErrores();
 
         System.err.println();
         System.err.println("[COMPILACIÓN ABORTADA]");
@@ -300,5 +303,262 @@ public class Main {
         try (FileWriter writer = new FileWriter(route)) {
                 writer.write(content);
         }
+    }
+
+    //COMPILATION PHASES.
+
+    /**
+     * Just show a simple simple header.
+     * @param orionCode
+     */
+    private static void showHeader(String orionCode) {
+        System.out.println("ORION Compiler.\n");
+        System.out.println("Source Code: \n");
+        System.out.println(orionCode);
+    }
+
+    /**
+     * Lexical Analysis.
+     * @param orionCode
+     * @param errorHandler
+     * @return the tokens, or empty if there were lexical errors.
+     */
+    private static Optional<List<Token>> lexicalAnalyzer(
+        String orionCode,
+        ErrorHandler errorHandler
+    ) {
+
+        System.out.println("1. LEXICAL ANALYSIS PHASE");
+
+        Lexer lexer = new Lexer(orionCode, errorHandler);
+
+        Tokenizer tokenizer = new Tokenizer(lexer);
+
+        tokenizer.run();
+
+        if (reportarSiHayErrores(errorHandler, "lexico")) {
+            return Optional.empty();
+        }
+
+        System.out.println(
+                "Total de tokens reconocidos: "
+                        + tokenizer.getNumTokens()
+        );
+
+        System.out.println();
+
+        return Optional.of(tokenizer.getTokensList());
+    }
+
+    /**
+     * Syntax Analysis.
+     * @param tokensList
+     * @param errorHandler
+     * @return the AST, or empty if there were syntax errors.
+     */
+    private static Optional<List<ElementoAST>> analizeSyntax(
+        List<Token> tokensList,
+        ErrorHandler errorHandler
+    ) {
+        System.out.println("=== 2. FASE DE ANÁLISIS SINTÁCTICO ===");
+
+        Parser parser = new Parser(
+                tokensList,
+                errorHandler
+        );
+
+        List<ElementoAST> arbolAST = parser.parsear();
+
+        if (reportarSiHayErrores(errorHandler, "sintactic")) {
+            return Optional.empty();
+        }
+
+        System.out.println(
+                "✓ Análisis sintáctico completado correctamente."
+        );
+
+        System.out.println(
+                "Número de nodos principales: "
+                        + arbolAST.size()
+        );
+
+        System.out.println();
+
+        return Optional.of(arbolAST);
+    }
+
+    /** Fase 3: visualización del AST. */
+    private static void mostrarAST(List<ElementoAST> arbolAST) {
+        System.out.println("=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===");
+
+        ASTPrinter.printAST(arbolAST, "");
+
+        System.out.println();
+    }
+
+    /**
+     * Phase 4: Symbol table construction. 
+     * Does not abort: errors detected are reported at the end of Phase 5.
+     * @param arbolAST
+     * @param errorHandler
+     * @return symbols table.
+     */
+    private static SymbolTable construirSymbolsTable(
+        List<ElementoAST> arbolAST,
+        ErrorHandler errorHandler
+    ) {
+        System.out.println("=== 4. SYMBOLS TABLE ===");
+
+        SymbolTable symbolsTable = new SymbolTable();
+
+        SemanticAnalyzer.analyzeSymbols(
+                arbolAST,
+                symbolsTable,
+                errorHandler
+        );
+
+        symbolsTable.mostrar();
+
+        System.out.println();
+
+        return symbolsTable;
+    }
+
+    /**
+     * Phase 5: Semantic Analysis.
+     * @param arbolAST
+     * @param symbolsTable
+     * @param errorHandler
+     * @return true if there are no errors; false if there were.
+     */
+    private static boolean analizarSemantica(
+        List<ElementoAST> arbolAST,
+        SymbolTable symbolsTable,
+        ErrorHandler errorHandler
+    ) {
+        System.out.println("=== 5. ANÁLISIS SEMÁNTICO ===");
+
+        SemanticAnalyzer.analyzeSemantic(
+                arbolAST,
+                symbolsTable,
+                errorHandler
+        );
+
+        if (reportarSiHayErrores(errorHandler, "Semantic")) {
+            return false;
+        }
+
+        System.out.println(
+                "✓ Semantic Analysis is done."
+        );
+
+        System.out.println();
+
+        return true;
+    }
+
+    /**
+     * Phase 6: Intermediate code generation (TAC and quadruples)
+     * @param arbolAST
+     * @param output
+     */
+    private static void generateIntermediateCode(
+        List<ElementoAST> arbolAST,
+        Path output
+    ) {
+        System.out.println("=== 6. GENERACIÓN DE CÓDIGO INTERMEDIO ===");
+
+        GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
+        List<Cuadrupla> codigoIntermedio = generadorIR.generar(arbolAST);
+        String textoTAC = GeneradorCodigoIntermedio.aTexto(codigoIntermedio);
+
+        System.out.println();
+        System.out.println("Código de tres direcciones:");
+        System.out.println("-----------------------------------------");
+        System.out.println(textoTAC);
+        System.out.println("-----------------------------------------");
+        System.out.println();
+
+        System.out.println("Cuádruplas (op, arg1, arg2, resultado):");
+        for (int i = 0; i < codigoIntermedio.size(); i++) {
+            System.out.println(String.format("%3d  %s", i, codigoIntermedio.get(i).comoTupla()));
+        }
+        System.out.println();
+
+        try {
+            writeFile(output.resolve(TAC_FILE).toString(), textoTAC);
+            System.out.println("✓ Archivo generado correctamente: " + TAC_FILE);
+        } catch (IOException e) {
+            // No es fatal: el resto de la compilación continúa
+            System.err.println("[AVISO] No se pudo generar " + TAC_FILE + ": " + e.getMessage());
+        }
+        System.out.println();
+    }
+
+    /**
+     * Phase 7: JS code generation.
+     * @param arbolAST list of AST elements.
+     * @return JavaScript code.
+     */
+    private static String generarJavaScript(List<ElementoAST> arbolAST) {
+        System.out.println("=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===");
+
+        JSGenerator generador = new JSGenerator();
+
+        String JavaScriptCode =
+                generador.generar(arbolAST);
+
+        System.out.println();
+        System.out.println(
+                "Código JavaScript generado:"
+        );
+
+        System.out.println("-----------------------------------------");
+        System.out.println(JavaScriptCode);
+        System.out.println("-----------------------------------------");
+
+        System.out.println();
+
+        return JavaScriptCode;
+    }
+
+    /**
+     * Fase 8: escritura del archivo JavaScript de salida.
+     * @return true si se escribió; false si falló (error ya mostrado), lo que aborta.
+     */
+    private static boolean escribirJavaScript(
+        String JavaScriptCode,
+        Path output
+    ) {
+        System.out.println("=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===");
+
+        try {
+
+            writeFile(output.resolve(JS_FILE).toString(), JavaScriptCode);
+
+            System.out.println(
+                    "Archivo generado correctamente: "
+                            + JS_FILE
+            );
+
+            return true;
+
+        } catch (IOException e) {
+
+            System.err.println(
+                    "[ERROR] No se pudo generar el archivo."
+            );
+
+            System.err.println(
+                    "Detalle: " + e.getMessage()
+            );
+
+            return false;
+        }
+    }
+
+    private static void mostrarFinal() {
+        System.out.println();
+        System.out.println(ConsoleColors.GREEN + "Compilation completed successfully.");
     }
 }
