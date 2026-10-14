@@ -52,7 +52,7 @@ final class ResultadoCompilacion {
             System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8));
             System.setErr(new PrintStream(err, true, StandardCharsets.UTF_8));
             try {
-                Main.compile(codigoOrion, directorio);
+                Compiler.compile(codigoOrion, directorio);
             } finally {
                 System.setOut(outOriginal);
                 System.setErr(errOriginal);

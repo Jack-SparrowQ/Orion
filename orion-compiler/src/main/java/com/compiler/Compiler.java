@@ -17,7 +17,7 @@ import com.compiler.util.JSGenerator;
 
 import com.compiler.util.ConsoleColors;
 
-public class Main {
+public class Compiler {
 
         private static final String TAC_FILE = "programa.tac";
         private static final String JS_FILE = "program.js";
@@ -33,226 +33,37 @@ public class Main {
 
     static void compile(String orionCode, Path output) {
 
-        System.out.println("=================================================");
-        System.out.println("              COMPILADOR ORION");
-        System.out.println("=================================================");
-        System.out.println();
+        showHeader(ORION_CODE);
 
-        System.out.println("Código fuente:");
-        System.out.println("-----------------------------------------");
-        System.out.println(orionCode);
-        System.out.println("-----------------------------------------");
-        System.out.println();
+        ErrorHandler errorHandler  = new ErrorHandler();
 
+        Optional<List<Token>> tokens = lexicalAnalyzer(ORION_CODE, errorHandler);
 
-        // ============================================================
-        // 1. ANÁLISIS LÉXICO
-        // ============================================================
-
-        System.out.println("=== 1. FASE DE ANÁLISIS LÉXICO ===");
-
-        ErrorHandler errorHandler = new ErrorHandler();
-        Lexer lexer = new Lexer(
-                orionCode,
-                errorHandler
-        );
-
-        Tokenizer lexerAnalyzer = new Tokenizer(lexer);
-
-        lexerAnalyzer.run();
-
-        if(reportarSiHayErrores(errorHandler, "lexico")) {
-                return;
-        }
-
-        System.out.println(
-                "Total de tokens reconocidos: "
-                        + lexerAnalyzer.getNumTokens()
-        );
-
-        System.out.println();
-
-
-        // ============================================================
-        // 2. ANÁLISIS SINTÁCTICO
-        // ============================================================
-
-        System.out.println("=== 2. FASE DE ANÁLISIS SINTÁCTICO ===");
-
-        List<Token> tokensList = lexerAnalyzer.getTokensList();
-
-        Parser parser = new Parser(
-                tokensList,
-                errorHandler
-        );
-
-        List<ElementoAST> arbolAST = parser.parsear();
-
-        /*
-         * Si el Parser devuelve null significa que ocurrió
-         * algún error sintáctico.
-         */
-        if (reportarSiHayErrores(errorHandler, "sintactic")) {
+        if(tokens.isEmpty()) {
             return;
         }
 
-        System.out.println(
-                "✓ Análisis sintáctico completado correctamente."
-        );
+        Optional<List<ElementoAST>> ASTTree = analizeSyntax(tokens.get(), errorHandler);
 
-        System.out.println(
-                "Número de nodos principales: "
-                        + arbolAST.size()
-        );
+        if(ASTTree.isEmpty()) { return; }
 
-        System.out.println();
+        mostrarAST(ASTTree.get());
 
+        SymbolTable symbolsTable = construirSymbolsTable(ASTTree.get(), errorHandler);
 
-        // ============================================================
-        // 3. VISUALIZACIÓN DEL AST
-        // ============================================================
-
-        System.out.println("=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===");
-
-        ASTPrinter.printAST(arbolAST, "");
-
-        System.out.println();
-
-
-        // ============================================================
-        // 4. TABLA DE SÍMBOLOS
-        // ============================================================
-
-        System.out.println("=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===");
-
-        SymbolTable symbolsTable = new SymbolTable();
-
-        SemanticAnalyzer.analyzeSymbols(
-                arbolAST, 
-                symbolsTable, 
-                errorHandler
-        );
-
-        symbolsTable.mostrar();
-
-        System.out.println();
-
-
-        // ============================================================
-        // 5. ANÁLISIS SEMÁNTICO
-        // ============================================================
-
-        System.out.println("=== 5. ANÁLISIS SEMÁNTICO ===");
-
-        SemanticAnalyzer.analyzeSemantic(
-                arbolAST, 
-                symbolsTable, 
-                errorHandler
-        );
-
-        if (reportarSiHayErrores(errorHandler, "Semantic")) {
+        if(!analizarSemantica(ASTTree.get(), symbolsTable, errorHandler)) {
             return;
         }
 
-        System.out.println(
-                "✓ Análisis semántico completado correctamente."
-        );
+        generateIntermediateCode(ASTTree.get(), output);
 
-        System.out.println();
+        String jsCode = generarJavaScript(ASTTree.get());
 
-        // ============================================================
-        // 6. GENERACIÓN DE CÓDIGO INTERMEDIO
-        // ============================================================
-
-        System.out.println("=== 6. GENERACIÓN DE CÓDIGO INTERMEDIO ===");
-
-        GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
-        List<Cuadrupla> codigoIntermedio = generadorIR.generar(arbolAST);
-        String textoTAC = GeneradorCodigoIntermedio.aTexto(codigoIntermedio);
-
-        System.out.println();
-        System.out.println("Código de tres direcciones:");
-        System.out.println("-----------------------------------------");
-        System.out.println(textoTAC);
-        System.out.println("-----------------------------------------");
-        System.out.println();
-
-        System.out.println("Cuádruplas (op, arg1, arg2, resultado):");
-        for (int i = 0; i < codigoIntermedio.size(); i++) {
-        System.out.println(String.format("%3d  %s", i, codigoIntermedio.get(i).comoTupla()));
-        }
-        System.out.println();
-
-        try {
-                writeFile(TAC_FILE, textoTAC);
-                System.out.println("✓ Archivo generado correctamente: programa.tac");
-        } catch (IOException e) {
-        // No es fatal: el resto de la compilación continúa
-                System.err.println("[AVISO] No se pudo generar programa.tac: " + e.getMessage());
-        }
-        System.out.println();
-
-
-        // ============================================================
-        // 7. GENERACIÓN DE CÓDIGO JS
-        // ============================================================
-
-        System.out.println("=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===");
-
-        JSGenerator generador = new JSGenerator();
-
-        String JavaScriptCode =
-                generador.generar(arbolAST);
-
-        System.out.println();
-        System.out.println(
-                "Código JavaScript generado:"
-        );
-
-        System.out.println("-----------------------------------------");
-        System.out.println(JavaScriptCode);
-        System.out.println("-----------------------------------------");
-
-        System.out.println();
-
-
-        // ============================================================
-        // 8. GENERACIÓN DEL ARCHIVO
-        // ============================================================
-
-        System.out.println("=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===");
-
-        try {
-
-            writeFile(JS_FILE, JavaScriptCode);
-
-            System.out.println(
-                    "Archivo generado correctamente: "
-                            + JS_FILE
-            );
-
-        } catch (IOException e) {
-
-            System.err.println(
-                    "[ERROR] No se pudo generar el archivo."
-            );
-
-            System.err.println(
-                    "Detalle: " + e.getMessage()
-            );
-
+        if(!escribirJavaScript(jsCode, output)) {
             return;
         }
 
-
-        // ============================================================
-        // FIN
-        // ============================================================
-
-        System.out.println();
-        System.out.println("=================================================");
-        System.out.println("       COMPILACIÓN FINALIZADA CORRECTAMENTE");
-        System.out.println("=================================================");
+        mostrarFinal();
     }
 
 
@@ -263,7 +74,7 @@ public class Main {
 
     /**
      * Si la fase dejó errores en el gestor, los muestra y devuelve true
-     * para que main() aborte la compilación.
+     * para que Compiler() aborte la compilación.
      * @param errorHandler
      * @param phase
      * @return
@@ -284,7 +95,7 @@ public class Main {
         errorHandler.mostrarErrores();
 
         System.err.println();
-        System.err.println("[COMPILACIÓN ABORTADA]");
+        System.err.println(ConsoleColors.RED + "[COMPILACIÓN ABORTADA]" + ConsoleColors.RESET);
 
         return true;
     }
@@ -374,7 +185,7 @@ public class Main {
         }
 
         System.out.println(
-                "✓ Análisis sintáctico completado correctamente."
+                ConsoleColors.RED + "✓ Análisis sintáctico completado correctamente." + ConsoleColors.GREEN
         );
 
         System.out.println(
@@ -449,7 +260,7 @@ public class Main {
         }
 
         System.out.println(
-                "✓ Semantic Analysis is done."
+                ConsoleColors.RED + "✓ Semantic Analysis is done." + ConsoleColors.GREEN
         );
 
         System.out.println();
@@ -537,8 +348,8 @@ public class Main {
             writeFile(output.resolve(JS_FILE).toString(), JavaScriptCode);
 
             System.out.println(
-                    "Archivo generado correctamente: "
-                            + JS_FILE
+                    ConsoleColors.RED + "Archivo generado correctamente: "
+                            + JS_FILE + ConsoleColors.RESET
             );
 
             return true;
@@ -546,7 +357,7 @@ public class Main {
         } catch (IOException e) {
 
             System.err.println(
-                    "[ERROR] No se pudo generar el archivo."
+                    ConsoleColors.RED + "[ERROR] No se pudo generar el archivo." + ConsoleColors.RESET
             );
 
             System.err.println(
@@ -559,6 +370,6 @@ public class Main {
 
     private static void mostrarFinal() {
         System.out.println();
-        System.out.println(ConsoleColors.GREEN + "Compilation completed successfully.");
+        System.out.println(ConsoleColors.GREEN + "Compilation completed successfully." + ConsoleColors.RESET);
     }
 }
