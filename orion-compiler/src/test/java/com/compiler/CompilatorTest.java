@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
+import com.compiler.cli.Options.Mode;
+
 public class CompilatorTest {
     
     private static String lines(String... lines) {
@@ -40,7 +42,7 @@ public class CompilatorTest {
     void errorSemantico_printNoDeclarado() {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("print(x);"));
         // Caracteriza F1 (defecto conocido): el mismo E301 aparece dos veces.
-        assertEquals(2, ResultadoCompilacion.contar(r.stdout, "E301"), "ocurrencias de E301");
+        assertEquals(2, ResultadoCompilacion.contar(r.stderr, "E301"), "ocurrencias de E301");
         GoldenFile.verificar("error_semantico_print_no_declarado", r.informe());
     }
  
@@ -61,31 +63,71 @@ public class CompilatorTest {
         GoldenFile.verificar("error_semantico_condicion_if", r.informe());
     }
 
- 
+
     // ------------------------------------------------------------
-    // Politica de fallo de escritura de archivos
-    // (se comprueban propiedades, no el texto completo, porque el
-    //  mensaje de IOException depende del sistema operativo)
+    // Modos de compilacion (programa "hello" de docs/CLI.md)
     // ------------------------------------------------------------
- 
-    /** Si no se puede escribir el TAC: aviso por stderr y la compilacion continua. */
-    // @Test
-    // void fallaEscrituraTac_noEsFatal() {
-    //     ResultadoCompilacion r = ResultadoCompilacion.ejecutar(
-    //             lines("let a = 1;", "print(a);"), "programa.tac");
- 
-    //     assertTrue(r.stderr.contains("[AVISO] No se pudo generar programa.tac:"), "aviso del TAC");
-    //     assertTrue(r.archivos.containsKey("program.js"), "se sigue generando program.js");
-    //     assertTrue(r.stdout.contains("FINALIZADA CORRECTAMENTE"), "la compilacion termina");
-    // }
- 
-    // /** Si no se puede escribir el JS: error por stderr y la compilacion se detiene. */
-    // @Test
-    // void fallaEscrituraJs_esFatal() {
-    //     ResultadoCompilacion r = ResultadoCompilacion.ejecutar(
-    //             lines("let a = 1;", "print(a);"), "program.js");
- 
-    //     assertTrue(r.stderr.contains("[ERROR] No se pudo generar el archivo."), "error del JS");
-    //     assertFalse(r.stdout.contains("FINALIZADA CORRECTAMENTE"), "no llega al banner final");
-    // }
+
+    private static final String HELLO = lines("let a = 10;", "let b = 3;", "print(a + b * 2);");
+
+    /** Modo por defecto: solo genera JavaScript (ya no escribe el TAC). */
+    @Test
+    void compilar_generaSoloJavaScript() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(HELLO);
+        assertEquals(0, r.exitCode);
+        assertEquals("", r.stdout);
+        assertEquals("orion: generated programa.js\n", r.stderr);
+        assertEquals(java.util.Set.of("programa.js"), r.archivos.keySet());
+    }
+
+    @Test
+    void emitIr_generaSoloTac() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(HELLO, Mode.EMIT_IR);
+        assertEquals(0, r.exitCode);
+        assertEquals(java.util.Set.of("programa.tac"), r.archivos.keySet());
+        assertTrue(r.archivos.get("programa.tac").contains("print t2"), r.archivos.toString());
+    }
+
+    @Test
+    void check_noGeneraArchivos() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(HELLO, Mode.CHECK);
+        assertEquals(0, r.exitCode);
+        assertEquals("", r.stdout);
+        assertTrue(r.archivos.isEmpty());
+    }
+
+    @Test
+    void tokens_imprimeTokensEnStdout() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(HELLO, Mode.TOKENS);
+        assertEquals(0, r.exitCode);
+        assertTrue(r.stdout.startsWith("Token: LET"), r.stdout);
+        assertTrue(r.stdout.contains("Token: EOF"), r.stdout);
+        assertEquals("", r.stderr);
+        assertTrue(r.archivos.isEmpty());
+    }
+
+    /** Con error lexico: tokens reconocidos por stdout, diagnosticos por stderr. */
+    @Test
+    void tokens_conErrorLexico() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = @;"), Mode.TOKENS);
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stdout.contains("Token: LET"), r.stdout);
+        assertTrue(r.stderr.contains("E100"), r.stderr);
+    }
+
+    @Test
+    void ast_imprimeArbolEnStdout() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(HELLO, Mode.AST);
+        assertEquals(0, r.exitCode);
+        assertEquals(3, ResultadoCompilacion.contar(r.stdout, "├──"), r.stdout);
+        assertTrue(r.archivos.isEmpty());
+    }
+
+    /** Si no se puede escribir el artefacto: error por stderr y codigo 3. */
+    @Test
+    void fallaEscritura_devuelveErrorIo() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(HELLO, Mode.COMPILE, "programa.js");
+        assertEquals(3, r.exitCode);
+        assertTrue(r.stderr.contains("orion: error: cannot write"), r.stderr);
+    }
 }

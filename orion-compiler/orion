@@ -1,0 +1,3 @@
+#!/bin/sh
+# Orion compiler launcher. Build the JAR first with: mvn package
+exec java -jar "$(dirname "$0")/target/orion.jar" "$@"

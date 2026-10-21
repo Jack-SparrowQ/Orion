@@ -1,38 +1,15 @@
+=== EXIT CODE ===
+1
 === STDOUT ===
-=================================================
-              COMPILADOR ORION
-=================================================
-
-Código fuente:
------------------------------------------
-let a = b;
-b = 1;
-
------------------------------------------
-
-=== 1. FASE DE ANÁLISIS LÉXICO ===
-Token: LET             Lexema: 'let' [1:1]
-Token: IDENTIFICADOR   Lexema: 'a' [1:5]
-Token: IGUAL           Lexema: '=' [1:7]
-Token: IDENTIFICADOR   Lexema: 'b' [1:9]
-Token: PUNTO_Y_COMA    Lexema: ';' [1:10]
-Token: IDENTIFICADOR   Lexema: 'b' [2:1]
-Token: IGUAL           Lexema: '=' [2:3]
-Token: NUMERO          Lexema: '1' [2:5]
-Token: PUNTO_Y_COMA    Lexema: ';' [2:6]
-Token: EOF             Lexema: '' [2:7]
-Total de tokens reconocidos: 10
-
-=== 2. FASE DE ANÁLISIS SINTÁCTICO ===
-E2002[SINTACTICO] Línea 2, columna 1: Instruccion no reconocida: 'b'.
 === STDERR ===
 
 Se encontraron errores durante el análisis sintactic.
 
 ---------------- ERRORES ----------------
+E2002[SINTACTICO] Línea 2, columna 1: Instruccion no reconocida: 'b'.
 ------------------------------------------
 Total de errores: 1
 
-[COMPILACIÓN ABORTADA]
+[31m[COMPILACIÓN ABORTADA][0m
 === FILES ===
 (ninguno)

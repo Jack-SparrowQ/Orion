@@ -45,7 +45,7 @@ public class ErrorHandler {
         System.err.println("---------------- ERRORES ----------------");
 
         for (CompilationError error : errores) {
-            System.out.println(error);
+            System.err.println(error);
         }
 
         System.err.println("------------------------------------------");

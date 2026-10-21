@@ -1,18 +1,17 @@
-from pathlib import Path
-content = r"""# Orion Command-Line Interface (CLI) Design
+# Orion Command-Line Interface (CLI) Design
 
-> **Status:** Design proposal only. No implementation changes have been made.
+> **Status:** Implemented. Section 1 describes the project before the CLI was added.
 >
 > This document adapts the proposed CLI requirements to the current capabilities and structure of the Orion compiler.
 
-## 1. Current Project Constraints
+## 1. Project Constraints (before the CLI)
 
 The following facts have been verified in the source code and `pom.xml`:
 
-- **Input:** The source program is hard-coded in `Main` as `CODIGO_ORION`. The compiler does not read source files or parse command-line arguments.
+- **Input:** The source program is hard-coded in `Compiler` as `ORION_CODE`. The compiler does not read source files or parse command-line arguments.
 - **Output:** Output filenames are fixed in the current working directory: `program.js` and `programa.tac`. Both are written on every run.
 - **Backend:** `JSGenerator` is the only backend. Three-address code (TAC) is an intermediate representation, not a backend.
-- **Compiler phases:** Lexical analysis, parsing, symbol-table construction, semantic analysis, intermediate representation (IR), and JavaScript generation all exist. Starting at step 3, each phase is implemented as a separate method in `Main`.
+- **Compiler phases:** Lexical analysis, parsing, symbol-table construction, semantic analysis, intermediate representation (IR), and JavaScript generation all exist. Starting at step 3, each phase is implemented as a separate method in `Compiler`.
 - **Console output:** Output is hard-coded throughout the project. `Tokenizer.run()`, `SemanticAnalyzer`, `SymbolTable.mostrar()`, `ASTPrinter`, and `ErrorHandler` print directly to the console. In addition, `ErrorHandler.mostrarErrores` currently writes to stdout instead of stderr.
 - **Exit status:** The process always exits with status `0`, even when errors occur (issue F6).
 - **Version and packaging:** The only version declaration is in `pom.xml` (`1.0-SNAPSHOT`). There is no JAR plugin configuration, `orion` launcher script, or `examples/` directory.
@@ -57,7 +56,7 @@ to work without informational messages mixed into the token stream.
 | `--ast` alone    | Through parsing                                                  | None                    |
 | `--tokens` alone | Lexical analysis only                                            | None                    |
 
-`--tokens` and `--ast` are inspection modes. Unless `--check` or `--emit-ir` is also specified, compilation stops after the requested inspection phase and no file is written.
+Only one mode may be given per invocation; combining modes (for example `--check --tokens`) is a usage error with exit code `2`. `--tokens` and `--ast` never write files.
 
 ### Exit codes
 
@@ -97,7 +96,6 @@ E301[SEMANTIC] Line 2, column 5: ...
   - More than one input file: exit code `2`.
   - File does not exist or cannot be read: exit code `3`.
   - Empty file: accepted and compiled, as in the current behavior.
-- **Status:** Not implemented. File reading must be added to the CLI layer.
 
 ### `--help`, `-h`
 
@@ -106,7 +104,6 @@ E301[SEMANTIC] Line 2, column 5: ...
 - **Compatibility:** Takes precedence over all other arguments; the remaining arguments are ignored.
 - **Output:** Usage text to stdout; exit code `0`.
 - **Errors:** None expected.
-- **Status:** Not implemented; no compiler changes block this option.
 
 ### `--version`, `-V`
 
@@ -114,17 +111,15 @@ E301[SEMANTIC] Line 2, column 5: ...
 - **Arguments:** None.
 - **Compatibility:** `--help` takes precedence if both are present.
 - **Output:** `orion 1.0-SNAPSHOT` to stdout, with exit code `0`. When running unpackaged classes, display `orion (development version)`.
-- **Status:** Partially supported by existing project metadata. Build configuration is needed to expose the `pom.xml` version to the application, for example through resource filtering or the JAR manifest.
 
 ### `--output`, `-o`
 
 - **Purpose:** Set the output path.
 - **Arguments:** One path, or `-` to write the artifact to stdout.
-- **Compatibility:** Only with the default compilation mode or `--emit-ir`, because these modes generate artifacts. Incompatible with `--check`, and with `--tokens` or `--ast` when `--emit-ir` is not also specified.
+- **Compatibility:** Only with the default compilation mode or `--emit-ir`, because these modes generate artifacts.
 - **Default output:** `<basename>.js` or `<basename>.tac` in the **current working directory**, not beside the source file.
 - **Behavior:** Create parent directories when necessary, overwrite an existing output file, and refuse to overwrite the input source file (exit code `2`).
 - **Errors:** Missing path argument: exit code `2`. Any output-write failure: exit code `3`.
-- **Status:** Not implemented. Output names are currently fixed constants, and `compilar` accepts only a directory.
 
 ### `--verbose`
 
@@ -132,7 +127,6 @@ E301[SEMANTIC] Line 2, column 5: ...
 - **Arguments:** None.
 - **Compatibility:** Compatible with all options except `--quiet`; conflict results in exit code `2`.
 - **Output:** To stderr, show one line per phase with its counts, the symbol table, quadruples, and the path of the written artifact.
-- **Status:** Not implemented. The current direct `println` calls in `Tokenizer`, `SemanticAnalyzer`, and `SymbolTable` must be separated from presentation logic first.
 
 ### `--quiet`
 
@@ -140,7 +134,6 @@ E301[SEMANTIC] Line 2, column 5: ...
 - **Arguments:** None.
 - **Compatibility:** Compatible with all options except `--verbose`; conflict results in exit code `2`.
 - **Output:** No informational output on success. Errors and explicitly requested data (`--tokens`, `--ast`, and `-o -`) are never suppressed.
-- **Status:** Depends on separating presentation from compiler logic, as with `--verbose`.
 - **Default mode:** Print one informational line to stderr after success, for example:
 
   ```text
@@ -151,25 +144,24 @@ E301[SEMANTIC] Line 2, column 5: ...
 
 - **Purpose:** Validate a source program without generating an artifact.
 - **Arguments:** None.
-- **Compatibility:** Compatible with `--tokens`, `--ast`, `--verbose`, and `--quiet`. Incompatible with `--emit-ir` and `-o`.
+- **Compatibility:** Compatible with `--verbose` and `--quiet`. Exclusive with the other modes; incompatible with `-o`.
 - **Output:** Nothing on success, apart from the default informational line when not quiet.
 - **Errors:** Diagnostics to stderr; exit code `1`.
-- **Status:** Nearly ready. The compiler already has lexical, syntactic, symbol-table, and semantic validation phases. The CLI needs to stop after semantic analysis and return the correct exit status (issue F6). Current semantic validation is limited (E301, E302, E304) and has known issues F1 and F2.
+- **Limitation:** Semantic validation is limited (E301, E302, E304) and has known issues F1 and F2.
 
 ### `--emit-ir`
 
 - **Purpose:** Generate the textual intermediate representation (three-address code, or TAC).
 - **Arguments:** None.
-- **Compatibility:** Compatible with `-o`, `--tokens`, `--ast`, `--verbose`, and `--quiet`. Incompatible with `--check`.
+- **Compatibility:** Compatible with `-o`, `--verbose`, and `--quiet`. Exclusive with the other modes.
 - **Output:** Write `<basename>.tac`, or the path supplied by `-o`. Do not generate JavaScript. Display quadruples only with `--verbose`.
 - **Errors:** Validate the program first. If compilation errors occur, do not write IR and return exit code `1`.
-- **Status:** The `ir/GeneradorCodigoIntermedio` component exists. The CLI must stop after phase 6 and support configurable output paths.
 
 ### `--tokens`
 
 - **Purpose:** Display tokens produced by lexical analysis.
 - **Arguments:** None.
-- **Compatibility:** Compatible with other options according to the matrix below.
+- **Compatibility:** Compatible with `--verbose` and `--quiet`. Exclusive with the other modes; incompatible with `-o`.
 - **Output:** One token per line on stdout, using the current token format, including `EOF`. For example:
 
   ```text
@@ -178,13 +170,12 @@ E301[SEMANTIC] Line 2, column 5: ...
   ```
 
 - **Errors:** Print tokens recognized before the failure, then lexical diagnostics to stderr; exit code `1`.
-- **Status:** Token data is available through `Tokenizer.getTokensList()`. The printing logic must be moved out of `Tokenizer.run()`.
 
 ### `--ast`
 
 - **Purpose:** Display the abstract syntax tree (AST).
 - **Arguments:** None.
-- **Compatibility:** Compatible with other options according to the matrix below.
+- **Compatibility:** Compatible with `--verbose` and `--quiet`. Exclusive with the other modes; incompatible with `-o`.
 - **Output:** Print the current `ASTPrinter` format to stdout. Example:
 
   ```text
@@ -194,7 +185,7 @@ E301[SEMANTIC] Line 2, column 5: ...
   ```
 
 - **Errors:** If parsing fails, no AST is printed; diagnostics go to stderr and the exit code is `1`.
-- **Status:** Nearly ready; the CLI only needs to stop after parsing. Limitation: `ASTPrinter` currently handles only variable declarations, `if` statements, and print statements.
+- **Limitation:** `ASTPrinter` handles only variable declarations, `if` statements, and print statements, and prints its labels in Spanish (`[Declaración Variable]`, `[Instrucción Imprimir]`).
 
 ### `--target`
 
@@ -205,19 +196,7 @@ E301[SEMANTIC] Line 2, column 5: ...
 
 ## 4. Option Compatibility
 
-Legend: `✓` = compatible; `✗` = incompatible.
-
-| Option      | `--check` | `--emit-ir` |            `--tokens` |               `--ast` | `-o`                  | `--verbose` | `--quiet` |
-| ----------- | --------: | ----------: | --------------------: | --------------------: | --------------------- | ----------: | --------: |
-| `--check`   |         — |           ✗ |                     ✓ |                     ✓ | ✗                     |           ✓ |         ✓ |
-| `--emit-ir` |         ✗ |           — |                     ✓ |                     ✓ | ✓                     |           ✓ |         ✓ |
-| `--tokens`  |         ✓ |           ✓ |                     — |                     ✓ | Only with `--emit-ir` |           ✓ |         ✓ |
-| `--ast`     |         ✓ |           ✓ |                     ✓ |                     — | Only with `--emit-ir` |           ✓ |         ✓ |
-| `-o`        |         ✗ |           ✓ | Only with `--emit-ir` | Only with `--emit-ir` | —                     |           ✓ |         ✓ |
-| `--verbose` |         ✓ |           ✓ |                     ✓ |                     ✓ | ✓                     |           — |         ✗ |
-| `--quiet`   |         ✓ |           ✓ |                     ✓ |                     ✓ | ✓                     |           ✗ |         — |
-
-Any incompatible combination returns exit code `2` and produces a message naming both conflicting options.
+Modes (`--check`, `--emit-ir`, `--tokens`, `--ast`) are mutually exclusive; repeating the same mode is allowed. `-o` is accepted only by the default mode and `--emit-ir`. `--verbose` and `--quiet` cannot be combined. Every conflict returns exit code `2` with a message naming both options.
 
 ## 5. Example Commands
 
@@ -253,7 +232,7 @@ The `.tac` extension follows the project's current naming convention; the extens
 
 ### Expected TAC output
 
-For `--emit-ir` with output directed to stdout (`-o -`), the expected output for the example program is:
+For `--emit-ir` with output directed to stdout (`-o -`), the expected output for the example program is (the generator indents each instruction with four spaces):
 
 ```text
 a = 10
@@ -300,32 +279,14 @@ Exit codes: 0 success, 1 source errors, 2 usage error, 3 I/O error.
 - **Subcommands** (for example, `orion check`, `orion ast`): potentially more extensible, but the requested interface uses options, and subcommands are unnecessary for the current project size.
 - **CLI library such as picocli:** reduces custom parsing code but introduces a dependency into a project that currently only uses JUnit. For educational purposes, a small custom parser of approximately 100 lines in a `cli` package is recommended. Suggested classes: `Options`, `ArgumentParser`, and `Cli`.
 
-## 7. Implementation Roadmap
+## 7. Implementation
 
-Each step should be implemented and verified independently with tests.
+- `Options.parse` (package `com.compiler.cli`) parses the command line; invalid input raises `Options.UsageException`.
+- `Compiler.run(String[])` handles help, version, input reading, default output paths, and exit codes. `Compiler.compile(...)` runs the phases up to the selected mode.
+- The phase trace goes to stderr only with `--verbose`; diagnostics always go to stderr.
+- `--version` reads `Implementation-Version` from the JAR manifest (`maven-jar-plugin` in `pom.xml`).
+- Launchers: `orion` (POSIX shell) and `orion.cmd` (Windows) run `target/orion.jar`. Build it with `mvn package`.
+- Example program: `examples/hello.orion`.
+- Tests: `OptionsTest` (parser), `CliTest` (`Compiler.run`), and `CompilatorTest` (modes and golden files).
 
-1. **Compilation result and exit status** — fix issue F6. This changes runtime behavior and requires approval.
-2. **Separate presentation from compiler logic** — remove direct console printing from `Tokenizer`, `SemanticAnalyzer`, `SymbolTable`, `ASTPrinter`, and `ErrorHandler`. Define verbose, normal, and quiet levels, and always send errors to stderr. This enables `--verbose`, `--quiet`, and `--tokens`.
-3. **Argument parser, `--help`, and `--version`** — configure the build to expose the version and add an `orion` launcher script.
-4. **File input and output** — implement `-o`, default output paths, parent-directory creation, and protection against overwriting the source file.
-5. **Compilation modes** — implement `--check`, `--emit-ir`, `--tokens`, and `--ast`.
-6. **Future: `--target`** — add only when a second backend exists.
-
-The current 14 characterization tests should remain valid. The new CLI can be introduced in a separate package while `Main.compilar` retains its complete existing trace until a decision is made to retire it.
-
-## 8. Decisions to Confirm
-
-The following defaults are recommended:
-
-1. **Default output path:** `<basename>.js` and `<basename>.tac` in the current working directory. This replaces the current fixed filenames `program.js` and `programa.tac`.
-2. **IR extension:** `.tac`, not `.ir`.
-3. **No arguments:** display help and exit with code `2`. This removes the current fixed-program demo behavior; preserving it would require a dedicated option.
-4. **No `--target` for now:** wait until a second backend exists.
-5. **Informational messages to stderr:** reserve stdout for data.
-6. **Inspection semantics:** `--tokens` and `--ast` alone do not generate files.
-
-After these decisions are approved, implementation should begin with step 1 (exit status), because it is the only first-step change that alters existing behavior.
-"""
-path = Path("/mnt/data/document.md")
-path.write_text(content, encoding="utf-8")
-print(f"Created: {path}\nSize: {path.stat().st_size} bytes")
+Decisions taken: default output in the current working directory, `.tac` extension for IR, no arguments shows help with exit code `2`, no `--target`, informational messages on stderr, and one mode per invocation.

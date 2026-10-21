@@ -1,5 +1,6 @@
 package com.compiler.semantic;
 
+import java.io.PrintStream;
 import java.util.LinkedHashMap;
 
 public class SymbolTable {
@@ -50,9 +51,9 @@ public class SymbolTable {
     }
 
 // Muestra la tabla en formato tabular, en orden de declaración
-public void mostrar() {
+public void mostrar(PrintStream out) {
     if (symbols.isEmpty()) {
-        System.out.println("(La tabla de símbolos está vacía)");
+        out.println("(La tabla de símbolos está vacía)");
         return;
     }
 
@@ -69,12 +70,12 @@ public void mostrar() {
             + "+" + "-".repeat(7)
             + "+" + "-".repeat(9) + "+";
 
-    System.out.println(separador);
-    System.out.printf(formato, "Nombre", "Tipo", "Categoría", "Línea", "Columna");
-    System.out.println(separador);
+    out.println(separador);
+    out.printf(formato, "Nombre", "Tipo", "Categoría", "Línea", "Columna");
+    out.println(separador);
 
     for (Symbol s : symbols.values()) {
-        System.out.printf(formato,
+        out.printf(formato,
                 s.getNombre(),
                 String.valueOf(s.getTipo()),
                 String.valueOf(s.getCategoria()),
@@ -82,6 +83,6 @@ public void mostrar() {
                 String.valueOf(s.getColumna()));
     }
 
-    System.out.println(separador);
+    out.println(separador);
 }
 }
