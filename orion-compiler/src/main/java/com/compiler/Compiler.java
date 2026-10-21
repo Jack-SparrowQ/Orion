@@ -17,6 +17,7 @@ import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
+import com.compiler.parser.ast.Sentencia;
 import com.compiler.semantic.*;
 import com.compiler.util.ASTPrinter;
 import com.compiler.util.JSGenerator;
@@ -145,7 +146,7 @@ public class Compiler {
 
         if(mode == Mode.TOKENS) { return EXIT_OK; }
 
-        Optional<List<ElementoAST>> ASTTree = analizeSyntax(tokens.get(), errorHandler);
+        Optional<List<Sentencia>> ASTTree = analizeSyntax(tokens.get(), errorHandler);
 
         if(ASTTree.isEmpty()) { return EXIT_SOURCE_ERRORS; }
 
@@ -318,7 +319,7 @@ public class Compiler {
      * @param errorHandler
      * @return the AST, or empty if there were syntax errors.
      */
-    private static Optional<List<ElementoAST>> analizeSyntax(
+    private static Optional<List<Sentencia>> analizeSyntax(
         List<Token> tokensList,
         ErrorHandler errorHandler
     ) {
@@ -329,7 +330,7 @@ public class Compiler {
                 errorHandler
         );
 
-        List<ElementoAST> arbolAST = parser.parsear();
+        List<Sentencia> arbolAST = parser.parsear();
 
         if (reportarSiHayErrores(errorHandler, "sintactic")) {
             return Optional.empty();
@@ -357,7 +358,7 @@ public class Compiler {
      * @return symbols table.
      */
     private static SymbolTable construirSymbolsTable(
-        List<ElementoAST> arbolAST,
+        List<Sentencia> arbolAST,
         ErrorHandler errorHandler
     ) {
         info.println("=== 3. SYMBOLS TABLE ===");
@@ -385,7 +386,7 @@ public class Compiler {
      * @return true if there are no errors; false if there were.
      */
     private static boolean analizarSemantica(
-        List<ElementoAST> arbolAST,
+        List<Sentencia> arbolAST,
         SymbolTable symbolsTable,
         ErrorHandler errorHandler
     ) {
@@ -415,7 +416,7 @@ public class Compiler {
      * @param arbolAST
      * @return the three-address code as text.
      */
-    private static String generateIntermediateCode(List<ElementoAST> arbolAST) {
+    private static String generateIntermediateCode(List<Sentencia> arbolAST) {
         info.println("=== 5. GENERACIÓN DE CÓDIGO INTERMEDIO ===");
 
         GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
@@ -443,7 +444,7 @@ public class Compiler {
      * @param arbolAST list of AST elements.
      * @return JavaScript code.
      */
-    private static String generarJavaScript(List<ElementoAST> arbolAST) {
+    private static String generarJavaScript(List<Sentencia> arbolAST) {
         info.println("=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===");
 
         JSGenerator generador = new JSGenerator();

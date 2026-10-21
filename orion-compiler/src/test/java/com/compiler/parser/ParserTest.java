@@ -12,15 +12,16 @@ import com.compiler.error.CompilationError;
 import com.compiler.error.ErrorHandler;
 import com.compiler.lexer.Lexer;
 import com.compiler.lexer.Tokenizer;
-import com.compiler.parser.Nodes.NodoDeclaracion;
-import com.compiler.parser.Nodes.NodoIf;
-import com.compiler.parser.Nodes.NodoImprimir;
+import com.compiler.parser.ast.NodoDeclaracion;
+import com.compiler.parser.ast.NodoIf;
+import com.compiler.parser.ast.NodoImprimir;
+import com.compiler.parser.ast.Sentencia;
 
 public class ParserTest {
 
     private final ErrorHandler errores = new ErrorHandler();
 
-    private List<ElementoAST> parse(String codigo) {
+    private List<Sentencia> parse(String codigo) {
         Tokenizer tokenizer = new Tokenizer(new Lexer(codigo, errores));
         tokenizer.run();
         return new Parser(tokenizer.getTokensList(), errores).parsear();
@@ -28,9 +29,9 @@ public class ParserTest {
 
     /** Forma parentizada de la expresión de un print. */
     private String expr(String expresion) {
-        List<ElementoAST> programa = parse("print(" + expresion + ");");
+        List<Sentencia> programa = parse("print(" + expresion + ");");
         assertEquals("", errores(), "errores inesperados");
-        return ((NodoImprimir) programa.get(0)).expresion.toString();
+        return ((NodoImprimir) programa.get(0)).expresion().toString();
     }
 
     private String errores() {
@@ -62,13 +63,13 @@ public class ParserTest {
 
     @Test
     void sentencias() {
-        List<ElementoAST> programa = parse("let a = 1; const b = a; if (a > 0) { print(a); print(b); }");
+        List<Sentencia> programa = parse("let a = 1; const b = a; if (a > 0) { print(a); print(b); }");
         assertEquals("", errores());
         assertEquals(3, programa.size());
         assertInstanceOf(NodoDeclaracion.class, programa.get(0));
         assertInstanceOf(NodoDeclaracion.class, programa.get(1));
         NodoIf nodoIf = assertInstanceOf(NodoIf.class, programa.get(2));
-        assertEquals(2, nodoIf.bloqueTrue.sentencias.size());
+        assertEquals(2, nodoIf.bloqueTrue().sentencias().size());
     }
 
     @Test

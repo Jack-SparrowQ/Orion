@@ -7,14 +7,7 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
 import com.compiler.lexer.Token;
 import com.compiler.lexer.TokenType;
-import com.compiler.parser.Nodes.NodoAgrupacion;
-import com.compiler.parser.Nodes.NodoBinario;
-import com.compiler.parser.Nodes.NodoBloque;
-import com.compiler.parser.Nodes.NodoDeclaracion;
-import com.compiler.parser.Nodes.NodoExpresionSimple;
-import com.compiler.parser.Nodes.NodoIf;
-import com.compiler.parser.Nodes.NodoImprimir;
-import com.compiler.parser.Nodes.NodoUnario;
+import com.compiler.parser.ast.*;
 
 public class Parser {
 
@@ -100,8 +93,8 @@ public class Parser {
     }
     
     //Metodo principal
-    public List<ElementoAST> parsear() {
-        List<ElementoAST> program = new ArrayList<>();
+    public List<Sentencia> parsear() {
+        List<Sentencia> program = new ArrayList<>();
         try {
             while (!isAtEnd()) {
                 program.add(sentencia());
@@ -115,7 +108,7 @@ public class Parser {
     }
 
     // 2. El Enrutador: Decide qué regla gramatical usar viendo el token actual
-    private ElementoAST sentencia() {
+    private Sentencia sentencia() {
         if (verificar(TokenType.LET) || verificar(TokenType.CONST)) {
             return declaracionVariable(); 
         }
@@ -131,7 +124,7 @@ public class Parser {
     }
 
     // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
-    private ElementoAST declaracionVariable() {
+    private Sentencia declaracionVariable() {
         // 1. Como ya verificamos en el paso anterior, avanzamos de forma segura y guardamos si fue 'let' o 'const'
         Token palabraClave = avanzar(); 
         
@@ -142,7 +135,7 @@ public class Parser {
         consumir(TokenType.IGUAL, "Se esperaba '=' después del nombre de la variable.");
         
         // 4. Obligatoriamente debe seguir un número literal
-        ElementoAST valor = expresion();        
+        Expresion valor = expresion();        
         // 5. Obligatoriamente debe cerrar con ';'
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la sentencia.");
         
@@ -150,10 +143,10 @@ public class Parser {
     }
 
     // Regla: "print" "(" expresion ")" ";"
-    private ElementoAST declaracionImprimir() {
+    private Sentencia declaracionImprimir() {
         consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'print'.");
         
-        ElementoAST valorAImprimir = expresion(); // Leemos lo que está adentro
+        Expresion valorAImprimir = expresion(); // Leemos lo que está adentro
         
         consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después del valor a imprimir.");
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la instrucción print.");
@@ -162,10 +155,10 @@ public class Parser {
     }
 
     // Regla: "if" "(" expresion ")" "{" sentencias "}"
-    private ElementoAST declaracionIf() {
+    private Sentencia declaracionIf() {
         consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'if'.");
         
-        ElementoAST condicion = expresion(); // Leemos la condición
+        Expresion condicion = expresion(); // Leemos la condición
         
         consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la condición del if.");
         
@@ -178,7 +171,7 @@ public class Parser {
 
     // Regla auxiliar para leer todo lo que está dentro de { }
     private NodoBloque parsearBloque() {
-        List<ElementoAST> sentenciasInternas = new ArrayList<>();
+        List<Sentencia> sentenciasInternas = new ArrayList<>();
         
         // Seguimos leyendo sentencias hasta encontrar la llave derecha '}' o el EOF
         while (!verificar(TokenType.LLAVE_DER) && !isAtEnd()) {
@@ -194,96 +187,99 @@ public class Parser {
 // ================================================================
 
 // expresion -> logicoOr
-private ElementoAST expresion() {
+private Expresion expresion() {
     return logicoOr();
 }
 
 // logicoOr -> logicoAnd ( "||" logicoAnd )*
-private ElementoAST logicoOr() {
-    ElementoAST izquierda = logicoAnd();
+private Expresion logicoOr() {
+    Expresion izquierda = logicoAnd();
     while (coinciden(TokenType.OR_LOGICO)) {
         Token operador = anterior();
-        ElementoAST derecha = logicoAnd();
+        Expresion derecha = logicoAnd();
         izquierda = new NodoBinario(izquierda, operador, derecha);
     }
     return izquierda;
 }
 
 // logicoAnd -> igualdad ( "&&" igualdad )*
-private ElementoAST logicoAnd() {
-    ElementoAST izquierda = igualdad();
+private Expresion logicoAnd() {
+    Expresion izquierda = igualdad();
     while (coinciden(TokenType.AND_LOGICO)) {
         Token operador = anterior();
-        ElementoAST derecha = igualdad();
+        Expresion derecha = igualdad();
         izquierda = new NodoBinario(izquierda, operador, derecha);
     }
     return izquierda;
 }
 
 // igualdad -> comparacion ( ("==" | "!=") comparacion )*
-private ElementoAST igualdad() {
-    ElementoAST izquierda = comparacion();
+private Expresion igualdad() {
+    Expresion izquierda = comparacion();
     while (coinciden(TokenType.COMPARACION_IGUAL, TokenType.DIFERENTE)) {
         Token operador = anterior();
-        ElementoAST derecha = comparacion();
+        Expresion derecha = comparacion();
         izquierda = new NodoBinario(izquierda, operador, derecha);
     }
     return izquierda;
 }
 
 // comparacion -> termino ( ("<" | "<=" | ">" | ">=") termino )*
-private ElementoAST comparacion() {
-    ElementoAST izquierda = termino();
+private Expresion comparacion() {
+    Expresion izquierda = termino();
     while (coinciden(TokenType.MENOR, TokenType.MENOR_IGUAL,
                      TokenType.MAYOR, TokenType.MAYOR_IGUAL)) {
         Token operador = anterior();
-        ElementoAST derecha = termino();
+        Expresion derecha = termino();
         izquierda = new NodoBinario(izquierda, operador, derecha);
     }
     return izquierda;
 }
 
 // termino -> factor ( ("+" | "-") factor )*
-private ElementoAST termino() {
-    ElementoAST izquierda = factor();
+private Expresion termino() {
+    Expresion izquierda = factor();
     while (coinciden(TokenType.SUMA, TokenType.RESTA)) {
         Token operador = anterior();
-        ElementoAST derecha = factor();
+        Expresion derecha = factor();
         izquierda = new NodoBinario(izquierda, operador, derecha);
     }
     return izquierda;
 }
 
 // factor -> unario ( ("*" | "/" | "%") unario )*
-private ElementoAST factor() {
-    ElementoAST izquierda = unario();
+private Expresion factor() {
+    Expresion izquierda = unario();
     while (coinciden(TokenType.MULTI, TokenType.DIVISION, TokenType.MODULO)) {
         Token operador = anterior();
-        ElementoAST derecha = unario();
+        Expresion derecha = unario();
         izquierda = new NodoBinario(izquierda, operador, derecha);
     }
     return izquierda;
 }
 
 // unario -> ("!" | "-") unario | primario
-private ElementoAST unario() {
+private Expresion unario() {
     if (coinciden(TokenType.NEGACION_LOGICA, TokenType.RESTA)) {
         Token operador = anterior();
-        ElementoAST operando = unario();
+        Expresion operando = unario();
         return new NodoUnario(operador, operando);
     }
     return primario();
 }
 
 // primario -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
-private ElementoAST primario() {
-    if (coinciden(TokenType.NUMERO, TokenType.IDENTIFICADOR,
-                  TokenType.TRUE, TokenType.FALSE)) {
-        return new NodoExpresionSimple(anterior());
+private Expresion primario() {
+    if (coinciden(TokenType.NUMERO, TokenType.TRUE, TokenType.FALSE)) {
+        return new NodoLiteral(anterior());
+    }
+
+    if (coinciden(TokenType.IDENTIFICADOR)) {
+        return new NodoVariable(anterior());
     }
 
     if (coinciden(TokenType.PARENTESIS_IZQ)) {
-        ElementoAST interior = expresion();
+        Expresion interior = expresion();
         consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la expresión.");
         return new NodoAgrupacion(interior);
     }
