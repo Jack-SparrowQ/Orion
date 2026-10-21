@@ -42,7 +42,7 @@ public class Parser {
 
      // Texto legible para mostrar el token encontrado
      private String describir(Token token) {
-        return token.tipo == TokenType.EOF ? "End of the file": "'" + token.lexema + "'";
+        return token.tipo == TokenType.EOF ? "el fin del archivo" : "'" + token.lexema + "'";
      }
 
     // --- MÉTODOS DE APOYO Y NAVEGACIÓN ---
@@ -96,7 +96,7 @@ public class Parser {
         Token tokenError = peek();
 
         throw error(tokenError, "E201",
-         mensajeError + "found "+ describir(tokenError) + ".");
+         mensajeError + " Se encontró " + describir(tokenError) + ".");
     }
     
     //Metodo principal

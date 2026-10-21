@@ -134,10 +134,10 @@ public class Lexer {
                     return createToken(TokenType.LLAVE_DER, "}");
                 case '[':
                     avanzar();
-                    return createToken(TokenType.CORCHETE_DER, "[");
+                    return createToken(TokenType.CORCHETE_IZQ, "[");
                 case ']':
                     avanzar();
-                    return createToken(TokenType.CORCHETE_IZQ, "]");
+                    return createToken(TokenType.CORCHETE_DER, "]");
                 case ';':
                     avanzar();
                     return createToken(TokenType.PUNTO_Y_COMA, ";");
@@ -203,9 +203,9 @@ public class Lexer {
             }
 
             // 3. Detectar Números
-            if (Character.isDigit(c)) {
+            if (esDigito(c)) {
                 StringBuilder numero = new StringBuilder();
-                while (posicionActual < codigoFuente.length() && Character.isDigit(caracterActual())) {
+                while (posicionActual < codigoFuente.length() && esDigito(caracterActual())) {
                     numero.append(caracterActual());
                     avanzar();
                 }
@@ -246,7 +246,13 @@ public class Lexer {
         }
 
         // Si el bucle termina, llegamos al final del archivo
-        return new Token(TokenType.EOF, "",startLine,startColumn);
+        // Posición real del final (no la del inicio del último token).
+        return new Token(TokenType.EOF, "", line, column);
+    }
+
+    // Solo dígitos ASCII: Character.isDigit acepta también '٣', '৩'... que luego no se pueden convertir a número.
+    private static boolean esDigito(char c) {
+        return c >= '0' && c <= '9';
     }
 
     //Metodo lookahead
