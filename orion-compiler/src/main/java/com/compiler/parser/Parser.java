@@ -2,6 +2,7 @@ package com.compiler.parser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
@@ -15,7 +16,7 @@ public class Parser {
     private final List<Token> tokens;
     private int actual = 0; // Puntero al token bajo análisis
 
-    // Excepción interna: solo sirve para abortar el parseo.
+    // Excepción interna: aborta la sentencia actual hasta sentenciaORecuperar().
     // El mensaje del error ya queda guardado en el ErrorHandler.
     private static class ParseError extends RuntimeException {}
 
@@ -95,16 +96,21 @@ public class Parser {
     //Metodo principal
     public List<Sentencia> parsear() {
         List<Sentencia> program = new ArrayList<>();
-        try {
-            while (!isAtEnd()) {
-                program.add(sentencia());
-            }
-            return program;
-        } catch (ParseError e) {
-            // El error ya fue registrado en el ErrorHandler (modo fail-fast).
+        while (!isAtEnd()) {
+            sentenciaORecuperar(false).ifPresent(program::add);
         }
-
         return program;
+    }
+
+    // Parsea una sentencia. Si tiene un error (ya registrado en el ErrorHandler),
+    // salta hasta la siguiente sentencia para seguir buscando errores.
+    private Optional<Sentencia> sentenciaORecuperar(boolean enBloque) {
+        try {
+            return Optional.of(sentencia());
+        } catch (ParseError e) {
+            sincronizar(enBloque);
+            return Optional.empty();
+        }
     }
 
     // 2. El Enrutador: Decide qué regla gramatical usar viendo el token actual
@@ -175,7 +181,7 @@ public class Parser {
         
         // Seguimos leyendo sentencias hasta encontrar la llave derecha '}' o el EOF
         while (!verificar(TokenType.LLAVE_DER) && !isAtEnd()) {
-            sentenciasInternas.add(sentencia());
+            sentenciaORecuperar(true).ifPresent(sentenciasInternas::add);
         }
         
         consumir(TokenType.LLAVE_DER, "Se esperaba '}' al final del bloque.");
@@ -289,13 +295,24 @@ private Expresion primario() {
                     + describir(peek()) + ".");
 }
 
-    private void sincronizar() {
+    // Modo pánico: descarta tokens hasta pasar un ';' o hasta el inicio de otra
+    // sentencia (o el '}' que cierra el bloque). Consume al menos un token para
+    // no quedar en un bucle infinito, salvo el '}' del bloque actual, que debe
+    // quedar para cerrarlo (el bucle de parsearBloque termina en él).
+    private void sincronizar(boolean enBloque) {
+        if (!(enBloque && verificar(TokenType.LLAVE_DER))) {
+            avanzar();
+        }
         while (!isAtEnd()) {
-            if(verificar(TokenType.PUNTO_Y_COMA)) {
-                avanzar();
+            if (anterior().tipo == TokenType.PUNTO_Y_COMA) {
                 return;
             }
-            avanzar();
+            switch (peek().tipo) {
+                case LET, CONST, PRINT, IF, LLAVE_DER -> {
+                    return;
+                }
+                default -> avanzar();
+            }
         }
     }
 }

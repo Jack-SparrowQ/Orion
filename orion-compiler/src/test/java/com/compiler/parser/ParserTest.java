@@ -93,6 +93,48 @@ public class ParserTest {
         assertEquals("E203", errores.obtenerErrores().get(0).toString().substring(0, 4));
     }
 
+    // ------------------------------------------------------------
+    // Recuperación de errores (modo pánico)
+    // ------------------------------------------------------------
+
+    /** Códigos y líneas de los errores, uno por línea: "E201@1". */
+    private String codigosYLineas() {
+        return errores.obtenerErrores().stream()
+                .map(e -> e.toString().substring(0, e.toString().indexOf('['))
+                        + "@" + e.toString().replaceAll(".*Línea (\\d+).*", "$1"))
+                .collect(Collectors.joining(" "));
+    }
+
+    @Test
+    void reportaUnErrorPorSentencia() {
+        List<Sentencia> programa = parse("let = 1;\nprint(;\nlet c = ;\nlet ok = 2;");
+        assertEquals("E201@1 E203@2 E203@3", codigosYLineas());
+        // La sentencia válida después de los errores sigue en el árbol
+        assertEquals(1, programa.size());
+    }
+
+    @Test
+    void errorDentroDeBloque_noRompeElBloque() {
+        List<Sentencia> programa = parse("if (a) {\n let = 1;\n print(a);\n}\nprint(b);");
+        assertEquals("E201@2", codigosYLineas());
+        NodoIf nodoIf = assertInstanceOf(NodoIf.class, programa.get(0));
+        assertEquals(1, nodoIf.bloqueTrue().sentencias().size());
+        assertEquals(2, programa.size());
+    }
+
+    /** El error está justo en la '}' de cierre: no debe consumirse ni provocar otro error. */
+    @Test
+    void errorEnLaLlaveDeCierre() {
+        parse("if (a) { let x = }\nprint(a);");
+        assertEquals("E203@1", codigosYLineas());
+    }
+
+    @Test
+    void llaveSuelta_noBuclea() {
+        parse("}\nprint(a);\n}");
+        assertEquals("E2002@1 E2002@3", codigosYLineas());
+    }
+
     @Test
     void bloqueSinCerrar() {
         parse("if (a) { print(a);");
