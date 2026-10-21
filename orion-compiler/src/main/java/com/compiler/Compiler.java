@@ -23,7 +23,13 @@ public class Compiler {
         private static final String JS_FILE = "program.js";
 
         private static final String ORION_CODE = """
-                let a = ;
+                let a = 1;
+                let b = 2;
+                let c = 3;
+                let d = 4;
+
+                let e = a + a * (a-c) + (b - c) * d;
+                print(e);
                 """;
 
 
@@ -33,11 +39,11 @@ public class Compiler {
 
     static void compile(String orionCode, Path output) {
 
-        showHeader(ORION_CODE);
+        showHeader(orionCode);
 
         ErrorHandler errorHandler  = new ErrorHandler();
 
-        Optional<List<Token>> tokens = lexicalAnalyzer(ORION_CODE, errorHandler);
+        Optional<List<Token>> tokens = lexicalAnalyzer(orionCode, errorHandler);
 
         if(tokens.isEmpty()) {
             return;
@@ -228,7 +234,7 @@ public class Compiler {
                 errorHandler
         );
 
-        symbolsTable.mostrar();
+        //symbolsTable.mostrar();
 
         System.out.println();
 

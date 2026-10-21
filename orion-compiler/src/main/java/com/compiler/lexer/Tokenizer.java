@@ -34,8 +34,6 @@ public class Tokenizer {
             token = lexer.siguienteToken();
             tokensList.add(token);
 
-            System.out.println(geTTokenInformation());
-
         } while (token.tipo != TokenType.EOF);
     }
     
@@ -49,9 +47,10 @@ public class Tokenizer {
 
     /**
      * Metodo encargado de devolver informacion del Token.
+     * @param token
      * @return String of Token information (type, lex, line & colum).
      */
-    private String geTTokenInformation() {
+    public static String getTokenInformation(Token token) {
         return String.format(
             "Token: %-15s Lexema: '%s' [%d:%d]",
             token.tipo,

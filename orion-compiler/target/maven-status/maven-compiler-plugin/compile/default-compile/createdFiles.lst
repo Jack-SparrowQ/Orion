@@ -6,7 +6,6 @@ com\compiler\error\CompilationError.class
 com\compiler\semantic\SymbolCategory.class
 com\compiler\semantic\SemanticAnalyzer$1.class
 com\compiler\semantic\SymbolTable.class
-com\compiler\Main.class
 com\compiler\util\JSGenerator.class
 com\compiler\parser\Nodes\NodoImprimir.class
 com\compiler\error\ErrorType.class

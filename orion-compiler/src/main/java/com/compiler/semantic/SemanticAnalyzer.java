@@ -134,13 +134,6 @@ public final class SemanticAnalyzer {
 
                     continue;
                 }
-
-                System.out.println(
-                       "Symbol validated: "
-                          + name 
-                        + " -> "
-                        + symbol.getTipo()
-                );
             }
 
             //IF
