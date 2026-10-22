@@ -1,0 +1,5 @@
+
+fn hello {
+	let x = 1;
+}
+print(x);

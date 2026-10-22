@@ -145,7 +145,7 @@ public class Parser {
         }
 
         // Si no es ninguna de las anteriores, lanzamos error (por ahora)
-        throw error(peek(), "E202", "Instrucción no reconocida: " + describir(peek()) + ".");
+        throw error(peek(), "E202", "Instruccion no reconocida: " + describir(peek()) + ".");
     }
 
     // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
@@ -157,7 +157,7 @@ public class Parser {
         Token identificador = consumir(TokenType.IDENTIFICADOR, "Se esperaba el nombre de la variable.");
         
         // 3. Obligatoriamente debe seguir un signo '='
-        consumir(TokenType.IGUAL, "Se esperaba '=' después del nombre de la variable.");
+        consumir(TokenType.IGUAL, "Se esperaba '=' despues del nombre de la variable.");
         
         // 4. Obligatoriamente debe seguir un número literal
         Expresion valor = expresion();        
@@ -192,11 +192,11 @@ public class Parser {
 
     // Regla: "print" "(" expresion ")" ";"
     private Sentencia declaracionImprimir() {
-        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'print'.");
+        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' despues de 'print'.");
         
         Expresion valorAImprimir = expresion(); // Leemos lo que está adentro
         
-        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después del valor a imprimir.");
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' despues del valor a imprimir.");
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la instrucción print.");
         
         return new NodoImprimir(valorAImprimir);
@@ -204,11 +204,11 @@ public class Parser {
 
     // Regla: "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?
     private Sentencia declaracionIf() {
-        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'if'.");
+        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' despues de 'if'.");
 
         Expresion condicion = expresion(); // Leemos la condición
 
-        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la condición del if.");
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' despues de la condicion del if.");
 
         // El 'if' requiere un bloque de código
         consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' antes del bloque del if.");

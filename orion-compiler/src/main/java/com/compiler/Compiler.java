@@ -204,13 +204,13 @@ public class Compiler {
 
         System.err.println();
         System.err.println(
-                "Se encontraron errores durante el análisis " + phase + "."
+                "Se encontraron errores durante el analisis " + phase + "."
         );
 
         errorHandler.mostrarErrores();
 
         System.err.println();
-        System.err.println(ConsoleColors.RED + "[COMPILACIÓN ABORTADA]" + ConsoleColors.RESET);
+        System.err.println(ConsoleColors.RED + "[COMPILACION ABORTADA]" + ConsoleColors.RESET);
 
         return true;
     }
@@ -299,7 +299,7 @@ public class Compiler {
             tokensOut.println(Tokenizer.getTokenInformation(token));
         }
 
-        if (reportarSiHayErrores(errorHandler, "léxico")) {
+        if (reportarSiHayErrores(errorHandler, "LEXICO")) {
             return Optional.empty();
         }
 
