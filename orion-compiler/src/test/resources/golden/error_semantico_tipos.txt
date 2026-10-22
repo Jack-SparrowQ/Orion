@@ -1,0 +1,17 @@
+=== EXIT CODE ===
+1
+=== STDOUT ===
+=== STDERR ===
+
+Se encontraron errores durante el análisis semántico.
+
+---------------- ERRORES ----------------
+E306[SEMANTICO] Línea 2, columna 12: Operación inválida: no se puede aplicar '+' a int y bool.
+E307[SEMANTICO] Línea 3, columna 1: No se puede asignar un valor float a 'n', que es de tipo int.
+E308[SEMANTICO] Línea 4, columna 5: La condición del if debe ser bool, no int.
+------------------------------------------
+Total de errores: 3
+
+[31m[COMPILACIÓN ABORTADA][0m
+=== FILES ===
+(ninguno)
