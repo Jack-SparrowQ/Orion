@@ -1,87 +1,15 @@
+=== EXIT CODE ===
+1
 === STDOUT ===
-=================================================
-              COMPILADOR ORION
-=================================================
-
-Código fuente:
------------------------------------------
-let a = b;
-let b = 1;
-
------------------------------------------
-
-=== 1. FASE DE ANÁLISIS LÉXICO ===
-Token: LET             Lexema: 'let' [1:1]
-Token: IDENTIFICADOR   Lexema: 'a' [1:5]
-Token: IGUAL           Lexema: '=' [1:7]
-Token: IDENTIFICADOR   Lexema: 'b' [1:9]
-Token: PUNTO_Y_COMA    Lexema: ';' [1:10]
-Token: LET             Lexema: 'let' [2:1]
-Token: IDENTIFICADOR   Lexema: 'b' [2:5]
-Token: IGUAL           Lexema: '=' [2:7]
-Token: NUMERO          Lexema: '1' [2:9]
-Token: PUNTO_Y_COMA    Lexema: ';' [2:10]
-Token: EOF             Lexema: '' [2:11]
-Total de tokens reconocidos: 11
-
-=== 2. FASE DE ANÁLISIS SINTÁCTICO ===
-✓ Análisis sintáctico completado correctamente.
-Número de nodos principales: 2
-
-=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===
-├── [Declaración Variable]: let a = b
-├── [Declaración Variable]: let b = 1
-
-=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===
-+--------+--------+-----------+-------+---------+
-| Nombre | Tipo   | Categoría | Línea | Columna |
-+--------+--------+-----------+-------+---------+
-| a      | NULL   | VARIABLE  |     1 |       5 |
-| b      | INT    | VARIABLE  |     2 |       5 |
-+--------+--------+-----------+-------+---------+
-
-=== 5. ANÁLISIS SEMÁNTICO ===
-✓ Símbolo validado: a -> NULL
-✓ Símbolo validado: b -> INT
-✓ Análisis semántico completado correctamente.
-
-=== 6. GENERACIÓN DE CÓDIGO INTERMEDIO ===
-
-Código de tres direcciones:
------------------------------------------
-    a = b
-    b = 1
-
------------------------------------------
-
-Cuádruplas (op, arg1, arg2, resultado):
-  0  (=, b, _, a)
-  1  (=, 1, _, b)
-
-✓ Archivo generado correctamente: programa.tac
-
-=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===
-
-Código JavaScript generado:
------------------------------------------
-let a = b;
-let b = 1;
-
------------------------------------------
-
-=== 7. GENERACIÓN DEL ARCHIVO DE SALIDA ===
-Archivo generado correctamente: program.js
-
-=================================================
-       COMPILACIÓN FINALIZADA CORRECTAMENTE
-=================================================
 === STDERR ===
+
+Se encontraron errores durante el análisis semántico.
+
+---------------- ERRORES ----------------
+E303[SEMANTICO] Línea 1, columna 9: El identificador 'b' se usa antes de su declaración o fuera de su bloque (declarado en la linea: 2).
+------------------------------------------
+Total de errores: 1
+
+[31m[COMPILACIÓN ABORTADA][0m
 === FILES ===
---- program.js ---
-let a = b;
-let b = 1;
-
---- programa.tac ---
-    a = b
-    b = 1
-
+(ninguno)

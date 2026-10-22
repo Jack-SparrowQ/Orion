@@ -62,6 +62,12 @@ public class Lexer {
         return codigoFuente.charAt(posicionActual);
     }
 
+    // Método de apoyo para ver el carácter siguiente al actual sin avanzar
+    private char siguienteCaracter() {
+        if (posicionActual + 1 >= codigoFuente.length()) return '\0';
+        return codigoFuente.charAt(posicionActual + 1);
+    }
+
     // Método de apoyo para avanzar el puntero
     private void avanzar() {
         if(caracterActual() == '\n') {
@@ -110,6 +116,13 @@ public class Lexer {
                     return createToken(TokenType.MULTI, "*");
                 case '/':
                     avanzar();
+                    if (match('/')) {
+                        // Comentario de línea: se descarta hasta el salto de línea
+                        while (posicionActual < codigoFuente.length() && caracterActual() != '\n') {
+                            avanzar();
+                        }
+                        continue;
+                    }
                     if (match('=')) {
                         return createToken(TokenType.DIVISION_Y_ASIGNACION, "/=");
                     }
@@ -134,10 +147,10 @@ public class Lexer {
                     return createToken(TokenType.LLAVE_DER, "}");
                 case '[':
                     avanzar();
-                    return createToken(TokenType.CORCHETE_DER, "[");
+                    return createToken(TokenType.CORCHETE_IZQ, "[");
                 case ']':
                     avanzar();
-                    return createToken(TokenType.CORCHETE_IZQ, "]");
+                    return createToken(TokenType.CORCHETE_DER, "]");
                 case ';':
                     avanzar();
                     return createToken(TokenType.PUNTO_Y_COMA, ";");
@@ -187,7 +200,7 @@ public class Lexer {
                     if(match('&')) { 
                         return createToken(TokenType.AND_LOGICO, "&&"); 
                     }
-                    gestorErrores.agregar("E101", ErrorType.LEXICO, "Error Léxico: Se esperaba '&' después de '&'", startLine, startColumn);
+                    gestorErrores.agregar("E101", ErrorType.LEXICO, "Operador incompleto: se esperaba '&&'.", startLine, startColumn);
                     continue;
                 case '|':
                     avanzar();
@@ -195,7 +208,7 @@ public class Lexer {
                         return createToken(TokenType.OR_LOGICO, "||");
                     }
                     gestorErrores.agregar("E102",
-                    ErrorType.LEXICO, "Operador incompleto: se esperaba '||'", startLine, startColumn);
+                    ErrorType.LEXICO, "Operador incompleto: se esperaba '||'.", startLine, startColumn);
                     continue;
 
                 default:
@@ -203,11 +216,20 @@ public class Lexer {
             }
 
             // 3. Detectar Números
-            if (Character.isDigit(c)) {
+            if (esDigito(c)) {
                 StringBuilder numero = new StringBuilder();
-                while (posicionActual < codigoFuente.length() && Character.isDigit(caracterActual())) {
+                while (posicionActual < codigoFuente.length() && esDigito(caracterActual())) {
                     numero.append(caracterActual());
                     avanzar();
+                }
+                // Parte decimal: solo si al '.' le sigue un dígito ("3." sigue siendo 3 y '.')
+                if (caracterActual() == '.' && esDigito(siguienteCaracter())) {
+                    numero.append('.');
+                    avanzar();
+                    while (posicionActual < codigoFuente.length() && esDigito(caracterActual())) {
+                        numero.append(caracterActual());
+                        avanzar();
+                    }
                 }
                 return createToken(TokenType.NUMERO, numero.toString());
             }
@@ -246,7 +268,13 @@ public class Lexer {
         }
 
         // Si el bucle termina, llegamos al final del archivo
-        return new Token(TokenType.EOF, "",startLine,startColumn);
+        // Posición real del final (no la del inicio del último token).
+        return new Token(TokenType.EOF, "", line, column);
+    }
+
+    // Solo dígitos ASCII: Character.isDigit acepta también '٣', '৩'... que luego no se pueden convertir a número.
+    private static boolean esDigito(char c) {
+        return c >= '0' && c <= '9';
     }
 
     //Metodo lookahead

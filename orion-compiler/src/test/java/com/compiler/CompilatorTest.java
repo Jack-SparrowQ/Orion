@@ -29,38 +29,110 @@ public class CompilatorTest {
         GoldenFile.verificar("error_sintactico_expresion", r.informe());
     }
  
-    /** Instruccion no reconocida. Caracteriza F8: el codigo es E2002 (4 digitos). */
+    /** E202: instrucción no reconocida. */
     @Test
     void errorSintactico_instruccionNoReconocida() {
-        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = b;", "b = 1;"));
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 1;", "5;"));
         GoldenFile.verificar("error_sintactico_instruccion", r.informe());
     }
 
  
-    /** E301 en print. Caracteriza F1: el error se reporta DOS veces. */
+    /** E301 en print. Regresion de F1: el error se reportaba dos veces. */
     @Test
     void errorSemantico_printNoDeclarado() {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("print(x);"));
-        // Caracteriza F1 (defecto conocido): el mismo E301 aparece dos veces.
-        assertEquals(2, ResultadoCompilacion.contar(r.stderr, "E301"), "ocurrencias de E301");
+        assertEquals(1, ResultadoCompilacion.contar(r.stderr, "E301"), "ocurrencias de E301");
         GoldenFile.verificar("error_semantico_print_no_declarado", r.informe());
     }
  
-    // /** Caracteriza F2: usar una variable antes de declararla NO es error. */
-    // @Test
-    // void usoAntesDeDeclarar_noGeneraError() {
-    //     ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = b;", "let b = 1;"));
-    //     // Caracteriza F2 (defecto conocido): no se reporta ningun error semantico.
-    //     assertFalse(r.stdout.contains("E301"), "no debe haber E301");
-    //     assertFalse(r.archivos.containsKey("program.js"), "se genera program.js");
-    //     GoldenFile.verificar("uso_antes_de_declarar", r.informe());
-    // }
- 
+    /** E303. Regresion de F2: usar una variable antes de declararla no era error y el JS fallaba al ejecutarse. */
+    @Test
+    void usoAntesDeDeclarar() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = b;", "let b = 1;"));
+        assertEquals(1, r.exitCode);
+        assertFalse(r.archivos.containsKey("programa.js"), "no se genera programa.js");
+        GoldenFile.verificar("uso_antes_de_declarar", r.informe());
+    }
+
     /** E301 en la condicion de un if. */
     @Test
     void errorSemantico_condicionIfNoDeclarada() {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("if (z > 0) {", " print(1);", "}"));
         GoldenFile.verificar("error_semantico_condicion_if", r.informe());
+    }
+
+    /** E301 en el valor de una declaracion. */
+    @Test
+    void errorSemantico_noDeclaradoEnDeclaracion() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let c = desconocida + 1;"));
+        GoldenFile.verificar("error_semantico_no_declarado_en_declaracion", r.informe());
+    }
+
+    /** E302: declaracion duplicada. */
+    @Test
+    void errorSemantico_duplicado() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 1;", "let a = 2;"));
+        GoldenFile.verificar("error_semantico_duplicado", r.informe());
+    }
+
+    /** E304: division entre una constante que vale cero. */
+    @Test
+    void errorSemantico_divisionCero() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 1;", "print(a/(2-2));"));
+        GoldenFile.verificar("error_semantico_division_cero", r.informe());
+    }
+
+    /** E306 / E307 / E308: errores de tipos. */
+    @Test
+    void errorSemantico_tipos() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines(
+                "let n = 1;",
+                "let ok = n + true;",
+                "n = 2.5;",
+                "if (n) {",
+                "    print(n);",
+                "}"));
+        GoldenFile.verificar("error_semantico_tipos", r.informe());
+    }
+
+    // ------------------------------------------------------------
+    // Programas validos (golden completo: JS generado)
+    // ------------------------------------------------------------
+
+    @Test
+    void programaValido() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines(
+                "let a = 10;",
+                "let b = 3;",
+                "let c = a + b * 2;",
+                "const ok = true;",
+                "print(c);",
+                "if (a > 0) {",
+                " print(a);",
+                "}"));
+        assertEquals(0, r.exitCode, r.stderr);
+        GoldenFile.verificar("valido", r.informe());
+    }
+
+    @Test
+    void ifConVariasSentencias() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines(
+                "let a = 1;",
+                "if (a > 0) {",
+                " let b = 2;",
+                " print(b);",
+                " print(a);",
+                "}"));
+        assertEquals(0, r.exitCode, r.stderr);
+        GoldenFile.verificar("if_varias_sentencias", r.informe());
+    }
+
+    /** Un programa vacio es valido y genera un JS vacio. */
+    @Test
+    void programaVacio() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar("");
+        assertEquals(0, r.exitCode, r.stderr);
+        GoldenFile.verificar("vacio", r.informe());
     }
 
 
@@ -121,6 +193,112 @@ public class CompilatorTest {
         assertEquals(0, r.exitCode);
         assertEquals(3, ResultadoCompilacion.contar(r.stdout, "├──"), r.stdout);
         assertTrue(r.archivos.isEmpty());
+    }
+
+    // ------------------------------------------------------------
+    // if / else if / else
+    // ------------------------------------------------------------
+
+    private static final String IF_ELSE = lines(
+            "let a = 1;",
+            "if (a > 0) {",
+            "    print(a);",
+            "} else if (a < 0) {",
+            "    print(-a);",
+            "} else {",
+            "    print(0);",
+            "}");
+
+    @Test
+    void ifElse_generaJavaScript() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(IF_ELSE);
+        assertEquals(0, r.exitCode, r.stderr);
+        assertEquals(lines(
+                "let a = 1;",
+                "if (a > 0) {",
+                "    console.log(a);",
+                "} else {",
+                "    if (a < 0) {",
+                "        console.log(-a);",
+                "    } else {",
+                "        console.log(0);",
+                "    }",
+                "}"), r.archivos.get("programa.js"));
+    }
+
+    @Test
+    void ifElse_generaTac() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(IF_ELSE, Mode.EMIT_IR);
+        assertEquals(lines(
+                "    a = 1",
+                "    t1 = a > 0",
+                "    ifFalse t1 goto L1",
+                "    print a",
+                "    goto L2",
+                "L1:",
+                "    t2 = a < 0",
+                "    ifFalse t2 goto L3",
+                "    t3 = -a",
+                "    print t3",
+                "    goto L4",
+                "L3:",
+                "    print 0",
+                "L4:",
+                "L2:"), r.archivos.get("programa.tac"));
+    }
+
+    @Test
+    void errorSemanticoEnElse() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("if (true) { } else { print(z); }"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E301[SEMANTICO] Línea 1, columna 28"), r.stderr);
+    }
+
+    // ------------------------------------------------------------
+    // Asignacion
+    // ------------------------------------------------------------
+
+    private static final String ASIGNACION = lines("let a = 1;", "a = a + 2;", "print(a);");
+
+    @Test
+    void asignacion_generaJavaScriptYTac() {
+        ResultadoCompilacion js = ResultadoCompilacion.ejecutar(ASIGNACION);
+        assertEquals(0, js.exitCode, js.stderr);
+        assertEquals(lines("let a = 1;", "a = a + 2;", "console.log(a);"), js.archivos.get("programa.js"));
+
+        ResultadoCompilacion tac = ResultadoCompilacion.ejecutar(ASIGNACION, Mode.EMIT_IR);
+        assertEquals(lines("    a = 1", "    t1 = a + 2", "    a = t1", "    print a"),
+                tac.archivos.get("programa.tac"));
+    }
+
+    @Test
+    void asignacionCompuesta_generaJavaScript() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 1;", "a += 2;", "a *= a - 1;"));
+        assertEquals(0, r.exitCode, r.stderr);
+        assertEquals(lines("let a = 1;", "a = a + 2;", "a = a * (a - 1);"), r.archivos.get("programa.js"));
+    }
+
+    @Test
+    void asignacionCompuesta_comprobacionDeTipos() {
+        // int /= int produce float: no cabe en una variable int
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 4;", "a /= 2;"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E307"), r.stderr);
+    }
+
+    @Test
+    void asignacion_aConstante_E305() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("const k = 1;", "k = 2;"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E305[SEMANTICO] Línea 2, columna 1: No se puede reasignar la constante 'k'"),
+                r.stderr);
+    }
+
+    @Test
+    void asignacion_aNoDeclarada_E301() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("x = 2;"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E301[SEMANTICO] Línea 1, columna 1"), r.stderr);
     }
 
     /** Si no se puede escribir el artefacto: error por stderr y codigo 3. */

@@ -28,8 +28,8 @@ public enum TokenType {
     PARENTESIS_DER,   // )
     LLAVE_IZQ,        // {
     LLAVE_DER,        // }
-    CORCHETE_DER,     // [
-    CORCHETE_IZQ,     // ]
+    CORCHETE_IZQ,     // [
+    CORCHETE_DER,     // ]
     PUNTO_Y_COMA,     // ;
     PUNTO,             // .
 

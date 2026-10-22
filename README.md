@@ -1,6 +1,6 @@
 # Orion Compiler
 
-Compilador desarrollado en Java para el análisis y procesamiento de un lenguaje de programación propio. El proyecto implementa las etapas iniciales de un compilador, desde el análisis léxico y sintáctico hasta el análisis semántico y la generación de código intermedio.
+Compilador desarrollado en Java para el análisis y procesamiento de un lenguaje de programación propio. El proyecto implementa las fases de un compilador, desde el análisis léxico y sintáctico hasta el análisis semántico (con comprobación de tipos), la generación de código intermedio y la traducción a JavaScript.
 
 El objetivo es construir una arquitectura modular que permita comprender cómo se transforma un programa fuente en una representación intermedia, facilitando su análisis y el desarrollo posterior de nuevas etapas de compilación.
 
@@ -9,7 +9,7 @@ El objetivo es construir una arquitectura modular que permita comprender cómo s
 - Implementar el análisis léxico para reconocer los elementos del lenguaje.
 - Analizar la estructura sintáctica de los programas mediante una gramática.
 - Construir una representación del programa mediante un árbol de sintaxis abstracta (AST).
-- Detectar errores semánticos, como el uso de identificadores no declarados.
+- Detectar errores semánticos, como el uso de identificadores no declarados o los errores de tipos.
 - Generar código intermedio a partir de la estructura del programa.
 - Mantener una arquitectura modular que facilite la extensión del compilador.
 
@@ -21,175 +21,246 @@ El proceso de compilación se organiza en las siguientes etapas:
 Programa fuente
       |
       v
-Análisis léxico
+Análisis léxico ........................ lista de tokens
       |
       v
-Análisis sintáctico
+Análisis sintáctico .................... árbol de sintaxis abstracta (AST)
       |
       v
-Árbol de sintaxis abstracta (AST)
+Tabla de símbolos ...................... declaraciones con su tipo inferido
       |
       v
-Análisis semántico
+Análisis semántico ..................... uso de identificadores y tipos
       |
       v
-Generación de código intermedio
+Generación de código intermedio ........ código de tres direcciones (TAC)
       |
       v
-Código de tres direcciones (TAC)
+Generación de JavaScript ............... programa .js
 ```
 
-Cada etapa cumple una responsabilidad específica y utiliza los resultados de las etapas anteriores.
+Cada fase solo se ejecuta si las anteriores terminaron sin errores. Dentro de una fase se informan todos los errores encontrados, no solo el primero.
 
 ## Tecnologías utilizadas
 
-- **Java:** lenguaje de implementación del compilador.
-- **Maven o Gradle:** herramienta de construcción, según la configuración del proyecto.
+- **Java 21** o superior: lenguaje de implementación (usa `record`, interfaces selladas y `switch` con patrones).
+- **Maven:** construcción y pruebas (JUnit 5).
 - **Git:** control de versiones.
-- **Visual Studio Code o IntelliJ IDEA:** entornos de desarrollo compatibles con Java.
 
 ## Estructura del proyecto
 
-La organización principal del código fuente se encuentra dentro de `src/main/java/com/compiler/`.
-
 ```text
 orion-compiler/
-├── src/
-│   └── main/
-│       └── java/
-│           └── com/
-│               └── compiler/
-│                   ├── Main.java
-│                   ├── lexer/
-│                   ├── parser/
-│                   ├── ast/
-│                   ├── semantic/
-│                   ├── codegen/
-│                   └── ...
-├── programa.js
-├── programa.tac
-└── README.md
+├── orion, orion.cmd           Lanzadores del compilador (sh / Windows)
+├── examples/hello.orion       Programa de ejemplo
+├── docs/CLI.md                Diseño de la interfaz de línea de comandos
+├── pom.xml
+└── src/
+    ├── main/java/com/compiler/
+    │   ├── Compiler.java      Punto de entrada: CLI y orquestación de las fases
+    │   ├── cli/               Opciones de la línea de comandos
+    │   ├── lexer/             Lexer, Token, TokenType
+    │   ├── parser/            Parser (descendente recursivo)
+    │   │   └── ast/           Nodos del AST (records sellados)
+    │   ├── semantic/          Tabla de símbolos y análisis semántico
+    │   ├── ir/                Código intermedio (cuádruplas / TAC)
+    │   ├── error/             Gestión de errores de compilación
+    │   └── util/              Generador de JavaScript e impresión del AST
+    └── test/                  Pruebas unitarias y de extremo a extremo
 ```
-
-> **Nota:** Los directorios anteriores representan una organización conceptual. Conserva en el README los nombres exactos de los paquetes y archivos existentes en tu repositorio.
 
 ### Componentes principales
 
-| Componente                       | Responsabilidad                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------ |
-| `Main.java`                      | Coordina las etapas del proceso de compilación.                                      |
-| `Lexer.java`                     | Reconoce los tokens del programa fuente.                                             |
-| `Parser.java`                    | Analiza la estructura sintáctica y construye la representación del programa.         |
-| AST                              | Representa declaraciones, expresiones, bloques y otras construcciones del lenguaje.  |
-| Tabla de símbolos                | Mantiene información sobre los identificadores del programa.                         |
-| Análisis semántico               | Comprueba restricciones semánticas del lenguaje.                                     |
-| `GeneradorCodigoIntermedio.java` | Traduce nodos del AST a instrucciones de código intermedio.                          |
-| `Cuadrupla.java`                 | Representa las instrucciones del código intermedio mediante operaciones y operandos. |
+| Componente                       | Responsabilidad                                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `Compiler.java`                  | Interpreta la línea de comandos y coordina las fases de compilación.                             |
+| `Lexer.java`                     | Reconoce los tokens del programa fuente.                                                         |
+| `Parser.java`                    | Analiza la sintaxis, construye el AST y se recupera de errores para informar de todos.           |
+| `parser/ast`                     | `Sentencia` y `Expresion`: interfaces selladas cuyos nodos son `record`.                         |
+| `SymbolTable.java`               | Mantiene los identificadores declarados, su tipo y su categoría (variable o constante).          |
+| `SemanticAnalyzer.java`          | Comprueba el uso de identificadores, la división entre cero y los tipos.                         |
+| `GeneradorCodigoIntermedio.java` | Traduce el AST a instrucciones de código intermedio.                                             |
+| `Cuadrupla.java`                 | Representa una instrucción del código intermedio mediante operación, operandos y resultado.      |
+| `JSGenerator.java`               | Traduce el AST a JavaScript.                                                                     |
+
+Como `Sentencia` y `Expresion` son interfaces selladas, cada fase las recorre con un `switch` exhaustivo: al añadir un tipo de nodo nuevo, el proyecto no compila hasta que todas las fases lo manejen.
 
 ## Lenguaje fuente
 
-Orion Compiler procesa programas escritos en un lenguaje propio con construcciones como declaraciones de variables, constantes, expresiones, operaciones y estructuras de control implementadas en el proyecto.
-
-Por ejemplo:
-
 ```javascript
 let a = 10;
-let b = 3;
-let c = a + b * 2;
+let b = 3.5;
+const max = 20;
 
-const ok = true;
+let c = a + b * 2;   // float
+a += 1;
+
+if (c > max) {
+    print(max);
+} else if (c > 0) {
+    print(c);
+} else {
+    print(0);
+}
 ```
 
-Este programa permite ilustrar las declaraciones, los valores literales y las expresiones aritméticas.
+### Elementos léxicos
 
-La sintaxis admitida debe consultarse en la implementación del analizador léxico y del analizador sintáctico.
+- Números enteros (`10`) y decimales (`3.5`).
+- Booleanos `true` y `false`.
+- Identificadores: letra o `_` seguida de letras, dígitos o `_`.
+- Comentarios de línea: `// ...`.
+- Operadores: `+ - * / %`, `== != < <= > >=`, `&& || !`, `= += -= *= /= %=`.
+
+### Gramática
+
+```text
+programa     -> sentencia* EOF
+sentencia    -> declaracion | asignacion | imprimir | if
+declaracion  -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
+asignacion   -> IDENTIFICADOR ("=" | "+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
+imprimir     -> "print" "(" expresion ")" ";"
+if           -> "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?
+bloque       -> "{" sentencia* "}"
+
+expresion    -> logicoOr
+logicoOr     -> logicoAnd ( "||" logicoAnd )*
+logicoAnd    -> igualdad ( "&&" igualdad )*
+igualdad     -> comparacion ( ("==" | "!=") comparacion )*
+comparacion  -> termino ( ("<" | "<=" | ">" | ">=") termino )*
+termino      -> factor ( ("+" | "-") factor )*
+factor       -> unario ( ("*" | "/" | "%") unario )*
+unario       -> ("!" | "-") unario | primario
+primario     -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+```
+
+La precedencia y la asociatividad (por la izquierda) coinciden con las de JavaScript. Una asignación compuesta `a += b` se traduce a `a = a + b`.
 
 ## Análisis semántico
 
-El análisis semántico verifica propiedades del programa que no pueden determinarse únicamente mediante la gramática.
+El análisis semántico se hace en dos pasadas:
 
-Entre los aspectos relevantes se encuentran:
+1. **Tabla de símbolos:** registra cada declaración, en orden, con su tipo inferido y su categoría (`let` → variable, `const` → constante).
+2. **Comprobaciones:** recorre el programa en orden y por bloques comprobando el uso de cada identificador y los tipos.
 
-- Verificar que los identificadores utilizados hayan sido declarados.
-- Mantener información de los símbolos.
-- Determinar los tipos de datos de expresiones.
-- Comprobar la compatibilidad entre operadores y operandos.
-- Validar las condiciones de las estructuras de control.
+### Tipos
 
-La cobertura de estas comprobaciones depende de la implementación actual. La inferencia de tipos y las reglas completas de compatibilidad deben considerarse trabajo pendiente mientras no estén implementadas y verificadas.
+| Expresión                       | Operandos                          | Resultado                                         |
+| ------------------------------- | ---------------------------------- | ------------------------------------------------- |
+| `+ - * %`                       | numéricos                          | `int` si ambos son `int`; si no, `float`          |
+| `/`                             | numéricos                          | `float` (en JavaScript, `7 / 2` es `3.5`)         |
+| `< <= > >=`                     | numéricos                          | `bool`                                            |
+| `== !=`                         | del mismo tipo, o ambos numéricos  | `bool`                                            |
+| `&& \|\|` y `!`                 | `bool`                             | `bool`                                            |
+| `-x`                            | numérico                           | el tipo de `x`                                    |
+| `x = valor`                     | mismo tipo que `x`                 | se admite asignar un `int` a una variable `float` |
+| `if (condición)`                | `bool`                             | —                                                 |
+
+Las variables declaradas dentro de un bloque solo son visibles en ese bloque, igual que `let`/`const` en el JavaScript generado. Cuando una expresión tiene un error, su tipo queda como desconocido y no provoca más errores en cascada.
+
+### Códigos de error
+
+| Código | Fase        | Significado                                                             |
+| ------ | ----------- | ----------------------------------------------------------------------- |
+| E100   | Léxica      | Carácter no reconocido.                                                 |
+| E101   | Léxica      | `&` suelto: se esperaba `&&`.                                           |
+| E102   | Léxica      | `\|` suelto: se esperaba `\|\|`.                                        |
+| E201   | Sintáctica  | Falta un elemento obligatorio (`;`, `=`, `)`, `}`...).                  |
+| E202   | Sintáctica  | Instrucción no reconocida.                                              |
+| E203   | Sintáctica  | Se esperaba una expresión.                                              |
+| E301   | Semántica   | Identificador no declarado.                                             |
+| E302   | Semántica   | Identificador declarado dos veces.                                      |
+| E303   | Semántica   | Identificador usado antes de su declaración o fuera de su bloque.       |
+| E304   | Semántica   | División entre una constante que vale cero.                             |
+| E305   | Semántica   | Reasignación de una constante.                                          |
+| E306   | Semántica   | Operador aplicado a tipos incompatibles.                                |
+| E307   | Semántica   | Asignación de un valor de tipo incompatible.                            |
+| E308   | Semántica   | La condición de un `if` no es `bool`.                                   |
 
 ## Generación de código intermedio
 
-El proyecto incluye un generador de código intermedio que transforma determinadas construcciones del AST en una representación basada en instrucciones de tres direcciones (_Three-Address Code_, TAC).
-
-Una instrucción puede representarse mediante una cuádrupla:
+El generador transforma el AST en código de tres direcciones (_Three-Address Code_, TAC). Cada instrucción es una cuádrupla:
 
 ```text
 (operación, argumento1, argumento2, resultado)
 ```
 
-Por ejemplo, la expresión:
-
-```javascript
-let c = a + b * 2;
-```
-
-puede traducirse a las siguientes instrucciones, suponiendo que `a` y `b` ya están disponibles:
+Para el programa de ejemplo de la sección anterior (`orion --emit-ir ejemplo.orion -o -`):
 
 ```text
-t1 = b * 2
-t2 = a + t1
-c = t2
+    a = 10
+    b = 3.5
+    max = 20
+    t1 = b * 2
+    t2 = a + t1
+    c = t2
+    t3 = a + 1
+    a = t3
+    t4 = c > max
+    ifFalse t4 goto L1
+    print max
+    goto L2
+L1:
+    t5 = c > 0
+    ifFalse t5 goto L3
+    print c
+    goto L4
+L3:
+    print 0
+L4:
+L2:
 ```
 
-Los temporales permiten dividir una expresión compleja en operaciones más sencillas, respetando la precedencia de los operadores.
-
-El generador también contempla instrucciones para declaraciones, impresión y estructuras condicionales según las construcciones que admite su implementación.
+Los temporales (`t1`, `t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`L1`, `L2`...) implementan los saltos del `if`/`else`.
 
 ## Ejecución
 
-Para ejecutar el proyecto, utiliza el entorno Java configurado en el repositorio.
+Requisitos: JDK 21 o superior y Maven.
 
-1. Instala una versión del JDK compatible con el proyecto.
-2. Abre el proyecto en tu entorno de desarrollo.
-3. Identifica la configuración de compilación y las dependencias.
-4. Ejecuta la clase `Main.java` o utiliza el comando de ejecución definido por el proyecto.
-5. Revisa la salida del programa y el código intermedio generado, si el proceso termina correctamente.
+```bash
+mvn package                       # compila, ejecuta las pruebas y genera target/orion.jar
+./orion examples/hello.orion      # genera ./hello.js   (en Windows: orion.cmd ...)
+```
 
-Los comandos exactos dependen del sistema de construcción y de la configuración existente en el repositorio.
+Modos principales (uno por invocación):
 
-## Pruebas recomendadas
+```bash
+orion programa.orion              # compila a programa.js
+orion --check programa.orion      # solo valida
+orion --emit-ir programa.orion    # genera programa.tac
+orion --tokens programa.orion     # muestra los tokens
+orion --ast programa.orion        # muestra el AST
+orion --help                      # todas las opciones
+```
 
-Para comprobar el funcionamiento del compilador, conviene utilizar programas que cubran distintos casos:
+Códigos de salida: `0` éxito, `1` errores en el programa fuente, `2` uso incorrecto, `3` error de E/S. El diseño completo está en [`docs/CLI.md`](orion-compiler/docs/CLI.md).
 
-| Caso                                 | Entrada de ejemplo         | Resultado esperado                                                            |
-| ------------------------------------ | -------------------------- | ----------------------------------------------------------------------------- |
-| Declaración                          | `let a = 10;`              | Reconocer la declaración y generar su asignación intermedia.                  |
-| Expresión aritmética                 | `let c = a + b * 2;`       | Respetar la precedencia y generar temporales cuando sean necesarios.          |
-| Identificador no declarado           | `let c = desconocida + 1;` | Reportar un error semántico.                                                  |
-| Expresión sintácticamente incorrecta | `let c = 10 + ;`           | Reportar un error de sintaxis.                                                |
-| Condicional                          | `if (a > 0) { print(a); }` | Analizar la condición y generar las instrucciones admitidas por el generador. |
+## Pruebas
 
-Estos casos constituyen una guía de validación. Los resultados deben comprobarse mediante la ejecución real del compilador.
+```bash
+mvn test
+```
+
+| Suite                  | Qué cubre                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| `LexerTest`            | Tokens, operadores, posiciones, comentarios, decimales y errores léxicos.          |
+| `ParserTest`           | Precedencia, asociatividad, sentencias, mensajes de error y recuperación.          |
+| `SemanticAnalyzerTest` | Inferencia y comprobación de tipos, ámbitos y errores semánticos.                  |
+| `CompilatorTest`       | Programas completos: salida, código de salida y archivos generados (golden files). |
+| `OptionsTest`, `CliTest` | Línea de comandos.                                                               |
+
+Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de programas completos. Tras un cambio de comportamiento deliberado se regeneran con `mvn test -Dgolden.update=true` y se revisan con `git diff`.
 
 ## Alcance y trabajo futuro
 
-Las siguientes mejoras pueden ampliar la funcionalidad del proyecto:
-
-- Completar la inferencia y comprobación de tipos.
-- Validar la compatibilidad de los operadores.
-- Verificar las condiciones booleanas de las estructuras de control.
-- Detectar declaraciones duplicadas y otros errores semánticos definidos por el lenguaje.
-- Ampliar la traducción de los nodos del AST a código intermedio.
-- Incorporar pruebas automatizadas para cada fase.
-- Documentar formalmente la gramática libre de contexto y las reglas de traducción dirigida por sintaxis.
-- Verificar que la generación de código intermedio se ejecute únicamente cuando las etapas anteriores hayan terminado sin errores.
+- Bucles (`while`, `for`) y funciones (`fn`, `return`): sus palabras reservadas ya se reconocen, pero no forman parte de la gramática.
+- Cadenas de texto.
+- Permitir reutilizar el nombre de una variable en bloques distintos (hoy los nombres son únicos en todo el programa).
+- Optimizaciones sobre el código intermedio.
 
 ## Documentación académica
 
 Este proyecto sirve como base para estudiar e implementar las fases de un compilador, especialmente el análisis semántico y la generación de código intermedio.
-
-La documentación técnica debe describir la gramática del lenguaje, las reglas semánticas, el formato del código intermedio, los esquemas de traducción y las pruebas realizadas.
 
 ## Autoría
 

@@ -3,7 +3,7 @@
 === STDOUT ===
 === STDERR ===
 
-Se encontraron errores durante el análisis lexico.
+Se encontraron errores durante el análisis léxico.
 
 ---------------- ERRORES ----------------
 E100[LEXICO] Línea 1, columna 9: Carácter no reconocido '@'.

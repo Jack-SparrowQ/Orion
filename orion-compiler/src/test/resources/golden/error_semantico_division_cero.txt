@@ -1,61 +1,15 @@
+=== EXIT CODE ===
+1
 === STDOUT ===
-=================================================
-              COMPILADOR ORION
-=================================================
-
-Código fuente:
------------------------------------------
-let a = 1;
-print(a/(2-2));
-
------------------------------------------
-
-=== 1. FASE DE ANÁLISIS LÉXICO ===
-Token: LET             Lexema: 'let' [1:1]
-Token: IDENTIFICADOR   Lexema: 'a' [1:5]
-Token: IGUAL           Lexema: '=' [1:7]
-Token: NUMERO          Lexema: '1' [1:9]
-Token: PUNTO_Y_COMA    Lexema: ';' [1:10]
-Token: PRINT           Lexema: 'print' [2:1]
-Token: PARENTESIS_IZQ  Lexema: '(' [2:6]
-Token: IDENTIFICADOR   Lexema: 'a' [2:7]
-Token: DIVISION        Lexema: '/' [2:8]
-Token: PARENTESIS_IZQ  Lexema: '(' [2:9]
-Token: NUMERO          Lexema: '2' [2:10]
-Token: RESTA           Lexema: '-' [2:11]
-Token: NUMERO          Lexema: '2' [2:12]
-Token: PARENTESIS_DER  Lexema: ')' [2:13]
-Token: PARENTESIS_DER  Lexema: ')' [2:14]
-Token: PUNTO_Y_COMA    Lexema: ';' [2:15]
-Token: EOF             Lexema: '' [2:16]
-Total de tokens reconocidos: 17
-
-=== 2. FASE DE ANÁLISIS SINTÁCTICO ===
-✓ Análisis sintáctico completado correctamente.
-Número de nodos principales: 2
-
-=== 3. ÁRBOL DE SINTAXIS ABSTRACTA (AST) ===
-├── [Declaración Variable]: let a = 1
-├── [Instrucción Imprimir]: (a / group((2 - 2)))
-
-=== 4. CONSTRUCCIÓN DE TABLA DE SÍMBOLOS ===
-+--------+--------+-----------+-------+---------+
-| Nombre | Tipo   | Categoría | Línea | Columna |
-+--------+--------+-----------+-------+---------+
-| a      | INT    | VARIABLE  |     1 |       5 |
-+--------+--------+-----------+-------+---------+
-
-=== 5. ANÁLISIS SEMÁNTICO ===
-✓ Símbolo validado: a -> INT
-E304[SEMANTICO] Línea 2, columna 8: División entre cero: el divisor de la operación no puede ser 0.
 === STDERR ===
 
-Se encontraron errores durante el análisis Semantic.
+Se encontraron errores durante el análisis semántico.
 
 ---------------- ERRORES ----------------
+E304[SEMANTICO] Línea 2, columna 8: División entre cero: el divisor de la operación no puede ser 0.
 ------------------------------------------
 Total de errores: 1
 
-[COMPILACIÓN ABORTADA]
+[31m[COMPILACIÓN ABORTADA][0m
 === FILES ===
 (ninguno)

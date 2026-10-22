@@ -3,8 +3,7 @@ package com.compiler.ir;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.compiler.parser.Nodes.*;
-import com.compiler.parser.ElementoAST;
+import com.compiler.parser.ast.*;
 
 // Traduce el AST a código de tres direcciones (lista de cuádruplas).
 public class GeneradorCodigoIntermedio {
@@ -13,12 +12,12 @@ public class GeneradorCodigoIntermedio {
     private int contadorTemporales = 0;
     private int contadorEtiquetas = 0;
 
-    public List<Cuadrupla> generar(List<ElementoAST> programa) {
+    public List<Cuadrupla> generar(List<Sentencia> programa) {
         codigo.clear();
         contadorTemporales = 0;
         contadorEtiquetas = 0;
 
-        for (ElementoAST nodo : programa) {
+        for (Sentencia nodo : programa) {
             generarSentencia(nodo);
         }
         return new ArrayList<>(codigo);
@@ -38,33 +37,43 @@ public class GeneradorCodigoIntermedio {
 
     // ---------------- SENTENCIAS ----------------
 
-    private void generarSentencia(ElementoAST nodo) {
+    private void generarSentencia(Sentencia nodo) {
 
-        if (nodo instanceof NodoDeclaracion) {
-            NodoDeclaracion dec = (NodoDeclaracion) nodo;
-            String valor = generarExpresion(dec.valorNumero
-            );
-            emitir("=", valor, null, dec.identificador.lexema);
-        }
-        else if (nodo instanceof NodoImprimir) {
-            String valor = generarExpresion(((NodoImprimir) nodo).expresion);
-            emitir("print", valor, null, null);
-        }
-        else if (nodo instanceof NodoIf) {
-            NodoIf nIf = (NodoIf) nodo;
-
-            String condicion = generarExpresion(nIf.condicion);
-            String etiquetaFin = nuevaEtiqueta();
-
-            emitir("ifFalse", condicion, null, etiquetaFin);
-            for (ElementoAST interna : nIf.bloqueTrue.sentencias) {
-                generarSentencia(interna);
+        switch (nodo) {
+            case NodoDeclaracion dec -> {
+                String valor = generarExpresion(dec.valor());
+                emitir("=", valor, null, dec.identificador().lexema);
             }
-            emitir("label", null, null, etiquetaFin);
-        }
-        else {
-            throw new IllegalArgumentException(
-                    "Sentencia desconocida: " + nodo.getClass().getSimpleName());
+            case NodoAsignacion asig -> {
+                String valor = generarExpresion(asig.valor());
+                emitir("=", valor, null, asig.identificador().lexema);
+            }
+            case NodoImprimir imp -> {
+                String valor = generarExpresion(imp.expresion());
+                emitir("print", valor, null, null);
+            }
+            case NodoIf nIf -> {
+                String condicion = generarExpresion(nIf.condicion());
+                List<Sentencia> sino = nIf.bloqueFalse().sentencias();
+
+                if (sino.isEmpty()) {
+                    //     ifFalse c goto Lfin ; then ; Lfin:
+                    String etiquetaFin = nuevaEtiqueta();
+                    emitir("ifFalse", condicion, null, etiquetaFin);
+                    nIf.bloqueTrue().sentencias().forEach(this::generarSentencia);
+                    emitir("label", null, null, etiquetaFin);
+                } else {
+                    //     ifFalse c goto Lelse ; then ; goto Lfin ; Lelse: ; else ; Lfin:
+                    String etiquetaElse = nuevaEtiqueta();
+                    String etiquetaFin = nuevaEtiqueta();
+                    emitir("ifFalse", condicion, null, etiquetaElse);
+                    nIf.bloqueTrue().sentencias().forEach(this::generarSentencia);
+                    emitir("goto", null, null, etiquetaFin);
+                    emitir("label", null, null, etiquetaElse);
+                    sino.forEach(this::generarSentencia);
+                    emitir("label", null, null, etiquetaFin);
+                }
+            }
         }
     }
 
@@ -72,36 +81,31 @@ public class GeneradorCodigoIntermedio {
 
     // Genera las cuádruplas de la expresión y devuelve dónde queda su valor:
     // un literal, una variable o un temporal (t1, t2, ...).
-    private String generarExpresion(ElementoAST expr) {
+    private String generarExpresion(Expresion expr) {
 
-        if (expr instanceof NodoExpresionSimple) {
-            return ((NodoExpresionSimple) expr).valor.lexema;
-        }
+        return switch (expr) {
+            case NodoLiteral l -> l.valor().lexema;
 
-        if (expr instanceof NodoBinario) {
-            NodoBinario b = (NodoBinario) expr;
-            String izquierda = generarExpresion(b.izquierda);
-            String derecha = generarExpresion(b.derecha);
-            String temporal = nuevoTemporal(); // después de los hijos
-            emitir(b.operador.lexema, izquierda, derecha, temporal);
-            return temporal;
-        }
+            case NodoVariable v -> v.nombre().lexema;
 
-        if (expr instanceof NodoUnario) {
-            NodoUnario u = (NodoUnario) expr;
-            String operando = generarExpresion(u.operando);
-            String temporal = nuevoTemporal();
-            emitir(u.operador.lexema, operando, null, temporal);
-            return temporal;
-        }
+            case NodoBinario b -> {
+                String izquierda = generarExpresion(b.izquierda());
+                String derecha = generarExpresion(b.derecha());
+                String temporal = nuevoTemporal(); // después de los hijos
+                emitir(b.operador().lexema, izquierda, derecha, temporal);
+                yield temporal;
+            }
 
-        if (expr instanceof NodoAgrupacion) {
+            case NodoUnario u -> {
+                String operando = generarExpresion(u.operando());
+                String temporal = nuevoTemporal();
+                emitir(u.operador().lexema, operando, null, temporal);
+                yield temporal;
+            }
+
             // Los paréntesis ya quedaron reflejados en la estructura del árbol
-            return generarExpresion(((NodoAgrupacion) expr).expresion);
-        }
-
-        throw new IllegalArgumentException(
-                "Expresión desconocida: " + expr.getClass().getSimpleName());
+            case NodoAgrupacion g -> generarExpresion(g.expresion());
+        };
     }
 
     // ---------------- AUXILIARES ----------------
