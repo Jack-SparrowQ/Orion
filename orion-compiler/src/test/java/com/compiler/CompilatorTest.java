@@ -122,6 +122,65 @@ public class CompilatorTest {
         assertTrue(r.archivos.isEmpty());
     }
 
+    // ------------------------------------------------------------
+    // if / else if / else
+    // ------------------------------------------------------------
+
+    private static final String IF_ELSE = lines(
+            "let a = 1;",
+            "if (a > 0) {",
+            "    print(a);",
+            "} else if (a < 0) {",
+            "    print(-a);",
+            "} else {",
+            "    print(0);",
+            "}");
+
+    @Test
+    void ifElse_generaJavaScript() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(IF_ELSE);
+        assertEquals(0, r.exitCode, r.stderr);
+        assertEquals(lines(
+                "let a = 1;",
+                "if (a > 0) {",
+                "    console.log(a);",
+                "} else {",
+                "    if (a < 0) {",
+                "        console.log(-a);",
+                "    } else {",
+                "        console.log(0);",
+                "    }",
+                "}"), r.archivos.get("programa.js"));
+    }
+
+    @Test
+    void ifElse_generaTac() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(IF_ELSE, Mode.EMIT_IR);
+        assertEquals(lines(
+                "    a = 1",
+                "    t1 = a > 0",
+                "    ifFalse t1 goto L1",
+                "    print a",
+                "    goto L2",
+                "L1:",
+                "    t2 = a < 0",
+                "    ifFalse t2 goto L3",
+                "    t3 = -a",
+                "    print t3",
+                "    goto L4",
+                "L3:",
+                "    print 0",
+                "L4:",
+                "L2:"), r.archivos.get("programa.tac"));
+    }
+
+    @Test
+    void errorSemanticoEnElse() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("if (true) { } else { print(z); }"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E301[SEMANTICO] Línea 1, columna 28"), r.stderr);
+    }
+
     /** Si no se puede escribir el artefacto: error por stderr y codigo 3. */
     @Test
     void fallaEscritura_devuelveErrorIo() {

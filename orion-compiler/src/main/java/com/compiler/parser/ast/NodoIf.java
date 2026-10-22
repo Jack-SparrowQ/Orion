@@ -1,5 +1,8 @@
 package com.compiler.parser.ast;
 
-/** "if" "(" condicion ")" bloque */
-public record NodoIf(Expresion condicion, NodoBloque bloqueTrue) implements Sentencia {
+/**
+ * "if" "(" condicion ")" bloque ( "else" bloque )?
+ * @param bloqueFalse rama else; vacía si no hay 'else'
+ */
+public record NodoIf(Expresion condicion, NodoBloque bloqueTrue, NodoBloque bloqueFalse) implements Sentencia {
 }

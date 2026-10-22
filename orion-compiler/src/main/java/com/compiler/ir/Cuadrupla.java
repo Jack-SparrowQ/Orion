@@ -7,6 +7,7 @@ package com.compiler.ir;
 //   (!,       b,  _,  t3)   ->  t3 = !b
 //   (print,   a,  _,  _ )   ->  print a
 //   (ifFalse, t2, _,  L1)   ->  ifFalse t2 goto L1
+//   (goto,    _,  _,  L2)   ->  goto L2
 //   (label,   _,  _,  L1)   ->  L1:
 public class Cuadrupla {
     public final String op;
@@ -31,6 +32,8 @@ public class Cuadrupla {
                 return "print " + arg1;
             case "ifFalse":
                 return "ifFalse " + arg1 + " goto " + resultado;
+            case "goto":
+                return "goto " + resultado;
             case "=":
                 return resultado + " = " + arg1;
             default:

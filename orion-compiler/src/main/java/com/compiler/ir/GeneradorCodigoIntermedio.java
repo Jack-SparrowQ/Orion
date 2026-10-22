@@ -50,13 +50,25 @@ public class GeneradorCodigoIntermedio {
             }
             case NodoIf nIf -> {
                 String condicion = generarExpresion(nIf.condicion());
-                String etiquetaFin = nuevaEtiqueta();
+                List<Sentencia> sino = nIf.bloqueFalse().sentencias();
 
-                emitir("ifFalse", condicion, null, etiquetaFin);
-                for (Sentencia interna : nIf.bloqueTrue().sentencias()) {
-                    generarSentencia(interna);
+                if (sino.isEmpty()) {
+                    //     ifFalse c goto Lfin ; then ; Lfin:
+                    String etiquetaFin = nuevaEtiqueta();
+                    emitir("ifFalse", condicion, null, etiquetaFin);
+                    nIf.bloqueTrue().sentencias().forEach(this::generarSentencia);
+                    emitir("label", null, null, etiquetaFin);
+                } else {
+                    //     ifFalse c goto Lelse ; then ; goto Lfin ; Lelse: ; else ; Lfin:
+                    String etiquetaElse = nuevaEtiqueta();
+                    String etiquetaFin = nuevaEtiqueta();
+                    emitir("ifFalse", condicion, null, etiquetaElse);
+                    nIf.bloqueTrue().sentencias().forEach(this::generarSentencia);
+                    emitir("goto", null, null, etiquetaFin);
+                    emitir("label", null, null, etiquetaElse);
+                    sino.forEach(this::generarSentencia);
+                    emitir("label", null, null, etiquetaFin);
                 }
-                emitir("label", null, null, etiquetaFin);
             }
         }
     }

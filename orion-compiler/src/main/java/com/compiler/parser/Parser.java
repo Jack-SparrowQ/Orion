@@ -160,19 +160,31 @@ public class Parser {
         return new NodoImprimir(valorAImprimir);
     }
 
-    // Regla: "if" "(" expresion ")" "{" sentencias "}"
+    // Regla: "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?
     private Sentencia declaracionIf() {
         consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'if'.");
-        
+
         Expresion condicion = expresion(); // Leemos la condición
-        
+
         consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la condición del if.");
-        
+
         // El 'if' requiere un bloque de código
         consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' antes del bloque del if.");
         NodoBloque cuerpo = parsearBloque();
-        
-        return new NodoIf(condicion, cuerpo);
+
+        // Sin 'else', la rama falsa es un bloque vacío
+        NodoBloque sino = new NodoBloque(List.of());
+        if (coinciden(TokenType.ELSE)) {
+            if (coinciden(TokenType.IF)) {
+                // else if: el if anidado es la única sentencia de la rama falsa
+                sino = new NodoBloque(List.of(declaracionIf()));
+            } else {
+                consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' después de 'else'.");
+                sino = parsearBloque();
+            }
+        }
+
+        return new NodoIf(condicion, cuerpo, sino);
     }
 
     // Regla auxiliar para leer todo lo que está dentro de { }

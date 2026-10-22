@@ -74,6 +74,12 @@ public final class SemanticAnalyzer {
                         symbolsTable,
                         errorHandler
                     );
+
+                    analyzeSymbols(
+                        nodeIf.bloqueFalse().sentencias(),
+                        symbolsTable,
+                        errorHandler
+                    );
                 }
 
                 //PRINT: no declara símbolos
@@ -118,11 +124,10 @@ public final class SemanticAnalyzer {
                 }
 
                 //IF: la condición ya se validó en analyzeSymbols
-                case NodoIf nodoIf -> analyzeSemantic(
-                        nodoIf.bloqueTrue().sentencias(),
-                        symbolsTable,
-                        errorHandler
-                    );
+                case NodoIf nodoIf -> {
+                    analyzeSemantic(nodoIf.bloqueTrue().sentencias(), symbolsTable, errorHandler);
+                    analyzeSemantic(nodoIf.bloqueFalse().sentencias(), symbolsTable, errorHandler);
+                }
 
                 //PRINT()
                 case NodoImprimir print -> validateExpression(print.expresion(), symbolsTable, errorHandler);

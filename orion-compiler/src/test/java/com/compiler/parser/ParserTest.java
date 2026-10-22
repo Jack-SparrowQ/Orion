@@ -73,6 +73,30 @@ public class ParserTest {
     }
 
     @Test
+    void ifSinElse_ramaFalsaVacia() {
+        NodoIf nodoIf = (NodoIf) parse("if (a) { print(a); }").get(0);
+        assertEquals(0, nodoIf.bloqueFalse().sentencias().size());
+    }
+
+    @Test
+    void ifElseIfElse() {
+        List<Sentencia> programa = parse("if (a) { print(1); } else if (b) { print(2); } else { print(3); print(4); }");
+        assertEquals("", errores());
+        assertEquals(1, programa.size());
+        NodoIf exterior = (NodoIf) programa.get(0);
+        // else if: el if anidado es la única sentencia de la rama falsa
+        NodoIf anidado = assertInstanceOf(NodoIf.class, exterior.bloqueFalse().sentencias().get(0));
+        assertEquals("b", anidado.condicion().toString());
+        assertEquals(2, anidado.bloqueFalse().sentencias().size());
+    }
+
+    @Test
+    void elseSinLlave() {
+        parse("if (a) { print(a); } else print(b);");
+        assertEquals("E201@1", codigosYLineas());
+    }
+
+    @Test
     void falta_igual() {
         parse("let x 5;");
         assertEquals("E201[SINTACTICO] Línea 1, columna 7: Se esperaba '=' después del nombre de la variable."

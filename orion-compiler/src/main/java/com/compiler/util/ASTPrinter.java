@@ -52,6 +52,18 @@ public class ASTPrinter {
                             nIf.bloqueTrue().sentencias(),
                             prefijo + "│       "
                     );
+
+                    if (!nIf.bloqueFalse().sentencias().isEmpty()) {
+                        System.out.println(
+                                prefijo
+                                        + "│   └── Bloque Else:"
+                        );
+
+                        printAST(
+                                nIf.bloqueFalse().sentencias(),
+                                prefijo + "│       "
+                        );
+                    }
                 }
 
                 case NodoImprimir imp -> System.out.println(

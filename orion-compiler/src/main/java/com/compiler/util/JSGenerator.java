@@ -39,7 +39,17 @@ public class JSGenerator {
                     jsIf.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
                 }
 
-                jsIf.append(indentacion).append("}\n");
+                jsIf.append(indentacion).append("}");
+
+                if (!nIf.bloqueFalse().sentencias().isEmpty()) {
+                    jsIf.append(" else {\n");
+                    for (Sentencia sentenciaInterna : nIf.bloqueFalse().sentencias()) {
+                        jsIf.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
+                    }
+                    jsIf.append(indentacion).append("}");
+                }
+
+                jsIf.append("\n");
                 yield jsIf.toString();
             }
         };
