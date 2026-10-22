@@ -272,6 +272,21 @@ public class CompilatorTest {
     }
 
     @Test
+    void asignacionCompuesta_generaJavaScript() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 1;", "a += 2;", "a *= a - 1;"));
+        assertEquals(0, r.exitCode, r.stderr);
+        assertEquals(lines("let a = 1;", "a = a + 2;", "a = a * (a - 1);"), r.archivos.get("programa.js"));
+    }
+
+    @Test
+    void asignacionCompuesta_comprobacionDeTipos() {
+        // int /= int produce float: no cabe en una variable int
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 4;", "a /= 2;"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E307"), r.stderr);
+    }
+
+    @Test
     void asignacion_aConstante_E305() {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("const k = 1;", "k = 2;"));
         assertEquals(1, r.exitCode);

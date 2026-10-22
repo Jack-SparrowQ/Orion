@@ -2,6 +2,7 @@ package com.compiler.parser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.compiler.error.ErrorHandler;
@@ -11,6 +12,14 @@ import com.compiler.lexer.TokenType;
 import com.compiler.parser.ast.*;
 
 public class Parser {
+
+    // Operador binario equivalente a cada asignación compuesta (+= -> +)
+    private static final Map<TokenType, TokenType> OPERADOR_COMPUESTO = Map.of(
+            TokenType.SUMA_Y_ASIGNACION, TokenType.SUMA,
+            TokenType.RESTA_Y_ASIGNACION, TokenType.RESTA,
+            TokenType.MULTI_Y_ASIGNACION, TokenType.MULTI,
+            TokenType.DIVISION_Y_ASIGNACION, TokenType.DIVISION,
+            TokenType.MODULO_Y_ASIGNACION, TokenType.MODULO);
 
     private final ErrorHandler gestorErrores;
     private final List<Token> tokens;
@@ -130,7 +139,8 @@ public class Parser {
             return declaracionIf();
         }
         // Un identificador solo empieza sentencia si le sigue '=' (asignación)
-        if (verificar(TokenType.IDENTIFICADOR) && siguiente().tipo == TokenType.IGUAL) {
+        if (verificar(TokenType.IDENTIFICADOR)
+                && (siguiente().tipo == TokenType.IGUAL || OPERADOR_COMPUESTO.containsKey(siguiente().tipo))) {
             return asignacion();
         }
 
@@ -158,12 +168,24 @@ public class Parser {
     }
 
     // Regla: asignacion -> IDENTIFICADOR "=" expresion ";"
+    //                   | IDENTIFICADOR ("+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
     private Sentencia asignacion() {
         Token identificador = avanzar();
-        avanzar(); // '=' (ya comprobado en sentencia())
+        Token operador = avanzar(); // '=' o compuesto (ya comprobado en sentencia())
 
         Expresion valor = expresion();
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la asignación.");
+
+        TokenType binario = OPERADOR_COMPUESTO.get(operador.tipo);
+        if (binario != null) {
+            // a += b se traduce a a = a + b: las demás fases no necesitan un nodo nuevo.
+            // Los paréntesis conservan el orden: a *= b + 1 es a = a * (b + 1).
+            if (valor instanceof NodoBinario) {
+                valor = new NodoAgrupacion(valor);
+            }
+            Token op = new Token(binario, operador.lexema.substring(0, 1), operador.line, operador.column);
+            valor = new NodoBinario(new NodoVariable(identificador), op, valor);
+        }
 
         return new NodoAsignacion(identificador, valor);
     }

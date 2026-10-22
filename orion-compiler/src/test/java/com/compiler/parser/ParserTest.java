@@ -106,6 +106,16 @@ public class ParserTest {
         assertEquals("(b * 2)", asignacion.valor().toString());
     }
 
+    @Test
+    void asignacionCompuesta_seTraduceASimple() {
+        List<Sentencia> programa = parse("a += 1;\na -= b;\na *= b + 1;\na /= 2;\na %= 3;");
+        assertEquals("", errores());
+        String valores = programa.stream()
+                .map(s -> ((NodoAsignacion) s).valor().toString())
+                .collect(Collectors.joining(" | "));
+        assertEquals("(a + 1) | (a - b) | (a * group((b + 1))) | (a / 2) | (a % 3)", valores);
+    }
+
     /** Un identificador sin '=' detrás no es una sentencia. */
     @Test
     void expresionSuelta_noEsSentencia() {
