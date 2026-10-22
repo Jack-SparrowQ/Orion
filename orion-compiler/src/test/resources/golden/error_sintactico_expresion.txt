@@ -3,7 +3,7 @@
 === STDOUT ===
 === STDERR ===
 
-Se encontraron errores durante el análisis sintactic.
+Se encontraron errores durante el análisis sintáctico.
 
 ---------------- ERRORES ----------------
 E203[SINTACTICO] Línea 1, columna 14: Se esperaba una expresión (número, variable, true/false o '('). Se encontró ';'.

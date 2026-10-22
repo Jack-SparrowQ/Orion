@@ -3,10 +3,10 @@
 === STDOUT ===
 === STDERR ===
 
-Se encontraron errores durante el análisis sintactic.
+Se encontraron errores durante el análisis sintáctico.
 
 ---------------- ERRORES ----------------
-E2002[SINTACTICO] Línea 2, columna 1: Instruccion no reconocida: 'b'.
+E202[SINTACTICO] Línea 2, columna 1: Instrucción no reconocida: 'b'.
 ------------------------------------------
 Total de errores: 1
 

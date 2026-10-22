@@ -126,7 +126,7 @@ public class Parser {
         }
         
         // Si no es ninguna de las anteriores, lanzamos error (por ahora)
-        throw error(peek(), "E2002", "Instruccion no reconocida: "+ describir(peek()) + ".");
+        throw error(peek(), "E202", "Instrucción no reconocida: " + describir(peek()) + ".");
     }
 
     // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" expresion ";"

@@ -132,7 +132,7 @@ public class ParserTest {
     @Test
     void llaveSuelta_noBuclea() {
         parse("}\nprint(a);\n}");
-        assertEquals("E2002@1 E2002@3", codigosYLineas());
+        assertEquals("E202@1 E202@3", codigosYLineas());
     }
 
     @Test

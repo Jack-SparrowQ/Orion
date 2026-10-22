@@ -29,7 +29,7 @@ public class CompilatorTest {
         GoldenFile.verificar("error_sintactico_expresion", r.informe());
     }
  
-    /** Instruccion no reconocida. Caracteriza F8: el codigo es E2002 (4 digitos). */
+    /** E202: instrucción no reconocida. */
     @Test
     void errorSintactico_instruccionNoReconocida() {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = b;", "b = 1;"));

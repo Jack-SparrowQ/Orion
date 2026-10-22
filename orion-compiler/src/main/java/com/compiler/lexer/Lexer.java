@@ -187,7 +187,7 @@ public class Lexer {
                     if(match('&')) { 
                         return createToken(TokenType.AND_LOGICO, "&&"); 
                     }
-                    gestorErrores.agregar("E101", ErrorType.LEXICO, "Error Léxico: Se esperaba '&' después de '&'", startLine, startColumn);
+                    gestorErrores.agregar("E101", ErrorType.LEXICO, "Operador incompleto: se esperaba '&&'.", startLine, startColumn);
                     continue;
                 case '|':
                     avanzar();
@@ -195,7 +195,7 @@ public class Lexer {
                         return createToken(TokenType.OR_LOGICO, "||");
                     }
                     gestorErrores.agregar("E102",
-                    ErrorType.LEXICO, "Operador incompleto: se esperaba '||'", startLine, startColumn);
+                    ErrorType.LEXICO, "Operador incompleto: se esperaba '||'.", startLine, startColumn);
                     continue;
 
                 default:

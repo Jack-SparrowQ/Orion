@@ -299,7 +299,7 @@ public class Compiler {
             tokensOut.println(Tokenizer.getTokenInformation(token));
         }
 
-        if (reportarSiHayErrores(errorHandler, "lexico")) {
+        if (reportarSiHayErrores(errorHandler, "léxico")) {
             return Optional.empty();
         }
 
@@ -332,7 +332,7 @@ public class Compiler {
 
         List<Sentencia> arbolAST = parser.parsear();
 
-        if (reportarSiHayErrores(errorHandler, "sintactic")) {
+        if (reportarSiHayErrores(errorHandler, "sintáctico")) {
             return Optional.empty();
         }
 
@@ -398,7 +398,7 @@ public class Compiler {
                 errorHandler
         );
 
-        if (reportarSiHayErrores(errorHandler, "Semantic")) {
+        if (reportarSiHayErrores(errorHandler, "semántico")) {
             return false;
         }
 

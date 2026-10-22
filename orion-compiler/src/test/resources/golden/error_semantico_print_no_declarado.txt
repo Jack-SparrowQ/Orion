@@ -3,7 +3,7 @@
 === STDOUT ===
 === STDERR ===
 
-Se encontraron errores durante el análisis Semantic.
+Se encontraron errores durante el análisis semántico.
 
 ---------------- ERRORES ----------------
 E301[SEMANTICO] Línea 1, columna 7: El identificador 'x' no ha sido declarado.
