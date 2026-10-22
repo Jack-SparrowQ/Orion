@@ -1,6 +1,10 @@
 package com.compiler.semantic;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.compiler.error.ErrorHandler;
 import com.compiler.error.ErrorType;
@@ -9,15 +13,31 @@ import com.compiler.lexer.TokenType;
 import com.compiler.parser.ast.*;
 
 /**
- * 
- * SemanticAnalyzer
+ * Análisis semántico en dos fases:
+ * <ol>
+ *   <li>{@link #analyzeSymbols}: registra cada declaración con su tipo inferido (E302).</li>
+ *   <li>{@link #analyzeSemantic}: comprueba, en orden y por bloques, el uso de cada
+ *       identificador y los tipos de expresiones, asignaciones y condiciones.</li>
+ * </ol>
+ *
+ * Reglas de tipos (int se promueve a float donde hace falta):
+ * <pre>
+ *   + - * %          int op int -> int ; numérico op numérico -> float
+ *   /                numérico / numérico -> float  (en JS, 7 / 2 es 3.5)
+ *   &lt; &lt;= &gt; &gt;=      numérico op numérico -> bool
+ *   == !=            mismo tipo, o ambos numéricos -> bool
+ *   &amp;&amp; ||  !         bool -> bool
+ *   -x               numérico -> mismo tipo
+ *   x = valor        mismo tipo, o int en una variable float
+ *   if (c)           c debe ser bool
+ * </pre>
  */
 public final class SemanticAnalyzer {
-    
+
     private SemanticAnalyzer() {}
 
     /**
-     * 
+     * Fase 3: registra las declaraciones (en orden) con su tipo inferido.
      * @param nodes
      * @param symbolsTable
      * @param errorHandler
@@ -36,7 +56,8 @@ public final class SemanticAnalyzer {
                 case NodoDeclaracion declaration -> {
                     String name = declaration.identificador().lexema;
 
-                    Type type = determineExpressionType(declaration.valor());
+                    // Sin reportar errores: eso lo hace la fase 4
+                    Type type = new Verificador(symbolsTable, null).tipo(declaration.valor());
 
                     Symbol symbol =
                             new Symbol(
@@ -69,19 +90,8 @@ public final class SemanticAnalyzer {
 
                 //IF
                 case NodoIf nodeIf -> {
-                    validateExpression(nodeIf.condicion(), symbolsTable, errorHandler);
-
-                    analyzeSymbols(
-                        nodeIf.bloqueTrue().sentencias(),
-                        symbolsTable,
-                        errorHandler
-                    );
-
-                    analyzeSymbols(
-                        nodeIf.bloqueFalse().sentencias(),
-                        symbolsTable,
-                        errorHandler
-                    );
+                    analyzeSymbols(nodeIf.bloqueTrue().sentencias(), symbolsTable, errorHandler);
+                    analyzeSymbols(nodeIf.bloqueFalse().sentencias(), symbolsTable, errorHandler);
                 }
 
                 //PRINT y ASIGNACIÓN: no declaran símbolos
@@ -92,7 +102,8 @@ public final class SemanticAnalyzer {
     }
 
     /**
-     *
+     * Fase 4: uso de identificadores (E301, E303, E305), división entre cero (E304)
+     * y tipos (E306, E307, E308).
      * @param nodes
      * @param symbolsTable
      * @param errorHandler
@@ -102,121 +113,217 @@ public final class SemanticAnalyzer {
         SymbolTable symbolsTable,
         ErrorHandler errorHandler
     ) {
+        new Verificador(symbolsTable, errorHandler).sentencias(nodes);
+    }
 
-        for(Sentencia node: nodes) {
+    /**
+     * Recorre sentencias y expresiones calculando tipos. Un tipo null significa
+     * "desconocido" (por un error ya reportado): no genera más errores en cascada.
+     */
+    private static final class Verificador {
 
-            switch (node) {
+        private final SymbolTable tabla;
 
-                //DECLARATION
-                case NodoDeclaracion declaration -> {
-                    String name = declaration.identificador().lexema;
+        /** null: solo inferir tipos, sin reportar errores ni comprobar ámbitos. */
+        private final ErrorHandler errores;
 
-                    validateExpression(declaration.valor(), symbolsTable, errorHandler);
+        /** Nombres declarados hasta este punto, un conjunto por bloque abierto. */
+        private final Deque<Set<String>> visibles = new ArrayDeque<>();
 
-                    if(symbolsTable.buscar(name) == null) {
-                        errorHandler.agregar(
-                            "E301",
-                            ErrorType.SEMANTICO,
-                            "El identificador '"
-                            + name
-                            + "' no ha sido declarado.",
-                            declaration.identificador().line,
-                            declaration.identificador().column
-                        );
-                    }
+        Verificador(SymbolTable tabla, ErrorHandler errores) {
+            this.tabla = tabla;
+            this.errores = errores;
+            visibles.push(new HashSet<>());
+        }
+
+        void sentencias(List<Sentencia> nodos) {
+            for (Sentencia nodo : nodos) {
+                sentencia(nodo);
+            }
+        }
+
+        // Las variables declaradas dentro de un bloque solo son visibles en él
+        // (el JavaScript generado usa let/const, que también son de bloque).
+        private void bloque(NodoBloque bloque) {
+            visibles.push(new HashSet<>());
+            sentencias(bloque.sentencias());
+            visibles.pop();
+        }
+
+        private void sentencia(Sentencia nodo) {
+            switch (nodo) {
+
+                // El valor se comprueba antes de declarar: "let a = a + 1;" es un error
+                case NodoDeclaracion declaracion -> {
+                    tipo(declaracion.valor());
+                    visibles.peek().add(declaracion.identificador().lexema);
                 }
 
-                //IF: la condición ya se validó en analyzeSymbols
-                case NodoIf nodoIf -> {
-                    analyzeSemantic(nodoIf.bloqueTrue().sentencias(), symbolsTable, errorHandler);
-                    analyzeSemantic(nodoIf.bloqueFalse().sentencias(), symbolsTable, errorHandler);
-                }
-
-                //ASIGNACIÓN: la variable debe existir y no ser constante
                 case NodoAsignacion asignacion -> {
-                    validateExpression(asignacion.valor(), symbolsTable, errorHandler);
-
+                    Type valor = tipo(asignacion.valor());
                     Token nombre = asignacion.identificador();
-                    Symbol symbol = symbolsTable.buscar(nombre.lexema);
+                    Symbol symbol = buscarVisible(nombre);
 
-                    if(symbol == null) {
-                        errorHandler.agregar(
-                            "E301",
-                            ErrorType.SEMANTICO,
-                            "El identificador '" + nombre.lexema + "' no ha sido declarado.",
-                            nombre.line,
-                            nombre.column
-                        );
-                    } else if(symbol.getCategoria() == SymbolCategory.CONSTANTE) {
-                        errorHandler.agregar(
-                            "E305",
-                            ErrorType.SEMANTICO,
-                            "No se puede reasignar la constante '" + nombre.lexema
-                            + "' (declarada en la linea: " + symbol.getLinea() + ").",
-                            nombre.line,
-                            nombre.column
-                        );
+                    if (symbol == null) {
+                        return;
+                    }
+
+                    if (symbol.getCategoria() == SymbolCategory.CONSTANTE) {
+                        reportar("E305", "No se puede reasignar la constante '" + nombre.lexema
+                                + "' (declarada en la linea: " + symbol.getLinea() + ").", nombre);
+                    } else if (!asignable(valor, symbol.getTipo())) {
+                        reportar("E307", "No se puede asignar un valor " + nombreTipo(valor)
+                                + " a '" + nombre.lexema + "', que es de tipo "
+                                + nombreTipo(symbol.getTipo()) + ".", nombre);
                     }
                 }
 
-                //PRINT()
-                case NodoImprimir print -> validateExpression(print.expresion(), symbolsTable, errorHandler);
+                case NodoIf nodoIf -> {
+                    Type condicion = tipo(nodoIf.condicion());
+                    if (condicion != null && condicion != Type.BOOL) {
+                        reportar("E308", "La condición del if debe ser bool, no "
+                                + nombreTipo(condicion) + ".", primerToken(nodoIf.condicion()));
+                    }
+                    bloque(nodoIf.bloqueTrue());
+                    bloque(nodoIf.bloqueFalse());
+                }
+
+                case NodoImprimir print -> tipo(print.expresion());
+            }
+        }
+
+        /** Tipo de la expresión, o null si no puede determinarse (error ya reportado). */
+        Type tipo(Expresion expresion) {
+            return switch (expresion) {
+
+                case NodoLiteral literal -> literal.valor().tipo == TokenType.NUMERO
+                        ? (literal.valor().lexema.contains(".") ? Type.FLOAT : Type.INT)
+                        : Type.BOOL;
+
+                case NodoVariable variable -> {
+                    Symbol symbol = buscarVisible(variable.nombre());
+                    yield symbol == null ? null : symbol.getTipo();
+                }
+
+                case NodoAgrupacion grupo -> tipo(grupo.expresion());
+
+                case NodoUnario unario -> {
+                    Type operando = tipo(unario.operando());
+                    if (operando == null) {
+                        yield null;
+                    }
+
+                    boolean valido = unario.operador().tipo == TokenType.RESTA
+                            ? esNumerico(operando)
+                            : operando == Type.BOOL; // '!'
+                    if (!valido) {
+                        reportar("E306", "Operación inválida: no se puede aplicar '"
+                                + unario.operador().lexema + "' a " + nombreTipo(operando) + ".",
+                                unario.operador());
+                        yield null;
+                    }
+                    yield operando;
+                }
+
+                case NodoBinario binario -> {
+                    Type izquierda = tipo(binario.izquierda());
+                    Type derecha = tipo(binario.derecha());
+
+                    if (binario.operador().tipo == TokenType.DIVISION
+                            && isAConstantZero(binario.derecha())) {
+                        reportar("E304", "División entre cero: el divisor de la "
+                                + "operación no puede ser 0.", binario.operador());
+                    }
+
+                    if (izquierda == null || derecha == null) {
+                        yield null;
+                    }
+
+                    Type resultado = tipoBinario(binario.operador().tipo, izquierda, derecha);
+                    if (resultado == null) {
+                        reportar("E306", "Operación inválida: no se puede aplicar '"
+                                + binario.operador().lexema + "' a " + nombreTipo(izquierda)
+                                + " y " + nombreTipo(derecha) + ".", binario.operador());
+                    }
+                    yield resultado;
+                }
+            };
+        }
+
+        /**
+         * Símbolo de un identificador usado en este punto, o null si no es
+         * visible (E301 si no existe, E303 si existe pero aún no está declarado
+         * o pertenece a otro bloque).
+         */
+        private Symbol buscarVisible(Token nombre) {
+            Symbol symbol = tabla.buscar(nombre.lexema);
+
+            if (errores == null) {
+                return symbol; // inferencia: basta con que ya esté en la tabla
+            }
+
+            if (symbol == null) {
+                reportar("E301", "El identificador '" + nombre.lexema
+                        + "' no ha sido declarado.", nombre);
+                return null;
+            }
+
+            if (visibles.stream().noneMatch(nombres -> nombres.contains(nombre.lexema))) {
+                reportar("E303", "El identificador '" + nombre.lexema
+                        + "' se usa antes de su declaración o fuera de su bloque (declarado en la linea: "
+                        + symbol.getLinea() + ").", nombre);
+                return null;
+            }
+
+            return symbol;
+        }
+
+        private void reportar(String codigo, String mensaje, Token posicion) {
+            if (errores != null) {
+                errores.agregar(codigo, ErrorType.SEMANTICO, mensaje, posicion.line, posicion.column);
             }
         }
     }
 
-    /**
-     * Traverse the expression and verify that each identifier is declared.
-     * @param expression
-     * @param symbolsTable
-     * @param errorHandler
-     */
-    private static void validateExpression(
-        Expresion expression,
-        SymbolTable symbolsTable,
-        ErrorHandler errorHandler
-    ) {
-        switch (expression) {
+    /** Tipo resultante de "izquierda op derecha", o null si la operación no es válida. */
+    private static Type tipoBinario(TokenType operador, Type izquierda, Type derecha) {
+        boolean numericos = esNumerico(izquierda) && esNumerico(derecha);
 
-            case NodoLiteral literal -> { }
+        return switch (operador) {
+            case SUMA, RESTA, MULTI, MODULO -> !numericos ? null
+                    : (izquierda == Type.INT && derecha == Type.INT ? Type.INT : Type.FLOAT);
+            case DIVISION -> numericos ? Type.FLOAT : null;
+            case MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL -> numericos ? Type.BOOL : null;
+            case COMPARACION_IGUAL, DIFERENTE -> izquierda == derecha || numericos ? Type.BOOL : null;
+            case AND_LOGICO, OR_LOGICO ->
+                    izquierda == Type.BOOL && derecha == Type.BOOL ? Type.BOOL : null;
+            default -> null;
+        };
+    }
 
-            case NodoVariable variable -> {
-                Token nombre = variable.nombre();
+    private static boolean esNumerico(Type tipo) {
+        return tipo == Type.INT || tipo == Type.FLOAT;
+    }
 
-                if (!symbolsTable.existe(nombre.lexema)) {
-                    errorHandler.agregar(
-                            "E301",
-                            ErrorType.SEMANTICO,
-                            "El identificador '" + nombre.lexema
-                                    + "' no ha sido declarado.",
-                            nombre.line,
-                            nombre.column
-                    );
-                }
-            }
+    /** Un tipo desconocido (null) se acepta para no generar errores en cascada. */
+    private static boolean asignable(Type valor, Type destino) {
+        return valor == null || destino == null || valor == destino
+                || (valor == Type.INT && destino == Type.FLOAT);
+    }
 
-            case NodoBinario b -> {
-                validateExpression(b.izquierda(), symbolsTable, errorHandler);
-                validateExpression(b.derecha(), symbolsTable, errorHandler);
+    private static String nombreTipo(Type tipo) {
+        return tipo.name().toLowerCase();
+    }
 
-                if (b.operador().tipo == TokenType.DIVISION
-                        && isAConstantZero(b.derecha())) {
-
-                    errorHandler.agregar(
-                            "E304",
-                            ErrorType.SEMANTICO,
-                            "División entre cero: el divisor de la "
-                                    + "operación no puede ser 0.",
-                            b.operador().line,
-                            b.operador().column
-                    );
-                }
-            }
-
-            case NodoUnario u -> validateExpression(u.operando(), symbolsTable, errorHandler);
-
-            case NodoAgrupacion g -> validateExpression(g.expresion(), symbolsTable, errorHandler);
-        }
+    /** Token más a la izquierda de una expresión, para ubicar el error. */
+    private static Token primerToken(Expresion expresion) {
+        return switch (expresion) {
+            case NodoLiteral literal -> literal.valor();
+            case NodoVariable variable -> variable.nombre();
+            case NodoAgrupacion grupo -> primerToken(grupo.expresion());
+            case NodoUnario unario -> unario.operador();
+            case NodoBinario binario -> primerToken(binario.izquierda());
+        };
     }
 
     /**
@@ -300,87 +407,4 @@ public final class SemanticAnalyzer {
             }
         };
     }
-
-    //DETERMINACION SIMPLE DE TIPO
-    /**
-     * Determinacion simple de tipo.
-     * @param valor
-     * @return
-     */
-    private static Type determineType(String valor) {
-
-        if (valor == null) {
-            return Type.NULL;
-        }
-
-
-        // Entero
-
-        if (valor.matches("-?\\d+")) {
-            return Type.INT;
-        }
-
-
-        // Real
-
-        if (valor.matches("-?\\d+\\.\\d+")) {
-            return Type.FLOAT;
-        }
-
-
-        // Booleano
-
-        if (valor.equals("true")
-                || valor.equals("false")) {
-
-            return Type.BOOL;
-        }
-
-
-        // Carácter
-
-        if (valor.length() >= 3
-                && valor.startsWith("'")
-                && valor.endsWith("'")) {
-
-            return Type.CHAR;
-        }
-
-
-        // Cadena
-
-        if (valor.length() >= 2
-                && valor.startsWith("\"")
-                && valor.endsWith("\"")) {
-
-            return Type.STRING;
-        }
-
-
-        /*
-         * Si todavía no sabemos qué tipo es,
-         * dejamos que el análisis semántico
-         * posterior lo determine.
-         */
-
-        return null;
-    }
-
-    // Tipo provisional de una expresión de inicialización.
-    /**
-     * Tipo provisional de una expresion de inicializacion.
-     * @param expresion
-     * @return
-     */
-    private static Type determineExpressionType(Expresion expresion) {
-
-        // Literales: el tipo se deduce del propio valor, como hasta ahora
-        if (expresion instanceof NodoLiteral literal) {
-            return determineType(literal.valor().lexema);
-        }
-
-        // TODO (Tarea 7): calcular el tipo real de identificadores y de
-        // expresiones compuestas (int + float -> float, a > b -> bool, ...).
-        return Type.NULL;
-    }    
 }
