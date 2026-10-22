@@ -129,6 +129,14 @@ public class ParserTest {
         assertEquals("E203@1", codigosYLineas());
     }
 
+    /** Error en la cabecera del if: se descarta el bloque entero, sin errores en cascada. */
+    @Test
+    void errorEnCabeceraDeIf_saltaElBloque() {
+        List<Sentencia> programa = parse("if (a {\n print(a);\n}\nprint(;\nprint(b);");
+        assertEquals("E201@1 E203@4", codigosYLineas());
+        assertEquals(1, programa.size());
+    }
+
     @Test
     void llaveSuelta_noBuclea() {
         parse("}\nprint(a);\n}");

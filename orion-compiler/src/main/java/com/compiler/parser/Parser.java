@@ -299,20 +299,35 @@ public class Parser {
     // sentencia (o el '}' que cierra el bloque). Consume al menos un token para
     // no quedar en un bucle infinito, salvo el '}' del bloque actual, que debe
     // quedar para cerrarlo (el bucle de parsearBloque termina en él).
+    // Si descarta un '{' (p. ej. error en la cabecera de un if), descarta el
+    // bloque entero hasta su '}' para no analizar su cuerpo fuera de contexto.
     private void sincronizar(boolean enBloque) {
-        if (!(enBloque && verificar(TokenType.LLAVE_DER))) {
-            avanzar();
+        if (enBloque && verificar(TokenType.LLAVE_DER)) {
+            return;
         }
-        while (!isAtEnd()) {
-            if (anterior().tipo == TokenType.PUNTO_Y_COMA) {
+
+        int llavesAbiertas = 0;
+        do {
+            Token descartado = avanzar();
+
+            if (descartado.tipo == TokenType.LLAVE_IZQ) {
+                llavesAbiertas++;
+            } else if (descartado.tipo == TokenType.LLAVE_DER && llavesAbiertas > 0
+                    && --llavesAbiertas == 0) {
                 return;
             }
-            switch (peek().tipo) {
-                case LET, CONST, PRINT, IF, LLAVE_DER -> {
+
+            if (llavesAbiertas == 0) {
+                if (descartado.tipo == TokenType.PUNTO_Y_COMA) {
                     return;
                 }
-                default -> avanzar();
+                switch (peek().tipo) {
+                    case LET, CONST, PRINT, IF, LLAVE_DER -> {
+                        return;
+                    }
+                    default -> { }
+                }
             }
-        }
+        } while (!isAtEnd());
     }
 }
