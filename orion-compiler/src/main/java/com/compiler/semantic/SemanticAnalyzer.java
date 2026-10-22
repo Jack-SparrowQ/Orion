@@ -125,16 +125,7 @@ public final class SemanticAnalyzer {
                     );
 
                 //PRINT()
-                case NodoImprimir print -> {
-                    validateExpression(print.expresion(), symbolsTable, errorHandler);
-
-                    // F1 (defecto conocido, caracterizado en CompilatorTest):
-                    // una expresión simple se valida dos veces y su error se duplica.
-                    if(print.expresion() instanceof NodoLiteral
-                            || print.expresion() instanceof NodoVariable) {
-                        validateExpression(print.expresion(), symbolsTable, errorHandler);
-                    }
-                }
+                case NodoImprimir print -> validateExpression(print.expresion(), symbolsTable, errorHandler);
             }
         }
     }

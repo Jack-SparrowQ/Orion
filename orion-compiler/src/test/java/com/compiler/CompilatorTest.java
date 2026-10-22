@@ -37,12 +37,11 @@ public class CompilatorTest {
     }
 
  
-    /** E301 en print. Caracteriza F1: el error se reporta DOS veces. */
+    /** E301 en print. Regresion de F1: el error se reportaba dos veces. */
     @Test
     void errorSemantico_printNoDeclarado() {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("print(x);"));
-        // Caracteriza F1 (defecto conocido): el mismo E301 aparece dos veces.
-        assertEquals(2, ResultadoCompilacion.contar(r.stderr, "E301"), "ocurrencias de E301");
+        assertEquals(1, ResultadoCompilacion.contar(r.stderr, "E301"), "ocurrencias de E301");
         GoldenFile.verificar("error_semantico_print_no_declarado", r.informe());
     }
  
