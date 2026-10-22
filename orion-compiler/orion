@@ -1,3 +1,4 @@
 #!/bin/sh
 # Orion compiler launcher. Build the JAR first with: mvn package
-exec java -jar "$(dirname "$0")/target/orion.jar" "$@"
+# UTF-8 output: otherwise Java writes Cp1252 on Windows when piped and accents break.
+exec java -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 -jar "$(dirname "$0")/target/orion.jar" "$@"
