@@ -101,6 +101,25 @@ public class LexerTest {
     }
 
     @Test
+    void comentarioDeLinea() {
+        assertEquals("LET IDENTIFICADOR IGUAL NUMERO PUNTO_Y_COMA PRINT",
+                tipos("let a = 1; // a / 2 = @\nprint"));
+        assertEquals("", codigosDeError());
+        assertEquals("", tipos("// solo un comentario"));
+    }
+
+    @Test
+    void numerosDecimales() {
+        List<Token> tokens = lex("3.14 10 2.0");
+        assertEquals("3.14", tokens.get(0).lexema);
+        assertEquals("10", tokens.get(1).lexema);
+        assertEquals("2.0", tokens.get(2).lexema);
+        // Un '.' sin dígitos detrás no forma parte del número
+        assertEquals("NUMERO PUNTO", tipos("3."));
+        assertEquals("NUMERO PUNTO IDENTIFICADOR", tipos("3.x"));
+    }
+
+    @Test
     void entradaVacia() {
         assertEquals("", tipos(""));
     }

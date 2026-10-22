@@ -62,6 +62,12 @@ public class Lexer {
         return codigoFuente.charAt(posicionActual);
     }
 
+    // Método de apoyo para ver el carácter siguiente al actual sin avanzar
+    private char siguienteCaracter() {
+        if (posicionActual + 1 >= codigoFuente.length()) return '\0';
+        return codigoFuente.charAt(posicionActual + 1);
+    }
+
     // Método de apoyo para avanzar el puntero
     private void avanzar() {
         if(caracterActual() == '\n') {
@@ -110,6 +116,13 @@ public class Lexer {
                     return createToken(TokenType.MULTI, "*");
                 case '/':
                     avanzar();
+                    if (match('/')) {
+                        // Comentario de línea: se descarta hasta el salto de línea
+                        while (posicionActual < codigoFuente.length() && caracterActual() != '\n') {
+                            avanzar();
+                        }
+                        continue;
+                    }
                     if (match('=')) {
                         return createToken(TokenType.DIVISION_Y_ASIGNACION, "/=");
                     }
@@ -208,6 +221,15 @@ public class Lexer {
                 while (posicionActual < codigoFuente.length() && esDigito(caracterActual())) {
                     numero.append(caracterActual());
                     avanzar();
+                }
+                // Parte decimal: solo si al '.' le sigue un dígito ("3." sigue siendo 3 y '.')
+                if (caracterActual() == '.' && esDigito(siguienteCaracter())) {
+                    numero.append('.');
+                    avanzar();
+                    while (posicionActual < codigoFuente.length() && esDigito(caracterActual())) {
+                        numero.append(caracterActual());
+                        avanzar();
+                    }
                 }
                 return createToken(TokenType.NUMERO, numero.toString());
             }
