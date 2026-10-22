@@ -44,6 +44,10 @@ public class GeneradorCodigoIntermedio {
                 String valor = generarExpresion(dec.valor());
                 emitir("=", valor, null, dec.identificador().lexema);
             }
+            case NodoAsignacion asig -> {
+                String valor = generarExpresion(asig.valor());
+                emitir("=", valor, null, asig.identificador().lexema);
+            }
             case NodoImprimir imp -> {
                 String valor = generarExpresion(imp.expresion());
                 emitir("print", valor, null, null);

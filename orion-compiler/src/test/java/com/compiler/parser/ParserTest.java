@@ -12,6 +12,7 @@ import com.compiler.error.CompilationError;
 import com.compiler.error.ErrorHandler;
 import com.compiler.lexer.Lexer;
 import com.compiler.lexer.Tokenizer;
+import com.compiler.parser.ast.NodoAsignacion;
 import com.compiler.parser.ast.NodoDeclaracion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
@@ -94,6 +95,22 @@ public class ParserTest {
     void elseSinLlave() {
         parse("if (a) { print(a); } else print(b);");
         assertEquals("E201@1", codigosYLineas());
+    }
+
+    @Test
+    void asignacion() {
+        List<Sentencia> programa = parse("a = b * 2;");
+        assertEquals("", errores());
+        NodoAsignacion asignacion = assertInstanceOf(NodoAsignacion.class, programa.get(0));
+        assertEquals("a", asignacion.identificador().lexema);
+        assertEquals("(b * 2)", asignacion.valor().toString());
+    }
+
+    /** Un identificador sin '=' detrás no es una sentencia. */
+    @Test
+    void expresionSuelta_noEsSentencia() {
+        parse("a + 1;\na = ;");
+        assertEquals("E202@1 E203@2", codigosYLineas());
     }
 
     @Test

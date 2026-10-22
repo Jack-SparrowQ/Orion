@@ -2,6 +2,7 @@ package com.compiler.util;
 
 import java.util.List;
 
+import com.compiler.parser.ast.NodoAsignacion;
 import com.compiler.parser.ast.NodoDeclaracion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
@@ -34,6 +35,14 @@ public class ASTPrinter {
                                 + d.identificador().lexema
                                 + " = "
                                 + d.valor()
+                );
+
+                case NodoAsignacion a -> System.out.println(
+                        prefijo
+                                + "├── [Asignación]: "
+                                + a.identificador().lexema
+                                + " = "
+                                + a.valor()
                 );
 
                 case NodoIf nIf -> {

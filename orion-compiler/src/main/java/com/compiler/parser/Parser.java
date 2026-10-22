@@ -57,6 +57,11 @@ public class Parser {
         return tokens.get(actual - 1);
     }
 
+    // Mira el token posterior al actual (el EOF si no hay más)
+    private Token siguiente() {
+        return tokens.get(Math.min(actual + 1, tokens.size() - 1));
+    }
+
     // Devuelve el último token consumido
     private Token anterior() {
         return tokens.get(actual - 1);
@@ -124,7 +129,11 @@ public class Parser {
         if (coinciden(TokenType.IF)) {
             return declaracionIf();
         }
-        
+        // Un identificador solo empieza sentencia si le sigue '=' (asignación)
+        if (verificar(TokenType.IDENTIFICADOR) && siguiente().tipo == TokenType.IGUAL) {
+            return asignacion();
+        }
+
         // Si no es ninguna de las anteriores, lanzamos error (por ahora)
         throw error(peek(), "E202", "Instrucción no reconocida: " + describir(peek()) + ".");
     }
@@ -146,6 +155,17 @@ public class Parser {
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la sentencia.");
         
         return new NodoDeclaracion(palabraClave, identificador, valor);
+    }
+
+    // Regla: asignacion -> IDENTIFICADOR "=" expresion ";"
+    private Sentencia asignacion() {
+        Token identificador = avanzar();
+        avanzar(); // '=' (ya comprobado en sentencia())
+
+        Expresion valor = expresion();
+        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la asignación.");
+
+        return new NodoAsignacion(identificador, valor);
     }
 
     // Regla: "print" "(" expresion ")" ";"

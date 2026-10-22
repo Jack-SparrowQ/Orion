@@ -32,7 +32,7 @@ public class CompilatorTest {
     /** E202: instrucción no reconocida. */
     @Test
     void errorSintactico_instruccionNoReconocida() {
-        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = b;", "b = 1;"));
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a = 1;", "5;"));
         GoldenFile.verificar("error_sintactico_instruccion", r.informe());
     }
 
@@ -179,6 +179,38 @@ public class CompilatorTest {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("if (true) { } else { print(z); }"));
         assertEquals(1, r.exitCode);
         assertTrue(r.stderr.contains("E301[SEMANTICO] Línea 1, columna 28"), r.stderr);
+    }
+
+    // ------------------------------------------------------------
+    // Asignacion
+    // ------------------------------------------------------------
+
+    private static final String ASIGNACION = lines("let a = 1;", "a = a + 2;", "print(a);");
+
+    @Test
+    void asignacion_generaJavaScriptYTac() {
+        ResultadoCompilacion js = ResultadoCompilacion.ejecutar(ASIGNACION);
+        assertEquals(0, js.exitCode, js.stderr);
+        assertEquals(lines("let a = 1;", "a = a + 2;", "console.log(a);"), js.archivos.get("programa.js"));
+
+        ResultadoCompilacion tac = ResultadoCompilacion.ejecutar(ASIGNACION, Mode.EMIT_IR);
+        assertEquals(lines("    a = 1", "    t1 = a + 2", "    a = t1", "    print a"),
+                tac.archivos.get("programa.tac"));
+    }
+
+    @Test
+    void asignacion_aConstante_E305() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("const k = 1;", "k = 2;"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E305[SEMANTICO] Línea 2, columna 1: No se puede reasignar la constante 'k'"),
+                r.stderr);
+    }
+
+    @Test
+    void asignacion_aNoDeclarada_E301() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("x = 2;"));
+        assertEquals(1, r.exitCode);
+        assertTrue(r.stderr.contains("E301[SEMANTICO] Línea 1, columna 1"), r.stderr);
     }
 
     /** Si no se puede escribir el artefacto: error por stderr y codigo 3. */

@@ -42,7 +42,9 @@ public final class SemanticAnalyzer {
                             new Symbol(
                                 name,
                                 type,
-                                SymbolCategory.VARIABLE,
+                                declaration.palabraClave().tipo == TokenType.CONST
+                                        ? SymbolCategory.CONSTANTE
+                                        : SymbolCategory.VARIABLE,
                                 declaration.identificador().line,
                                 declaration.identificador().column
                             );
@@ -82,8 +84,9 @@ public final class SemanticAnalyzer {
                     );
                 }
 
-                //PRINT: no declara símbolos
+                //PRINT y ASIGNACIÓN: no declaran símbolos
                 case NodoImprimir print -> { }
+                case NodoAsignacion asignacion -> { }
             }
         }
     }
@@ -127,6 +130,33 @@ public final class SemanticAnalyzer {
                 case NodoIf nodoIf -> {
                     analyzeSemantic(nodoIf.bloqueTrue().sentencias(), symbolsTable, errorHandler);
                     analyzeSemantic(nodoIf.bloqueFalse().sentencias(), symbolsTable, errorHandler);
+                }
+
+                //ASIGNACIÓN: la variable debe existir y no ser constante
+                case NodoAsignacion asignacion -> {
+                    validateExpression(asignacion.valor(), symbolsTable, errorHandler);
+
+                    Token nombre = asignacion.identificador();
+                    Symbol symbol = symbolsTable.buscar(nombre.lexema);
+
+                    if(symbol == null) {
+                        errorHandler.agregar(
+                            "E301",
+                            ErrorType.SEMANTICO,
+                            "El identificador '" + nombre.lexema + "' no ha sido declarado.",
+                            nombre.line,
+                            nombre.column
+                        );
+                    } else if(symbol.getCategoria() == SymbolCategory.CONSTANTE) {
+                        errorHandler.agregar(
+                            "E305",
+                            ErrorType.SEMANTICO,
+                            "No se puede reasignar la constante '" + nombre.lexema
+                            + "' (declarada en la linea: " + symbol.getLinea() + ").",
+                            nombre.line,
+                            nombre.column
+                        );
+                    }
                 }
 
                 //PRINT()

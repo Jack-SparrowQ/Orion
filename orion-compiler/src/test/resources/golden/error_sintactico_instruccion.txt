@@ -6,7 +6,7 @@
 Se encontraron errores durante el análisis sintáctico.
 
 ---------------- ERRORES ----------------
-E202[SINTACTICO] Línea 2, columna 1: Instrucción no reconocida: 'b'.
+E202[SINTACTICO] Línea 2, columna 1: Instrucción no reconocida: '5'.
 ------------------------------------------
 Total de errores: 1
 

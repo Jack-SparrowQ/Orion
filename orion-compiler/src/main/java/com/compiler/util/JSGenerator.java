@@ -26,6 +26,10 @@ public class JSGenerator {
             case NodoDeclaracion dec -> indentacion + dec.palabraClave().lexema + " "
                     + dec.identificador().lexema + " = " + generarExpresion(dec.valor()) + ";\n";
 
+            // Traducir una Asignación (x = 5;)
+            case NodoAsignacion asig -> indentacion + asig.identificador().lexema
+                    + " = " + generarExpresion(asig.valor()) + ";\n";
+
             // 2. Traducir una Impresión (print(x) -> console.log(x))
             case NodoImprimir imp -> indentacion + "console.log(" + generarExpresion(imp.expresion()) + ");\n";
 
