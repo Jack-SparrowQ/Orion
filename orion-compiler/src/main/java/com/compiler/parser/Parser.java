@@ -28,16 +28,16 @@ public class Parser {
         this.tokens = tokens;
     }
 
-     // Registra un error sintáctico en la posición del token dado
+    // Registra un error sintáctico en la posición del token dado
     private ParseError error(Token token, String code, String message) {
         gestorErrores.agregar(code, ErrorType.SINTACTICO, message, token.line, token.column);
         return new ParseError();
     }
 
-     // Texto legible para mostrar el token encontrado
-     private String describir(Token token) {
+    // Texto legible para mostrar el token encontrado
+    private String describir(Token token) {
         return token.tipo == TokenType.EOF ? "el fin del archivo" : "'" + token.lexema + "'";
-     }
+    }
 
     // --- MÉTODOS DE APOYO Y NAVEGACIÓN ---
 
@@ -189,111 +189,111 @@ public class Parser {
     }
 
     // ================================================================
-// EXPRESIONES (de menor a mayor precedencia, igual que en JavaScript)
-// ================================================================
+    // EXPRESIONES (de menor a mayor precedencia, igual que en JavaScript)
+    // ================================================================
 
-// expresion -> logicoOr
-private Expresion expresion() {
-    return logicoOr();
-}
-
-// logicoOr -> logicoAnd ( "||" logicoAnd )*
-private Expresion logicoOr() {
-    Expresion izquierda = logicoAnd();
-    while (coinciden(TokenType.OR_LOGICO)) {
-        Token operador = anterior();
-        Expresion derecha = logicoAnd();
-        izquierda = new NodoBinario(izquierda, operador, derecha);
-    }
-    return izquierda;
-}
-
-// logicoAnd -> igualdad ( "&&" igualdad )*
-private Expresion logicoAnd() {
-    Expresion izquierda = igualdad();
-    while (coinciden(TokenType.AND_LOGICO)) {
-        Token operador = anterior();
-        Expresion derecha = igualdad();
-        izquierda = new NodoBinario(izquierda, operador, derecha);
-    }
-    return izquierda;
-}
-
-// igualdad -> comparacion ( ("==" | "!=") comparacion )*
-private Expresion igualdad() {
-    Expresion izquierda = comparacion();
-    while (coinciden(TokenType.COMPARACION_IGUAL, TokenType.DIFERENTE)) {
-        Token operador = anterior();
-        Expresion derecha = comparacion();
-        izquierda = new NodoBinario(izquierda, operador, derecha);
-    }
-    return izquierda;
-}
-
-// comparacion -> termino ( ("<" | "<=" | ">" | ">=") termino )*
-private Expresion comparacion() {
-    Expresion izquierda = termino();
-    while (coinciden(TokenType.MENOR, TokenType.MENOR_IGUAL,
-                     TokenType.MAYOR, TokenType.MAYOR_IGUAL)) {
-        Token operador = anterior();
-        Expresion derecha = termino();
-        izquierda = new NodoBinario(izquierda, operador, derecha);
-    }
-    return izquierda;
-}
-
-// termino -> factor ( ("+" | "-") factor )*
-private Expresion termino() {
-    Expresion izquierda = factor();
-    while (coinciden(TokenType.SUMA, TokenType.RESTA)) {
-        Token operador = anterior();
-        Expresion derecha = factor();
-        izquierda = new NodoBinario(izquierda, operador, derecha);
-    }
-    return izquierda;
-}
-
-// factor -> unario ( ("*" | "/" | "%") unario )*
-private Expresion factor() {
-    Expresion izquierda = unario();
-    while (coinciden(TokenType.MULTI, TokenType.DIVISION, TokenType.MODULO)) {
-        Token operador = anterior();
-        Expresion derecha = unario();
-        izquierda = new NodoBinario(izquierda, operador, derecha);
-    }
-    return izquierda;
-}
-
-// unario -> ("!" | "-") unario | primario
-private Expresion unario() {
-    if (coinciden(TokenType.NEGACION_LOGICA, TokenType.RESTA)) {
-        Token operador = anterior();
-        Expresion operando = unario();
-        return new NodoUnario(operador, operando);
-    }
-    return primario();
-}
-
-// primario -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
-private Expresion primario() {
-    if (coinciden(TokenType.NUMERO, TokenType.TRUE, TokenType.FALSE)) {
-        return new NodoLiteral(anterior());
+    // expresion -> logicoOr
+    private Expresion expresion() {
+        return logicoOr();
     }
 
-    if (coinciden(TokenType.IDENTIFICADOR)) {
-        return new NodoVariable(anterior());
+    // logicoOr -> logicoAnd ( "||" logicoAnd )*
+    private Expresion logicoOr() {
+        Expresion izquierda = logicoAnd();
+        while (coinciden(TokenType.OR_LOGICO)) {
+            Token operador = anterior();
+            Expresion derecha = logicoAnd();
+            izquierda = new NodoBinario(izquierda, operador, derecha);
+        }
+        return izquierda;
     }
 
-    if (coinciden(TokenType.PARENTESIS_IZQ)) {
-        Expresion interior = expresion();
-        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la expresión.");
-        return new NodoAgrupacion(interior);
+    // logicoAnd -> igualdad ( "&&" igualdad )*
+    private Expresion logicoAnd() {
+        Expresion izquierda = igualdad();
+        while (coinciden(TokenType.AND_LOGICO)) {
+            Token operador = anterior();
+            Expresion derecha = igualdad();
+            izquierda = new NodoBinario(izquierda, operador, derecha);
+        }
+        return izquierda;
     }
 
-    throw error(peek(), "E203",
-            "Se esperaba una expresión (número, variable, true/false o '('). Se encontró "
-                    + describir(peek()) + ".");
-}
+    // igualdad -> comparacion ( ("==" | "!=") comparacion )*
+    private Expresion igualdad() {
+        Expresion izquierda = comparacion();
+        while (coinciden(TokenType.COMPARACION_IGUAL, TokenType.DIFERENTE)) {
+            Token operador = anterior();
+            Expresion derecha = comparacion();
+            izquierda = new NodoBinario(izquierda, operador, derecha);
+        }
+        return izquierda;
+    }
+
+    // comparacion -> termino ( ("<" | "<=" | ">" | ">=") termino )*
+    private Expresion comparacion() {
+        Expresion izquierda = termino();
+        while (coinciden(TokenType.MENOR, TokenType.MENOR_IGUAL,
+                         TokenType.MAYOR, TokenType.MAYOR_IGUAL)) {
+            Token operador = anterior();
+            Expresion derecha = termino();
+            izquierda = new NodoBinario(izquierda, operador, derecha);
+        }
+        return izquierda;
+    }
+
+    // termino -> factor ( ("+" | "-") factor )*
+    private Expresion termino() {
+        Expresion izquierda = factor();
+        while (coinciden(TokenType.SUMA, TokenType.RESTA)) {
+            Token operador = anterior();
+            Expresion derecha = factor();
+            izquierda = new NodoBinario(izquierda, operador, derecha);
+        }
+        return izquierda;
+    }
+
+    // factor -> unario ( ("*" | "/" | "%") unario )*
+    private Expresion factor() {
+        Expresion izquierda = unario();
+        while (coinciden(TokenType.MULTI, TokenType.DIVISION, TokenType.MODULO)) {
+            Token operador = anterior();
+            Expresion derecha = unario();
+            izquierda = new NodoBinario(izquierda, operador, derecha);
+        }
+        return izquierda;
+    }
+
+    // unario -> ("!" | "-") unario | primario
+    private Expresion unario() {
+        if (coinciden(TokenType.NEGACION_LOGICA, TokenType.RESTA)) {
+            Token operador = anterior();
+            Expresion operando = unario();
+            return new NodoUnario(operador, operando);
+        }
+        return primario();
+    }
+
+    // primario -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+    private Expresion primario() {
+        if (coinciden(TokenType.NUMERO, TokenType.TRUE, TokenType.FALSE)) {
+            return new NodoLiteral(anterior());
+        }
+
+        if (coinciden(TokenType.IDENTIFICADOR)) {
+            return new NodoVariable(anterior());
+        }
+
+        if (coinciden(TokenType.PARENTESIS_IZQ)) {
+            Expresion interior = expresion();
+            consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la expresión.");
+            return new NodoAgrupacion(interior);
+        }
+
+        throw error(peek(), "E203",
+                "Se esperaba una expresión (número, variable, true/false o '('). Se encontró "
+                        + describir(peek()) + ".");
+    }
 
     // Modo pánico: descarta tokens hasta pasar un ';' o hasta el inicio de otra
     // sentencia (o el '}' que cierra el bloque). Consume al menos un token para
