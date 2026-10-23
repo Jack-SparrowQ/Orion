@@ -868,7 +868,7 @@ compilador no genera código.
 | E310   | Semántica  | Índice no entero o valor no indexable                                     | Propuesto                   |
 | E311   | Semántica  | Propiedad inexistente                                                     | Propuesto                   |
 | E312   | Semántica  | No se puede inferir el tipo (o se usa un valor `void`)                    | Propuesto                   |
-| E313   | Semántica  | `break` o `continue` fuera de un ciclo                                    | Propuesto                   |
+| E313   | Semántica  | `break` o `continue` fuera de un ciclo                                    | Implementado                |
 | E314   | Semántica  | Se llama a algo que no es una función                                     | Propuesto                   |
 | E315   | Semántica  | Número de argumentos incorrecto                                           | Propuesto                   |
 | E316   | Semántica  | `return` fuera de una función                                             | Propuesto                   |

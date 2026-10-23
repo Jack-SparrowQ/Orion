@@ -100,9 +100,14 @@ public final class SemanticAnalyzer {
                     analyzeSymbols(nodeIf.bloqueFalse().sentencias(), symbolsTable.abrirAmbito(), errorHandler);
                 }
 
-                //PRINT y ASIGNACIÓN: no declaran símbolos
+                //WHILE: el cuerpo es un ámbito propio
+                case NodoWhile nodeWhile ->
+                        analyzeSymbols(nodeWhile.cuerpo().sentencias(), symbolsTable.abrirAmbito(), errorHandler);
+
+                //PRINT, ASIGNACIÓN, BREAK y CONTINUE: no declaran símbolos
                 case NodoImprimir print -> { }
                 case NodoAsignacion asignacion -> { }
+                case NodoSalto salto -> { }
 
                 //BLOQUE: registra sus declaraciones en un ámbito nuevo
                 case NodoBloque bloque -> analyzeSymbols(bloque.sentencias(), symbolsTable.abrirAmbito(), errorHandler);
@@ -111,8 +116,8 @@ public final class SemanticAnalyzer {
     }
 
     /**
-     * Fase 4: uso de identificadores (E301, E303, E305), división entre cero (E304)
-     * y tipos (E306, E307, E308).
+     * Fase 4: uso de identificadores (E301, E303, E305), división entre cero (E304),
+     * tipos (E306, E307, E308) y break/continue fuera de un ciclo (E313).
      * @param nodes
      * @param symbolsTable
      * @param errorHandler
@@ -146,6 +151,9 @@ public final class SemanticAnalyzer {
         /** Por cada ámbito, sus hijos aún no visitados (en el orden de la fase 3). */
         private final Map<SymbolTable, Iterator<SymbolTable>> pendientes = new HashMap<>();
 
+        /** Ciclos que contienen el punto actual: 0 significa que break/continue son E313. */
+        private int ciclos = 0;
+
         /**
          * @param tabla ámbito donde empieza el recorrido (el global en la fase 4)
          * @param errores destino de los errores, o null para solo inferir tipos
@@ -167,7 +175,7 @@ public final class SemanticAnalyzer {
          * variables declaradas dentro solo son visibles en él (el JavaScript
          * generado usa let/const, que también son de bloque).
          *
-         * @param bloque cuerpo de un if o bloque independiente
+         * @param bloque cuerpo de un if o de un while, o bloque independiente
          */
         private void bloque(NodoBloque bloque) {
             SymbolTable padre = actual;
@@ -215,18 +223,42 @@ public final class SemanticAnalyzer {
                 }
 
                 case NodoIf nodoIf -> {
-                    Type condicion = tipo(nodoIf.condicion());
-                    if (condicion != null && condicion != Type.BOOL) {
-                        reportar("E308", "La condición del if debe ser bool, no "
-                                + nombreTipo(condicion) + ".", primerToken(nodoIf.condicion()));
-                    }
+                    condicion(nodoIf.condicion(), "if");
                     bloque(nodoIf.bloqueTrue());
                     bloque(nodoIf.bloqueFalse());
+                }
+
+                case NodoWhile nodoWhile -> {
+                    condicion(nodoWhile.condicion(), "while");
+                    ciclos++;
+                    bloque(nodoWhile.cuerpo());
+                    ciclos--;
+                }
+
+                case NodoSalto salto -> {
+                    if (ciclos == 0) {
+                        reportar("E313", "'" + salto.palabraClave().lexema
+                                + "' solo puede usarse dentro de un ciclo.", salto.palabraClave());
+                    }
                 }
 
                 case NodoImprimir print -> tipo(print.expresion());
 
                 case NodoBloque b -> bloque(b);
+            }
+        }
+
+        /**
+         * Comprueba que la condición de un if o un while sea bool (E308).
+         *
+         * @param expresion condición a comprobar
+         * @param sentencia nombre de la sentencia, para el mensaje ("if", "while")
+         */
+        private void condicion(Expresion expresion, String sentencia) {
+            Type tipo = tipo(expresion);
+            if (tipo != null && tipo != Type.BOOL) {
+                reportar("E308", "La condición del " + sentencia + " debe ser bool, no "
+                        + nombreTipo(tipo) + ".", primerToken(expresion));
             }
         }
 

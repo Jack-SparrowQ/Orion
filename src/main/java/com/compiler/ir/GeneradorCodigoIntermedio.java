@@ -1,8 +1,11 @@
 package com.compiler.ir;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
+import com.compiler.lexer.TokenType;
 import com.compiler.parser.ast.*;
 
 // Traduce el AST a código de tres direcciones (lista de cuádruplas).
@@ -12,8 +15,15 @@ public class GeneradorCodigoIntermedio {
     private int contadorTemporales = 0;
     private int contadorEtiquetas = 0;
 
+    /**
+     * Etiquetas de los ciclos abiertos, el más interno arriba:
+     * [0] = inicio (destino de continue), [1] = fin (destino de break).
+     */
+    private final Deque<String[]> ciclos = new ArrayDeque<>();
+
     public List<Cuadrupla> generar(List<Sentencia> programa) {
         codigo.clear();
+        ciclos.clear();
         contadorTemporales = 0;
         contadorEtiquetas = 0;
 
@@ -77,6 +87,26 @@ public class GeneradorCodigoIntermedio {
                     emitir("label", null, null, etiquetaFin);
                 }
             }
+            case NodoWhile nWhile -> {
+                //     Linicio: ; ifFalse c goto Lfin ; cuerpo ; goto Linicio ; Lfin:
+                // La condición se genera después de Linicio: se reevalúa en cada vuelta
+                String etiquetaInicio = nuevaEtiqueta();
+                String etiquetaFin = nuevaEtiqueta();
+                emitir("label", null, null, etiquetaInicio);
+                String condicion = generarExpresion(nWhile.condicion());
+                emitir("ifFalse", condicion, null, etiquetaFin);
+
+                ciclos.push(new String[] { etiquetaInicio, etiquetaFin });
+                nWhile.cuerpo().sentencias().forEach(this::generarSentencia);
+                ciclos.pop();
+
+                emitir("goto", null, null, etiquetaInicio);
+                emitir("label", null, null, etiquetaFin);
+            }
+            // break salta al fin del ciclo más interno; continue, a su inicio.
+            // El análisis semántico ya garantizó que hay un ciclo abierto (E313).
+            case NodoSalto salto -> emitir("goto", null, null,
+                    ciclos.peek()[salto.palabraClave().tipo == TokenType.BREAK ? 1 : 0]);
             // El código de tres direcciones no tiene ámbitos: el bloque se aplana
             case NodoBloque bloque -> bloque.sentencias().forEach(this::generarSentencia);
         }

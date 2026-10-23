@@ -7,6 +7,8 @@ import com.compiler.parser.ast.NodoBloque;
 import com.compiler.parser.ast.NodoDeclaracion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
+import com.compiler.parser.ast.NodoSalto;
+import com.compiler.parser.ast.NodoWhile;
 import com.compiler.parser.ast.Sentencia;
 
 /**
@@ -86,6 +88,15 @@ public class ASTPrinter {
                     System.out.println(prefijo + "├── [Bloque]:");
                     printAST(b.sentencias(), prefijo + "│   ");
                 }
+
+                case NodoWhile w -> {
+                    System.out.println(prefijo + "├── [While] Condition: " + w.condicion());
+                    System.out.println(prefijo + "│   └── Cuerpo del Ciclo:");
+                    printAST(w.cuerpo().sentencias(), prefijo + "│       ");
+                }
+
+                case NodoSalto s -> System.out.println(
+                        prefijo + "├── [" + s.palabraClave().lexema + "]");
             }
         }
     }

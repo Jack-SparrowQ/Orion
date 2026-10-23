@@ -138,6 +138,12 @@ public class Parser {
         if (coinciden(TokenType.IF)) {
             return declaracionIf();
         }
+        if (coinciden(TokenType.WHILE)) {
+            return declaracionWhile();
+        }
+        if (coinciden(TokenType.BREAK, TokenType.CONTINUE)) {
+            return declaracionSalto();
+        }
         if (coinciden(TokenType.LLAVE_IZQ)) {
             return parsearBloque();
         }
@@ -252,6 +258,34 @@ public class Parser {
         }
 
         return new NodoIf(condicion, cuerpo, sino);
+    }
+
+    /**
+     * Regla: "while" "(" expresion ")" bloque.
+     * Quien la llama ya consumió el 'while'.
+     *
+     * @return el ciclo con su condición y su cuerpo
+     */
+    private Sentencia declaracionWhile() {
+        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'while'.");
+        Expresion condicion = expresion();
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la condición del while.");
+
+        consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' antes del cuerpo del while.");
+        return new NodoWhile(condicion, parsearBloque());
+    }
+
+    /**
+     * Regla: ( "break" | "continue" ) ";".
+     * Quien la llama ya consumió la palabra clave. Que esté dentro de un ciclo
+     * lo comprueba el análisis semántico (E313), no el parser.
+     *
+     * @return el salto, con su palabra clave
+     */
+    private Sentencia declaracionSalto() {
+        Token palabraClave = anterior();
+        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de '" + palabraClave.lexema + "'.");
+        return new NodoSalto(palabraClave);
     }
 
     /**
@@ -407,7 +441,7 @@ public class Parser {
                     return;
                 }
                 switch (peek().tipo) {
-                    case LET, CONST, PRINT, IF, LLAVE_DER -> {
+                    case LET, CONST, PRINT, IF, WHILE, FOR, BREAK, CONTINUE, LLAVE_DER -> {
                         return;
                     }
                     default -> { }

@@ -18,6 +18,8 @@ import com.compiler.parser.ast.NodoBloque;
 import com.compiler.parser.ast.NodoDeclaracion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
+import com.compiler.parser.ast.NodoSalto;
+import com.compiler.parser.ast.NodoWhile;
 import com.compiler.parser.ast.Sentencia;
 
 public class ParserTest {
@@ -73,6 +75,23 @@ public class ParserTest {
         assertInstanceOf(NodoDeclaracion.class, programa.get(1));
         NodoIf nodoIf = assertInstanceOf(NodoIf.class, programa.get(2));
         assertEquals(2, nodoIf.bloqueTrue().sentencias().size());
+    }
+
+    /** while con break y continue en el cuerpo. */
+    @Test
+    void whileConSaltos() {
+        List<Sentencia> programa = parse("while (a) { break; continue; }");
+        assertEquals("", errores());
+        NodoWhile ciclo = assertInstanceOf(NodoWhile.class, programa.get(0));
+        assertEquals(2, ciclo.cuerpo().sentencias().size());
+        assertInstanceOf(NodoSalto.class, ciclo.cuerpo().sentencias().get(0));
+    }
+
+    /** break sin ';' es E201; el parser no exige estar en un ciclo (eso es E313). */
+    @Test
+    void breakSinPuntoYComa() {
+        assertEquals("E201", codigos("break"));
+        assertEquals("", codigos("break;"));
     }
 
     /** Un bloque suelto es una sentencia y puede anidarse. */

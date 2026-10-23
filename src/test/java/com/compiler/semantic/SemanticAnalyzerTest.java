@@ -148,6 +148,25 @@ public class SemanticAnalyzerTest {
         assertEquals("E303", analizar("{ let t = 1; print(t); }\nprint(t);"));
     }
 
+    /** La condición del while debe ser bool. */
+    @Test
+    void condicionDelWhileNoBooleana() {
+        assertEquals("E308", analizar("while (1) { }"));
+    }
+
+    /** break/continue fuera de un ciclo es E313; dentro de un if dentro del ciclo es válido. */
+    @Test
+    void saltosFueraYDentroDeUnCiclo() {
+        assertEquals("E313 E313", analizar("break;\nif (true) { continue; }"));
+        assertEquals("", analizar("let i = 0;\nwhile (i < 3) { i += 1; if (i == 2) { continue; } break; }"));
+    }
+
+    /** El cuerpo del while es un ámbito: sus variables no se ven después del ciclo. */
+    @Test
+    void usoFueraDelCuerpoDelWhile() {
+        assertEquals("E303", analizar("while (false) { let t = 1; }\nprint(t);"));
+    }
+
     /** Bloques hermanos pueden repetir un nombre, cada uno con su propio tipo. */
     @Test
     void bloquesHermanosRepitenNombre() {

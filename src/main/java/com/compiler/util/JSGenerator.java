@@ -66,6 +66,19 @@ public class JSGenerator {
                 }
                 yield jsBloque.append(indentacion).append("}\n").toString();
             }
+
+            // 5. Traducir un WHILE: misma forma en JS
+            case NodoWhile nWhile -> {
+                StringBuilder jsWhile = new StringBuilder();
+                jsWhile.append(indentacion).append("while (").append(generarExpresion(nWhile.condicion())).append(") {\n");
+                for (Sentencia sentenciaInterna : nWhile.cuerpo().sentencias()) {
+                    jsWhile.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
+                }
+                yield jsWhile.append(indentacion).append("}\n").toString();
+            }
+
+            // 6. break y continue son iguales en JS
+            case NodoSalto salto -> indentacion + salto.palabraClave().lexema + ";\n";
         };
     }
 

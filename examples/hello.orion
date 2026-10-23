@@ -1,4 +1,7 @@
-{
-    let a =1;
+
+let a: int = 30;
+
+while(true) {
+    print(a);
+    if(a == 25) { break; }
 }
-print(a);
