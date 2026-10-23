@@ -142,6 +142,12 @@ public class SemanticAnalyzerTest {
         assertEquals("E303", analizar("if (true) { let t = 1; }\nprint(t);"));
     }
 
+    /** Un bloque independiente también abre un ámbito. */
+    @Test
+    void usoFueraDelBloqueIndependiente() {
+        assertEquals("E303", analizar("{ let t = 1; print(t); }\nprint(t);"));
+    }
+
     @Test
     void bloqueVeLasVariablesExteriores() {
         assertEquals("", analizar("let a = 1;\nif (a > 0) { let b = a + 1; print(b); }\nprint(a);"));

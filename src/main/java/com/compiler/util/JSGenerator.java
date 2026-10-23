@@ -57,6 +57,15 @@ public class JSGenerator {
                 jsIf.append("\n");
                 yield jsIf.toString();
             }
+
+            // 4. Traducir un bloque independiente: JS también tiene bloques con ámbito propio
+            case NodoBloque bloque -> {
+                StringBuilder jsBloque = new StringBuilder(indentacion + "{\n");
+                for (Sentencia sentenciaInterna : bloque.sentencias()) {
+                    jsBloque.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
+                }
+                yield jsBloque.append(indentacion).append("}\n").toString();
+            }
         };
     }
 

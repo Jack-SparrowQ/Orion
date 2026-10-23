@@ -138,6 +138,9 @@ public class Parser {
         if (coinciden(TokenType.IF)) {
             return declaracionIf();
         }
+        if (coinciden(TokenType.LLAVE_IZQ)) {
+            return parsearBloque();
+        }
         // Un identificador solo empieza sentencia si le sigue '=' (asignación)
         if (verificar(TokenType.IDENTIFICADOR)
                 && (siguiente().tipo == TokenType.IGUAL || OPERADOR_COMPUESTO.containsKey(siguiente().tipo))) {
@@ -251,7 +254,13 @@ public class Parser {
         return new NodoIf(condicion, cuerpo, sino);
     }
 
-    // Regla auxiliar para leer todo lo que está dentro de { }
+    /**
+     * Regla: bloque -> "{" { sentencia } "}".
+     * Se usa para el cuerpo del if y para el bloque como sentencia independiente.
+     * Quien la llama ya consumió el '{'.
+     *
+     * @return el bloque con las sentencias válidas (las erróneas se descartan)
+     */
     private NodoBloque parsearBloque() {
         List<Sentencia> sentenciasInternas = new ArrayList<>();
         

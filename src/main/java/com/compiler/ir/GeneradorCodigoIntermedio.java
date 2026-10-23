@@ -77,6 +77,8 @@ public class GeneradorCodigoIntermedio {
                     emitir("label", null, null, etiquetaFin);
                 }
             }
+            // El código de tres direcciones no tiene ámbitos: el bloque se aplana
+            case NodoBloque bloque -> bloque.sentencias().forEach(this::generarSentencia);
         }
     }
 

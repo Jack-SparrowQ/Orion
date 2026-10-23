@@ -14,6 +14,7 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.lexer.Lexer;
 import com.compiler.lexer.Tokenizer;
 import com.compiler.parser.ast.NodoAsignacion;
+import com.compiler.parser.ast.NodoBloque;
 import com.compiler.parser.ast.NodoDeclaracion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
@@ -72,6 +73,16 @@ public class ParserTest {
         assertInstanceOf(NodoDeclaracion.class, programa.get(1));
         NodoIf nodoIf = assertInstanceOf(NodoIf.class, programa.get(2));
         assertEquals(2, nodoIf.bloqueTrue().sentencias().size());
+    }
+
+    /** Un bloque suelto es una sentencia y puede anidarse. */
+    @Test
+    void bloqueIndependiente() {
+        List<Sentencia> programa = parse("{ let a = 1; { print(a); } }");
+        assertEquals("", errores());
+        NodoBloque bloque = assertInstanceOf(NodoBloque.class, programa.get(0));
+        assertEquals(2, bloque.sentencias().size());
+        assertInstanceOf(NodoBloque.class, bloque.sentencias().get(1));
     }
 
     @Test

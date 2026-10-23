@@ -3,6 +3,7 @@ package com.compiler.util;
 import java.util.List;
 
 import com.compiler.parser.ast.NodoAsignacion;
+import com.compiler.parser.ast.NodoBloque;
 import com.compiler.parser.ast.NodoDeclaracion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
@@ -80,6 +81,11 @@ public class ASTPrinter {
                                 + "├── [Instrucción Imprimir]: "
                                 + imp.expresion()
                 );
+
+                case NodoBloque b -> {
+                    System.out.println(prefijo + "├── [Bloque]:");
+                    printAST(b.sentencias(), prefijo + "│   ");
+                }
             }
         }
     }

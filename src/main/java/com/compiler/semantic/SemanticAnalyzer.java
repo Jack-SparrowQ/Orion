@@ -100,6 +100,10 @@ public final class SemanticAnalyzer {
                 //PRINT y ASIGNACIÓN: no declaran símbolos
                 case NodoImprimir print -> { }
                 case NodoAsignacion asignacion -> { }
+
+                //BLOQUE: registra las declaraciones de su interior
+                // shortcut: la tabla es plana, "{ let a = 1; } let a = 2;" da E302; usar una tabla por ámbito si se necesita.
+                case NodoBloque bloque -> analyzeSymbols(bloque.sentencias(), symbolsTable, errorHandler);
             }
         }
     }
@@ -145,8 +149,13 @@ public final class SemanticAnalyzer {
             }
         }
 
-        // Las variables declaradas dentro de un bloque solo son visibles en él
-        // (el JavaScript generado usa let/const, que también son de bloque).
+        /**
+         * Verifica un bloque en un ámbito nuevo: las variables declaradas dentro
+         * solo son visibles en él (el JavaScript generado usa let/const, que
+         * también son de bloque).
+         *
+         * @param bloque cuerpo de un if o bloque independiente
+         */
         private void bloque(NodoBloque bloque) {
             visibles.push(new HashSet<>());
             sentencias(bloque.sentencias());
@@ -201,6 +210,8 @@ public final class SemanticAnalyzer {
                 }
 
                 case NodoImprimir print -> tipo(print.expresion());
+
+                case NodoBloque b -> bloque(b);
             }
         }
 
