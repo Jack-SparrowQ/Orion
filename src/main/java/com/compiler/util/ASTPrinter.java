@@ -33,8 +33,8 @@ public class ASTPrinter {
                                 + d.palabraClave().lexema
                                 + " "
                                 + d.identificador().lexema
-                                + " = "
-                                + d.valor()
+                                + (d.tipo() == null ? "" : ": " + d.tipo().lexema)
+                                + (d.valor() == null ? "" : " = " + d.valor())
                 );
 
                 case NodoAsignacion a -> System.out.println(

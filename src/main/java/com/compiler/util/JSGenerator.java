@@ -22,9 +22,10 @@ public class JSGenerator {
         String indentacion = crearIndentacion(nivelIndentacion);
 
         return switch (nodo) {
-            // 1. Traducir una Declaración (let x = 5;)
+            // 1. Traducir una Declaración (let x = 5;). JS no tiene tipos: la anotación se descarta.
             case NodoDeclaracion dec -> indentacion + dec.palabraClave().lexema + " "
-                    + dec.identificador().lexema + " = " + generarExpresion(dec.valor()) + ";\n";
+                    + dec.identificador().lexema
+                    + (dec.valor() == null ? "" : " = " + generarExpresion(dec.valor())) + ";\n";
 
             // Traducir una Asignación (x = 5;)
             case NodoAsignacion asig -> indentacion + asig.identificador().lexema

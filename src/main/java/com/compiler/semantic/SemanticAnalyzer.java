@@ -56,8 +56,11 @@ public final class SemanticAnalyzer {
                 case NodoDeclaracion declaration -> {
                     String name = declaration.identificador().lexema;
 
-                    // Sin reportar errores: eso lo hace la fase 4
-                    Type type = new Verificador(symbolsTable, null).tipo(declaration.valor());
+                    // El tipo anotado manda; si no hay, se infiere del valor
+                    // (sin reportar errores: eso lo hace la fase 4)
+                    Type type = declaration.tipo() != null
+                            ? tipoAnotado(declaration.tipo())
+                            : new Verificador(symbolsTable, null).tipo(declaration.valor());
 
                     Symbol symbol =
                             new Symbol(
@@ -155,7 +158,16 @@ public final class SemanticAnalyzer {
 
                 // El valor se comprueba antes de declarar: "let a = a + 1;" es un error
                 case NodoDeclaracion declaracion -> {
-                    tipo(declaracion.valor());
+                    if (declaracion.valor() != null) {
+                        Type valor = tipo(declaracion.valor());
+                        Token anotado = declaracion.tipo();
+                        if (anotado != null && !asignable(valor, tipoAnotado(anotado))) {
+                            reportar("E307", "No se puede asignar un valor " + nombreTipo(valor)
+                                    + " a '" + declaracion.identificador().lexema + "', que es de tipo "
+                                    + anotado.lexema + ".", declaracion.identificador());
+                        }
+                    }
+                    // shortcut: "let x: T;" sin valor no se rastrea; leerla antes de asignarla es E309 (pendiente).
                     visibles.peek().add(declaracion.identificador().lexema);
                 }
 
@@ -309,6 +321,11 @@ public final class SemanticAnalyzer {
     private static boolean asignable(Type valor, Type destino) {
         return valor == null || destino == null || valor == destino
                 || (valor == Type.INT && destino == Type.FLOAT);
+    }
+
+    /** Tipo de una anotación: los tokens INT, FLOAT... se llaman igual que los valores de Type. */
+    private static Type tipoAnotado(Token tipo) {
+        return Type.valueOf(tipo.tipo.name());
     }
 
     private static String nombreTipo(Type tipo) {

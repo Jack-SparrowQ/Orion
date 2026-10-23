@@ -3,10 +3,13 @@ package com.compiler.parser.ast;
 import com.compiler.lexer.Token;
 
 /**
- * ("let" | "const") identificador "=" valor ";"
+ * ("let" | "const") identificador [ ":" tipo ] [ "=" valor ] ";"
+ * El parser garantiza que al menos uno de tipo/valor existe, y que una const tiene valor.
  * @param palabraClave 'let' o 'const'
  * @param identificador el nombre de la variable (ej. 'x')
- * @param valor la expresión asignada
+ * @param tipo el nombre de tipo anotado (ej. 'int'), o null si se infiere del valor
+ * @param valor la expresión asignada, o null en "let x: T;"
  */
-public record NodoDeclaracion(Token palabraClave, Token identificador, Expresion valor) implements Sentencia {
+public record NodoDeclaracion(Token palabraClave, Token identificador, Token tipo, Expresion valor)
+        implements Sentencia {
 }

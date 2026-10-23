@@ -308,4 +308,12 @@ public class CompilatorTest {
         assertEquals(3, r.exitCode);
         assertTrue(r.stderr.contains("orion: error: cannot write"), r.stderr);
     }
+
+    /** JavaScript no tiene tipos: la anotación desaparece y "let x: T;" queda como "let x;". */
+    @Test
+    void anotacionDeTipo_generaJavaScript() {
+        ResultadoCompilacion r = ResultadoCompilacion.ejecutar(lines("let a: int = 1;", "let b: float;", "b = a;"));
+        assertEquals(0, r.exitCode, r.stderr);
+        assertEquals(lines("let a = 1;", "let b;", "b = a;"), r.archivos.get("programa.js"));
+    }
 }

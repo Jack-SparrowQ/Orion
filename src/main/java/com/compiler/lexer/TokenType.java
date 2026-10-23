@@ -11,6 +11,9 @@ public enum TokenType {
     //Valores logicos y especiales
     TRUE, FALSE, NULL, VOID,
 
+    //Nombres de tipo (mismos nombres que semantic.Type)
+    INT, FLOAT, CHAR, STRING, BOOL,
+
     //Modulos
     IMPORT, FROM, EXPORT,
 
@@ -31,6 +34,7 @@ public enum TokenType {
     CORCHETE_IZQ,     // [
     CORCHETE_DER,     // ]
     PUNTO_Y_COMA,     // ;
+    DOS_PUNTOS,       // :
     PUNTO,             // .
 
     //Operadores de comparacion

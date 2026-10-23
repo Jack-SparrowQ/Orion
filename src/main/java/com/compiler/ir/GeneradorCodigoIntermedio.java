@@ -41,8 +41,11 @@ public class GeneradorCodigoIntermedio {
 
         switch (nodo) {
             case NodoDeclaracion dec -> {
-                String valor = generarExpresion(dec.valor());
-                emitir("=", valor, null, dec.identificador().lexema);
+                // "let x: T;" no produce código: solo reserva el nombre
+                if (dec.valor() != null) {
+                    String valor = generarExpresion(dec.valor());
+                    emitir("=", valor, null, dec.identificador().lexema);
+                }
             }
             case NodoAsignacion asig -> {
                 String valor = generarExpresion(asig.valor());

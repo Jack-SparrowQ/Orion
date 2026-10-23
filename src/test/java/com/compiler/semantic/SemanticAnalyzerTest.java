@@ -158,4 +158,27 @@ public class SemanticAnalyzerTest {
         assertEquals("E304", analizar("let a = 1;\nprint(a / (2 - 2));"));
         assertEquals("E305", analizar("const k = 1;\nk = 2;"));
     }
+
+    // ------------------------------------------------------------
+    // Anotación de tipo
+    // ------------------------------------------------------------
+
+    @Test
+    void anotacionDeTipo_defineElTipo() {
+        assertEquals("", analizar("let a: float = 1;\nlet b: string;\nconst c: bool = true;"));
+        assertEquals(Type.FLOAT, tipoDe("a")); // int se promueve: no se infiere int
+        assertEquals(Type.STRING, tipoDe("b"));
+        assertEquals(Type.BOOL, tipoDe("c"));
+    }
+
+    @Test
+    void anotacionDeTipo_valorIncompatible() {
+        assertEquals("E307 E307", analizar("let a: int = 2.5;\nconst b: bool = 1;"));
+    }
+
+    /** Sin valor inicial, la variable acepta luego asignaciones de su tipo. */
+    @Test
+    void anotacionDeTipo_sinValor() {
+        assertEquals("E307", analizar("let x: int;\nx = 3;\nx = true;"));
+    }
 }

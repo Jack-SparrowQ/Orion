@@ -148,23 +148,45 @@ public class Parser {
         throw error(peek(), "E202", "Instruccion no reconocida: " + describir(peek()) + ".");
     }
 
-    // Regla: declaracion -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
+    // Regla: declaracion -> "let" IDENTIFICADOR ( ":" tipo [ "=" expresion ] | "=" expresion ) ";"
+    //                    | "const" IDENTIFICADOR [ ":" tipo ] "=" expresion ";"
     private Sentencia declaracionVariable() {
         // 1. Como ya verificamos en el paso anterior, avanzamos de forma segura y guardamos si fue 'let' o 'const'
-        Token palabraClave = avanzar(); 
-        
+        Token palabraClave = avanzar();
+
         // 2. Obligatoriamente debe seguir el nombre de la variable
         Token identificador = consumir(TokenType.IDENTIFICADOR, "Se esperaba el nombre de la variable.");
-        
-        // 3. Obligatoriamente debe seguir un signo '='
-        consumir(TokenType.IGUAL, "Se esperaba '=' despues del nombre de la variable.");
-        
-        // 4. Obligatoriamente debe seguir un número literal
-        Expresion valor = expresion();        
+
+        // 3. Anotación de tipo opcional: ':' decide (LL(1))
+        Token tipo = coinciden(TokenType.DOS_PUNTOS) ? tipo() : null;
+
+        // 4. El '=' es obligatorio si no hay tipo (no habría de dónde inferirlo) o si es const
+        Expresion valor = null;
+        if (tipo == null) {
+            consumir(TokenType.IGUAL, "Se esperaba ':' o '=' después del nombre de la variable.");
+            valor = expresion();
+        } else if (palabraClave.tipo == TokenType.CONST) {
+            consumir(TokenType.IGUAL, "Una constante debe inicializarse: se esperaba '='.");
+            valor = expresion();
+        } else if (coinciden(TokenType.IGUAL)) {
+            valor = expresion();
+        }
+
         // 5. Obligatoriamente debe cerrar con ';'
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la sentencia.");
-        
-        return new NodoDeclaracion(palabraClave, identificador, valor);
+
+        return new NodoDeclaracion(palabraClave, identificador, tipo, valor);
+    }
+
+    // Regla: tipo -> "int" | "float" | "char" | "string" | "bool"
+    // 'void' no está: solo es válido como tipo de retorno.
+    // shortcut: sin arreglos (T[]); añadir el bucle { "[" "]" } cuando existan los literales de arreglo.
+    private Token tipo() {
+        if (coinciden(TokenType.INT, TokenType.FLOAT, TokenType.CHAR, TokenType.STRING, TokenType.BOOL)) {
+            return anterior();
+        }
+        throw error(peek(), "E201",
+                "Se esperaba un tipo (int, float, char, string o bool). Se encontró " + describir(peek()) + ".");
     }
 
     // Regla: asignacion -> IDENTIFICADOR "=" expresion ";"

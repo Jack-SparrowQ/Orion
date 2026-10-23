@@ -2,6 +2,7 @@ package com.compiler.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,7 +21,7 @@ import com.compiler.parser.ast.Sentencia;
 
 public class ParserTest {
 
-    private final ErrorHandler errores = new ErrorHandler();
+    private ErrorHandler errores = new ErrorHandler();
 
     private List<Sentencia> parse(String codigo) {
         Tokenizer tokenizer = new Tokenizer(new Lexer(codigo, errores));
@@ -126,7 +127,7 @@ public class ParserTest {
     @Test
     void falta_igual() {
         parse("let x 5;");
-        assertEquals("E201[SINTACTICO] Línea 1, columna 7: Se esperaba '=' después del nombre de la variable."
+        assertEquals("E201[SINTACTICO] Línea 1, columna 7: Se esperaba ':' o '=' después del nombre de la variable."
                 + " Se encontró '5'.", errores());
     }
 
@@ -199,5 +200,48 @@ public class ParserTest {
         parse("if (a) { print(a);");
         assertEquals(1, errores.obtenerErrores().size());
         assertEquals(true, errores().contains("Se esperaba '}' al final del bloque."), errores());
+    }
+
+    /** Códigos de error de un programa: "E201 E201". */
+    private String codigos(String codigo) {
+        errores = new ErrorHandler();
+        parse(codigo);
+        return errores.obtenerErrores().stream()
+                .map(e -> e.toString().substring(0, e.toString().indexOf('[')))
+                .collect(Collectors.joining(" "));
+    }
+
+    @Test
+    void anotacionDeTipo() {
+        List<Sentencia> programa = parse("let a: int = 1; let b: float; const c: bool = true; let d = 2;");
+        assertEquals("", errores());
+
+        NodoDeclaracion a = (NodoDeclaracion) programa.get(0);
+        assertEquals("int", a.tipo().lexema);
+        assertEquals("1", a.valor().toString());
+
+        NodoDeclaracion b = (NodoDeclaracion) programa.get(1);
+        assertEquals("float", b.tipo().lexema);
+        assertNull(b.valor());
+
+        assertEquals("bool", ((NodoDeclaracion) programa.get(2)).tipo().lexema);
+        assertNull(((NodoDeclaracion) programa.get(3)).tipo());
+    }
+
+    @Test
+    void anotacionDeTipo_formasInvalidas() {
+        assertEquals("E201", codigos("let x;"));           // sin tipo ni valor
+        assertEquals("E201", codigos("const x: int;"));    // const sin valor
+        assertEquals("E201", codigos("let x: void;"));     // void no es tipo de variable
+        assertEquals("E201", codigos("let x: y = 1;"));    // y no es un tipo
+        assertEquals("E201", codigos("let int = 1;"));     // los tipos son palabras reservadas
+    }
+
+    /** Tras un error en la anotación, el parser se recupera y sigue con la siguiente sentencia. */
+    @Test
+    void anotacionDeTipo_recuperacion() {
+        List<Sentencia> programa = parse("let x: ; let y: int = 2;");
+        assertEquals(1, errores.obtenerErrores().size());
+        assertEquals(1, programa.size());
     }
 }

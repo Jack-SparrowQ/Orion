@@ -1,5 +1,1 @@
-
-fn hello {
-	let x = 1;
-}
-print(x);
+let x: int = 1.1;

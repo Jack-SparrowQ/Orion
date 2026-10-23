@@ -887,7 +887,7 @@ de `src/main/java/com/compiler`:
 | Construcción                                      |                    Lexer                    |                Parser                 | Semántico | Generación JS |
 | ------------------------------------------------- | :-----------------------------------------: | :-----------------------------------: | :-------: | :-----------: |
 | `let` / `const` con inicializador, sin tipo       |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| Anotación de tipo `: Tipo`, `let x: T;`           |    ✘ (faltan `:` y los nombres de tipo)     |                   ✘                   |     ✘     |       ✘       |
+| Anotación de tipo `: Tipo`, `let x: T;`           |                      ✔                      |           ✔ (sin `T[]`)               | ✔ (sin E309) |       ✔       |
 | Asignación `=` y compuesta sobre un identificador |                      ✔                      | ✔ (LL(2), se reduce a `a = a op (e)`) |     ✔     |       ✔       |
 | Asignación a `v[i]`                               |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
 | `print(e)` con un solo argumento                  |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
@@ -895,7 +895,7 @@ de `src/main/java/com/compiler`:
 | `if` / `else` / `else if`                         |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `Bloque` como sentencia independiente             |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
 | `while`, `for … in`, `break`, `continue`          |           ✔ (palabras reservadas)           |                   ✘                   |     ✘     |       ✘       |
-| `fn`, parámetros, `return`, llamadas              |          ✔ / ✘ (faltan `,` y `:`)           |                   ✘                   |     ✘     |       ✘       |
+| `fn`, parámetros, `return`, llamadas              |          ✔ / ✘ (falta `,`)                  |                   ✘                   |     ✘     |       ✘       |
 | `\|\|` `&&` `==` `!=` `<` `<=` `>` `>=`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `+` `-` `*` `/` `%`, `!` y `-` unarios            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `**`                                              | ✘ (el token existe, el lexer no lo produce) |                   ✘                   |     ✘     |       ✘       |

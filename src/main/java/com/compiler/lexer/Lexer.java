@@ -41,6 +41,13 @@ public class Lexer {
         PALABRAS_RESERVADAS.put("false", TokenType.FALSE);
         PALABRAS_RESERVADAS.put("null", TokenType.NULL);
         PALABRAS_RESERVADAS.put("void", TokenType.VOID);
+
+        // Nombres de tipo
+        PALABRAS_RESERVADAS.put("int", TokenType.INT);
+        PALABRAS_RESERVADAS.put("float", TokenType.FLOAT);
+        PALABRAS_RESERVADAS.put("char", TokenType.CHAR);
+        PALABRAS_RESERVADAS.put("string", TokenType.STRING);
+        PALABRAS_RESERVADAS.put("bool", TokenType.BOOL);
         
         // Módulos
         PALABRAS_RESERVADAS.put("import", TokenType.IMPORT);
@@ -154,6 +161,9 @@ public class Lexer {
                 case ';':
                     avanzar();
                     return createToken(TokenType.PUNTO_Y_COMA, ";");
+                case ':':
+                    avanzar();
+                    return createToken(TokenType.DOS_PUNTOS, ":");
                 case '.':
                     avanzar();
                     return createToken(TokenType.PUNTO, ".");

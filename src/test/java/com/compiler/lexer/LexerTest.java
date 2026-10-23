@@ -123,4 +123,10 @@ public class LexerTest {
     void entradaVacia() {
         assertEquals("", tipos(""));
     }
+
+    @Test
+    void anotacionDeTipo() {
+        assertEquals("LET IDENTIFICADOR DOS_PUNTOS INT PUNTO_Y_COMA", tipos("let x: int;"));
+        assertEquals("FLOAT CHAR STRING BOOL VOID IDENTIFICADOR", tipos("float char string bool void integer"));
+    }
 }
