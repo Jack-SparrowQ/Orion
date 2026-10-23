@@ -1,9 +1,10 @@
 package com.compiler.semantic;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.compiler.error.ErrorHandler;
@@ -38,9 +39,11 @@ public final class SemanticAnalyzer {
 
     /**
      * Fase 3: registra las declaraciones (en orden) con su tipo inferido.
-     * @param nodes
-     * @param symbolsTable
-     * @param errorHandler
+     * Cada bloque abre un ámbito hijo en la tabla; la fase 4 recorre esos
+     * ámbitos en el mismo orden.
+     * @param nodes sentencias a registrar
+     * @param symbolsTable ámbito donde se registran
+     * @param errorHandler destino de los errores E302
      */
     public static void analyzeSymbols(
         List<Sentencia> nodes,
@@ -91,19 +94,18 @@ public final class SemanticAnalyzer {
                     }
                 }
 
-                //IF
+                //IF: cada rama es un ámbito propio
                 case NodoIf nodeIf -> {
-                    analyzeSymbols(nodeIf.bloqueTrue().sentencias(), symbolsTable, errorHandler);
-                    analyzeSymbols(nodeIf.bloqueFalse().sentencias(), symbolsTable, errorHandler);
+                    analyzeSymbols(nodeIf.bloqueTrue().sentencias(), symbolsTable.abrirAmbito(), errorHandler);
+                    analyzeSymbols(nodeIf.bloqueFalse().sentencias(), symbolsTable.abrirAmbito(), errorHandler);
                 }
 
                 //PRINT y ASIGNACIÓN: no declaran símbolos
                 case NodoImprimir print -> { }
                 case NodoAsignacion asignacion -> { }
 
-                //BLOQUE: registra las declaraciones de su interior
-                // shortcut: la tabla es plana, "{ let a = 1; } let a = 2;" da E302; usar una tabla por ámbito si se necesita.
-                case NodoBloque bloque -> analyzeSymbols(bloque.sentencias(), symbolsTable, errorHandler);
+                //BLOQUE: registra sus declaraciones en un ámbito nuevo
+                case NodoBloque bloque -> analyzeSymbols(bloque.sentencias(), symbolsTable.abrirAmbito(), errorHandler);
             }
         }
     }
@@ -129,18 +131,29 @@ public final class SemanticAnalyzer {
      */
     private static final class Verificador {
 
+        /** Ámbito raíz del recorrido. */
         private final SymbolTable tabla;
 
         /** null: solo inferir tipos, sin reportar errores ni comprobar ámbitos. */
         private final ErrorHandler errores;
 
-        /** Nombres declarados hasta este punto, un conjunto por bloque abierto. */
-        private final Deque<Set<String>> visibles = new ArrayDeque<>();
+        /** Ámbito del punto que se está verificando. */
+        private SymbolTable actual;
 
+        /** Símbolos cuya declaración ya se recorrió: los demás aún no son visibles (E303). */
+        private final Set<Symbol> declarados = new HashSet<>();
+
+        /** Por cada ámbito, sus hijos aún no visitados (en el orden de la fase 3). */
+        private final Map<SymbolTable, Iterator<SymbolTable>> pendientes = new HashMap<>();
+
+        /**
+         * @param tabla ámbito donde empieza el recorrido (el global en la fase 4)
+         * @param errores destino de los errores, o null para solo inferir tipos
+         */
         Verificador(SymbolTable tabla, ErrorHandler errores) {
             this.tabla = tabla;
             this.errores = errores;
-            visibles.push(new HashSet<>());
+            this.actual = tabla;
         }
 
         void sentencias(List<Sentencia> nodos) {
@@ -150,16 +163,17 @@ public final class SemanticAnalyzer {
         }
 
         /**
-         * Verifica un bloque en un ámbito nuevo: las variables declaradas dentro
-         * solo son visibles en él (el JavaScript generado usa let/const, que
-         * también son de bloque).
+         * Verifica un bloque dentro del ámbito que le abrió la fase 3: las
+         * variables declaradas dentro solo son visibles en él (el JavaScript
+         * generado usa let/const, que también son de bloque).
          *
          * @param bloque cuerpo de un if o bloque independiente
          */
         private void bloque(NodoBloque bloque) {
-            visibles.push(new HashSet<>());
+            SymbolTable padre = actual;
+            actual = pendientes.computeIfAbsent(padre, t -> t.getHijos().iterator()).next();
             sentencias(bloque.sentencias());
-            visibles.pop();
+            actual = padre;
         }
 
         private void sentencia(Sentencia nodo) {
@@ -177,7 +191,8 @@ public final class SemanticAnalyzer {
                         }
                     }
                     // shortcut: "let x: T;" sin valor no se rastrea; leerla antes de asignarla es E309 (pendiente).
-                    visibles.peek().add(declaracion.identificador().lexema);
+                    // Si fue un E302, buscar() devuelve la declaración previa, ya visible
+                    declarados.add(actual.buscar(declaracion.identificador().lexema));
                 }
 
                 case NodoAsignacion asignacion -> {
@@ -279,26 +294,27 @@ public final class SemanticAnalyzer {
          * o pertenece a otro bloque).
          */
         private Symbol buscarVisible(Token nombre) {
-            Symbol symbol = tabla.buscar(nombre.lexema);
+            Symbol symbol = actual.buscar(nombre.lexema);
 
             if (errores == null) {
                 return symbol; // inferencia: basta con que ya esté en la tabla
             }
 
-            if (symbol == null) {
+            if (symbol != null && declarados.contains(symbol)) {
+                return symbol;
+            }
+
+            // No es visible: puede estar más adelante en este ámbito o en otro bloque
+            Symbol enOtroLugar = symbol != null ? symbol : tabla.buscarEnSubambitos(nombre.lexema);
+            if (enOtroLugar == null) {
                 reportar("E301", "El identificador '" + nombre.lexema
                         + "' no ha sido declarado.", nombre);
-                return null;
-            }
-
-            if (visibles.stream().noneMatch(nombres -> nombres.contains(nombre.lexema))) {
+            } else {
                 reportar("E303", "El identificador '" + nombre.lexema
                         + "' se usa antes de su declaración o fuera de su bloque (declarado en la linea: "
-                        + symbol.getLinea() + ").", nombre);
-                return null;
+                        + enOtroLugar.getLinea() + ").", nombre);
             }
-
-            return symbol;
+            return null;
         }
 
         private void reportar(String codigo, String mensaje, Token posicion) {

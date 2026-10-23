@@ -148,6 +148,25 @@ public class SemanticAnalyzerTest {
         assertEquals("E303", analizar("{ let t = 1; print(t); }\nprint(t);"));
     }
 
+    /** Bloques hermanos pueden repetir un nombre, cada uno con su propio tipo. */
+    @Test
+    void bloquesHermanosRepitenNombre() {
+        assertEquals("", analizar("if (true) { let x = 1; print(x + 1); } else { let x = true; print(!x); }"));
+    }
+
+    /** Declarar un nombre ya visible en un ámbito exterior es ocultarlo: E302. */
+    @Test
+    void ocultarVariableExterior() {
+        assertEquals("E302", analizar("let n = 1;\nif (true) { let n = 2; }"));
+    }
+
+    /** Tras cerrar el bloque, su nombre queda libre para el ámbito exterior. */
+    @Test
+    void redeclararTrasCerrarElBloque() {
+        assertEquals("", analizar("{ let a = 1; print(a); }\nlet a = true;\nprint(!a);"));
+        assertEquals(Type.BOOL, tipoDe("a"));
+    }
+
     @Test
     void bloqueVeLasVariablesExteriores() {
         assertEquals("", analizar("let a = 1;\nif (a > 0) { let b = a + 1; print(b); }\nprint(a);"));
