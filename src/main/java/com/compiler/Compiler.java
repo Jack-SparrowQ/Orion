@@ -323,7 +323,7 @@ public class Compiler {
         List<Token> tokensList,
         ErrorHandler errorHandler
     ) {
-        info.println("=== 2. FASE DE ANÁLISIS SINTÁCTICO ===");
+        info.println("=== 2. FASE DE ANALISIS SINTACTICO ===");
 
         Parser parser = new Parser(
                 tokensList,
@@ -332,12 +332,12 @@ public class Compiler {
 
         List<Sentencia> arbolAST = parser.parsear();
 
-        if (reportarSiHayErrores(errorHandler, "sintáctico")) {
+        if (reportarSiHayErrores(errorHandler, "SINTACTICO")) {
             return Optional.empty();
         }
 
         info.println(
-                ConsoleColors.GREEN + "✓ Análisis sintáctico completado correctamente." + ConsoleColors.RESET
+                ConsoleColors.GREEN + "✓ Análisis SINTACTICO completado correctamente." + ConsoleColors.RESET
         );
 
         info.println(
@@ -390,7 +390,7 @@ public class Compiler {
         SymbolTable symbolsTable,
         ErrorHandler errorHandler
     ) {
-        info.println("=== 4. ANÁLISIS SEMÁNTICO ===");
+        info.println("=== 4. ANALISIS SEMANTICO ===");
 
         SemanticAnalyzer.analyzeSemantic(
                 arbolAST,
@@ -398,12 +398,12 @@ public class Compiler {
                 errorHandler
         );
 
-        if (reportarSiHayErrores(errorHandler, "semántico")) {
+        if (reportarSiHayErrores(errorHandler, "SEMANTICO")) {
             return false;
         }
 
         info.println(
-                ConsoleColors.GREEN + "✓ Semantic Analysis is done." + ConsoleColors.RESET
+                ConsoleColors.GREEN + "Semantic Analysis is done." + ConsoleColors.RESET
         );
 
         info.println();
@@ -417,20 +417,20 @@ public class Compiler {
      * @return the three-address code as text.
      */
     private static String generateIntermediateCode(List<Sentencia> arbolAST) {
-        info.println("=== 5. GENERACIÓN DE CÓDIGO INTERMEDIO ===");
+        info.println("=== 5. GENERACION DE CODIGO INTERMEDIO ===");
 
         GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
         List<Cuadrupla> codigoIntermedio = generadorIR.generar(arbolAST);
         String textoTAC = GeneradorCodigoIntermedio.aTexto(codigoIntermedio);
 
         info.println();
-        info.println("Código de tres direcciones:");
+        info.println("Codigo de tres direcciones:");
         info.println("-----------------------------------------");
         info.println(textoTAC);
         info.println("-----------------------------------------");
         info.println();
 
-        info.println("Cuádruplas (op, arg1, arg2, resultado):");
+        info.println("Cuadruplas (op, arg1, arg2, resultado):");
         for (int i = 0; i < codigoIntermedio.size(); i++) {
             info.println(String.format("%3d  %s", i, codigoIntermedio.get(i).comoTupla()));
         }
@@ -445,7 +445,7 @@ public class Compiler {
      * @return JavaScript code.
      */
     private static String generarJavaScript(List<Sentencia> arbolAST) {
-        info.println("=== 6. GENERACIÓN DE CÓDIGO JAVASCRIPT ===");
+        info.println("=== 6. GENERACION DE CODIGO JAVASCRIPT ===");
 
         JSGenerator generador = new JSGenerator();
 
@@ -454,7 +454,7 @@ public class Compiler {
 
         info.println();
         info.println(
-                "Código JavaScript generado:"
+                "CODIGO JavaScript generado:"
         );
 
         info.println("-----------------------------------------");

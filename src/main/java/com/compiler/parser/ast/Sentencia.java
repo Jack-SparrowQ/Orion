@@ -5,5 +5,5 @@ package com.compiler.parser.ast;
  * olvide un tipo de nodo no compila.
  */
 public sealed interface Sentencia permits NodoDeclaracion, NodoAsignacion, NodoImprimir, NodoIf, NodoBloque,
-        NodoWhile, NodoSalto {
+        NodoWhile, NodoSalto, NodoFuncion, NodoReturn, NodoLlamada {
 }

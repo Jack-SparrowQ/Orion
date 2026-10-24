@@ -5,5 +5,5 @@ package com.compiler.parser.ast;
  * de nodo no compila.
  */
 public sealed interface Expresion
-        permits NodoLiteral, NodoVariable, NodoBinario, NodoUnario, NodoAgrupacion {
+        permits NodoLiteral, NodoVariable, NodoBinario, NodoUnario, NodoAgrupacion, NodoLlamada {
 }

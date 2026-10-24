@@ -33,11 +33,11 @@ public class GeneradorCodigoIntermedio {
         return new ArrayList<>(codigo);
     }
 
-    // Texto listo para mostrar o guardar (las etiquetas sin sangría)
+    // Texto listo para mostrar o guardar (etiquetas y delimitadores de función sin sangría)
     public static String aTexto(List<Cuadrupla> codigo) {
         StringBuilder sb = new StringBuilder();
         for (Cuadrupla c : codigo) {
-            if (!c.op.equals("label")) {
+            if (!c.op.equals("label") && !c.op.equals("func") && !c.op.equals("endfunc")) {
                 sb.append("    ");
             }
             sb.append(c).append("\n");
@@ -109,7 +109,39 @@ public class GeneradorCodigoIntermedio {
                     ciclos.peek()[salto.palabraClave().tipo == TokenType.BREAK ? 1 : 0]);
             // El código de tres direcciones no tiene ámbitos: el bloque se aplana
             case NodoBloque bloque -> bloque.sentencias().forEach(this::generarSentencia);
+            //     func f, n ; cuerpo ; return ; endfunc
+            // Se emite en su lugar: func/endfunc delimitan una definición, no código
+            // que se ejecute al pasar por ahí. Los parámetros se usan por su nombre.
+            case NodoFuncion fn -> {
+                emitir("func", fn.nombre().lexema, String.valueOf(fn.parametros().size()), null);
+                fn.cuerpo().sentencias().forEach(this::generarSentencia);
+                // Retorno implícito al final (las void pueden terminar sin return)
+                if (!codigo.get(codigo.size() - 1).op.equals("return")) {
+                    emitir("return", null, null, null);
+                }
+                emitir("endfunc", null, null, null);
+            }
+            case NodoReturn ret -> emitir("return",
+                    ret.valor() == null ? null : generarExpresion(ret.valor()), null, null);
+            // Llamada como sentencia: el valor de retorno se descarta
+            case NodoLlamada llamada -> generarLlamada(llamada, false);
         }
+    }
+
+    /**
+     * Emite param por cada argumento (ya evaluados, en orden) y luego el call.
+     *
+     * @param llamada   la llamada
+     * @param usarValor true si el valor de retorno se usa (se guarda en un temporal)
+     * @return el temporal con el valor de retorno, o null si se descarta
+     */
+    private String generarLlamada(NodoLlamada llamada, boolean usarValor) {
+        // Se evalúan todos antes del primer param: un argumento puede contener otra llamada
+        List<String> argumentos = llamada.argumentos().stream().map(this::generarExpresion).toList();
+        argumentos.forEach(a -> emitir("param", a, null, null));
+        String temporal = usarValor ? nuevoTemporal() : null; // después de los hijos
+        emitir("call", llamada.nombre().lexema, String.valueOf(argumentos.size()), temporal);
+        return temporal;
     }
 
     // ---------------- EXPRESIONES ----------------
@@ -140,6 +172,8 @@ public class GeneradorCodigoIntermedio {
 
             // Los paréntesis ya quedaron reflejados en la estructura del árbol
             case NodoAgrupacion g -> generarExpresion(g.expresion());
+
+            case NodoLlamada llamada -> generarLlamada(llamada, true);
         };
     }
 

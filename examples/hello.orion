@@ -1,7 +1,3 @@
-
-let a: int = 30;
-
-while(true) {
-    print(a);
-    if(a == 25) { break; }
+fn sum(a: int, b: int): void {
+    print(a+b);
 }

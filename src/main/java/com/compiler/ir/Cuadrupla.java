@@ -9,6 +9,11 @@ package com.compiler.ir;
 //   (ifFalse, t2, _,  L1)   ->  ifFalse t2 goto L1
 //   (goto,    _,  _,  L2)   ->  goto L2
 //   (label,   _,  _,  L1)   ->  L1:
+//   (func,    f,  2,  _ )   ->  func f, 2      (inicio de la función f con 2 parámetros)
+//   (endfunc, _,  _,  _ )   ->  endfunc
+//   (param,   a,  _,  _ )   ->  param a        (argumento de la próxima llamada)
+//   (call,    f,  2,  t4)   ->  t4 = call f, 2 (sin resultado: call f, 2)
+//   (return,  t4, _,  _ )   ->  return t4      (sin valor: return)
 public class Cuadrupla {
     public final String op;
     public final String arg1;
@@ -36,6 +41,16 @@ public class Cuadrupla {
                 return "goto " + resultado;
             case "=":
                 return resultado + " = " + arg1;
+            case "func":
+                return "func " + arg1 + ", " + arg2;
+            case "endfunc":
+                return "endfunc";
+            case "param":
+                return "param " + arg1;
+            case "call":
+                return (resultado == null ? "" : resultado + " = ") + "call " + arg1 + ", " + arg2;
+            case "return":
+                return arg1 == null ? "return" : "return " + arg1;
             default:
                 if (arg2 == null) { // operador unario
                     return resultado + " = " + op + arg1;

@@ -164,6 +164,9 @@ public class Lexer {
                 case ':':
                     avanzar();
                     return createToken(TokenType.DOS_PUNTOS, ":");
+                case ',':
+                    avanzar();
+                    return createToken(TokenType.COMA, ",");
                 case '.':
                     avanzar();
                     return createToken(TokenType.PUNTO, ".");

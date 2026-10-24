@@ -855,7 +855,7 @@ compilador no genera código.
 | E202   | Sintáctica | Sentencia no reconocida                                                   | Implementado                |
 | E203   | Sintáctica | Se esperaba una expresión                                                 | Implementado                |
 | E204   | Sintáctica | Destino de asignación no válido                                           | Propuesto                   |
-| E205   | Sintáctica | Una expresión usada como sentencia debe ser una llamada                   | Propuesto                   |
+| E205   | Sintáctica | Una expresión usada como sentencia debe ser una llamada                   | Implementado                |
 | E301   | Semántica  | Identificador no declarado                                                | Implementado                |
 | E302   | Semántica  | Identificador ya declarado                                                | Implementado                |
 | E303   | Semántica  | Uso antes de la declaración o fuera de su bloque                          | Implementado                |
@@ -863,17 +863,17 @@ compilador no genera código.
 | E305   | Semántica  | Asignación a una constante o a una variable de solo lectura               | Implementado (solo `const`) |
 | E306   | Semántica  | Operación no válida para los tipos de sus operandos                       | Implementado                |
 | E307   | Semántica  | Tipos incompatibles en asignación, argumento o retorno                    | Implementado (asignación)   |
-| E308   | Semántica  | Condición que no es `bool`                                                | Implementado (solo `if`)    |
+| E308   | Semántica  | Condición que no es `bool`                                                | Implementado                |
 | E309   | Semántica  | Variable leída sin haber sido asignada                                    | Propuesto                   |
 | E310   | Semántica  | Índice no entero o valor no indexable                                     | Propuesto                   |
 | E311   | Semántica  | Propiedad inexistente                                                     | Propuesto                   |
-| E312   | Semántica  | No se puede inferir el tipo (o se usa un valor `void`)                    | Propuesto                   |
+| E312   | Semántica  | No se puede inferir el tipo (o se usa un valor `void`)                    | Implementado (solo `void`)  |
 | E313   | Semántica  | `break` o `continue` fuera de un ciclo                                    | Implementado                |
-| E314   | Semántica  | Se llama a algo que no es una función                                     | Propuesto                   |
-| E315   | Semántica  | Número de argumentos incorrecto                                           | Propuesto                   |
-| E316   | Semántica  | `return` fuera de una función                                             | Propuesto                   |
-| E317   | Semántica  | `return` con valor en una función `void`, o sin valor en una que no lo es | Propuesto                   |
-| E318   | Semántica  | Falta `return` en algún camino de ejecución                               | Propuesto                   |
+| E314   | Semántica  | Se llama a algo que no es una función                                     | Implementado                |
+| E315   | Semántica  | Número de argumentos incorrecto                                           | Implementado                |
+| E316   | Semántica  | `return` fuera de una función                                             | Implementado                |
+| E317   | Semántica  | `return` con valor en una función `void`, o sin valor en una que no lo es | Implementado                |
+| E318   | Semántica  | Falta `return` en algún camino de ejecución                               | Implementado                |
 | E319   | Semántica  | `for … in` sobre un valor no iterable                                     | Propuesto                   |
 | W301   | Semántica  | Código inalcanzable (advertencia)                                         | Propuesto                   |
 

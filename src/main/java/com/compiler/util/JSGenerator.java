@@ -79,6 +79,26 @@ public class JSGenerator {
 
             // 6. break y continue son iguales en JS
             case NodoSalto salto -> indentacion + salto.palabraClave().lexema + ";\n";
+
+            // 7. Traducir una función: JS no tiene tipos, así que se descartan
+            case NodoFuncion fn -> {
+                StringBuilder jsFn = new StringBuilder(indentacion).append("function ")
+                        .append(fn.nombre().lexema).append("(");
+                for (int i = 0; i < fn.parametros().size(); i++) {
+                    jsFn.append(i == 0 ? "" : ", ").append(fn.parametros().get(i).nombre().lexema);
+                }
+                jsFn.append(") {\n");
+                for (Sentencia sentenciaInterna : fn.cuerpo().sentencias()) {
+                    jsFn.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
+                }
+                yield jsFn.append(indentacion).append("}\n").toString();
+            }
+
+            case NodoReturn ret -> indentacion + "return"
+                    + (ret.valor() == null ? "" : " " + generarExpresion(ret.valor())) + ";\n";
+
+            // Llamada como sentencia (f(x);)
+            case NodoLlamada llamada -> indentacion + generarExpresion(llamada) + ";\n";
         };
     }
 
@@ -109,6 +129,9 @@ public class JSGenerator {
             }
 
             case NodoAgrupacion g -> "(" + generarExpresion(g.expresion()) + ")";
+
+            case NodoLlamada llamada -> llamada.nombre().lexema + "("
+                    + String.join(", ", llamada.argumentos().stream().map(this::generarExpresion).toList()) + ")";
         };
     }
 }

@@ -120,15 +120,30 @@ public class Parser {
     // salta hasta la siguiente sentencia para seguir buscando errores.
     private Optional<Sentencia> sentenciaORecuperar(boolean enBloque) {
         try {
-            return Optional.of(sentencia());
+            return Optional.of(sentencia(enBloque));
         } catch (ParseError e) {
             sincronizar(enBloque);
             return Optional.empty();
         }
     }
 
-    // 2. El Enrutador: Decide qué regla gramatical usar viendo el token actual
-    private Sentencia sentencia() {
+    /**
+     * El enrutador: decide qué regla gramatical usar viendo el token actual.
+     *
+     * @param enBloque true dentro de un bloque, donde 'fn' no está permitido
+     * @return la sentencia reconocida
+     */
+    private Sentencia sentencia(boolean enBloque) {
+        if (verificar(TokenType.FN)) {
+            if (enBloque) {
+                throw error(peek(), "E202", "Las funciones solo pueden declararse en el nivel superior.");
+            }
+            avanzar();
+            return declaracionFuncion();
+        }
+        if (coinciden(TokenType.RETURN)) {
+            return declaracionReturn();
+        }
         if (verificar(TokenType.LET) || verificar(TokenType.CONST)) {
             return declaracionVariable(); 
         }
@@ -151,6 +166,10 @@ public class Parser {
         if (verificar(TokenType.IDENTIFICADOR)
                 && (siguiente().tipo == TokenType.IGUAL || OPERADOR_COMPUESTO.containsKey(siguiente().tipo))) {
             return asignacion();
+        }
+        // ...o '(' (llamada usada como sentencia)
+        if (verificar(TokenType.IDENTIFICADOR) && siguiente().tipo == TokenType.PARENTESIS_IZQ) {
+            return llamadaComoSentencia();
         }
 
         // Si no es ninguna de las anteriores, lanzamos error (por ahora)
@@ -258,6 +277,66 @@ public class Parser {
         }
 
         return new NodoIf(condicion, cuerpo, sino);
+    }
+
+    /**
+     * Regla: "fn" IDENTIFICADOR "(" [ parametro { "," parametro } ] ")" [ ":" tipoRetorno ] bloque.
+     * Quien la llama ya consumió el 'fn'.
+     *
+     * @return la funcion con sus parámetros, su tipo de retorno y su cuerpo
+     */
+    private Sentencia declaracionFuncion() {
+        Token nombre = consumir(TokenType.IDENTIFICADOR, "Se esperaba el nombre de la funcion.");
+        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después del nombre de la funcion.");
+
+        List<NodoParametro> parametros = new ArrayList<>();
+        if (!verificar(TokenType.PARENTESIS_DER)) {
+            do {
+                Token parametro = consumir(TokenType.IDENTIFICADOR, "Se esperaba el nombre del parámetro.");
+                consumir(TokenType.DOS_PUNTOS, "Los parámetros deben declarar su tipo: se esperaba ':'.");
+                parametros.add(new NodoParametro(parametro, tipo()));
+            } while (coinciden(TokenType.COMA));
+        }
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de los parámetros.");
+
+        // tipoRetorno -> tipo | "void"; sin anotación la funcion es void
+        Token tipoRetorno = null;
+        if (coinciden(TokenType.DOS_PUNTOS)) {
+            tipoRetorno = coinciden(TokenType.VOID) ? anterior() : tipo();
+        }
+
+        consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' antes del cuerpo de la funcion.");
+        return new NodoFuncion(nombre, parametros, tipoRetorno, parsearBloque());
+    }
+
+    /**
+     * Regla: "return" [ expresion ] ";". Un ';' inmediato indica que no hay valor.
+     * Quien la llama ya consumió el 'return'. Que esté dentro de una funcion
+     * lo comprueba el análisis semántico (E316).
+     *
+     * @return el return, con su valor o null
+     */
+    private Sentencia declaracionReturn() {
+        Token palabraClave = anterior();
+        Expresion valor = verificar(TokenType.PUNTO_Y_COMA) ? null : expresion();
+        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final del return.");
+        return new NodoReturn(palabraClave, valor);
+    }
+
+    /**
+     * Regla: llamada ";". Se parsea la expresión completa y luego se exige
+     * que sea una llamada: "f(1) + 2;" no tiene efecto (E205).
+     *
+     * @return la llamada
+     */
+    private Sentencia llamadaComoSentencia() {
+        Token inicio = peek();
+        Expresion expresion = expresion();
+        if (!(expresion instanceof NodoLlamada llamada)) {
+            throw error(inicio, "E205", "Una expresión usada como sentencia debe ser una llamada a funcion.");
+        }
+        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la llamada.");
+        return llamada;
     }
 
     /**
@@ -393,14 +472,16 @@ public class Parser {
         return primario();
     }
 
-    // primario -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+    // primario -> NUMERO | IDENTIFICADOR [ argumentos ] | "true" | "false" | "(" expresion ")"
     private Expresion primario() {
         if (coinciden(TokenType.NUMERO, TokenType.TRUE, TokenType.FALSE)) {
             return new NodoLiteral(anterior());
         }
 
         if (coinciden(TokenType.IDENTIFICADOR)) {
-            return new NodoVariable(anterior());
+            Token nombre = anterior();
+            // '(' decide entre llamada y variable (LL(1))
+            return coinciden(TokenType.PARENTESIS_IZQ) ? llamada(nombre) : new NodoVariable(nombre);
         }
 
         if (coinciden(TokenType.PARENTESIS_IZQ)) {
@@ -412,6 +493,24 @@ public class Parser {
         throw error(peek(), "E203",
                 "Se esperaba una expresión (número, variable, true/false o '('). Se encontró "
                         + describir(peek()) + ".");
+    }
+
+    /**
+     * Regla: argumentos -> "(" [ expresion { "," expresion } ] ")".
+     * Quien la llama ya consumió el nombre y el '('.
+     *
+     * @param nombre funcion llamada
+     * @return la llamada con sus argumentos
+     */
+    private NodoLlamada llamada(Token nombre) {
+        List<Expresion> argumentos = new ArrayList<>();
+        if (!verificar(TokenType.PARENTESIS_DER)) {
+            do {
+                argumentos.add(expresion());
+            } while (coinciden(TokenType.COMA));
+        }
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de los argumentos.");
+        return new NodoLlamada(nombre, argumentos);
     }
 
     // Modo pánico: descarta tokens hasta pasar un ';' o hasta el inicio de otra
@@ -441,7 +540,7 @@ public class Parser {
                     return;
                 }
                 switch (peek().tipo) {
-                    case LET, CONST, PRINT, IF, WHILE, FOR, BREAK, CONTINUE, LLAVE_DER -> {
+                    case LET, CONST, PRINT, IF, WHILE, FOR, RETURN, BREAK, CONTINUE, FN, LLAVE_DER -> {
                         return;
                     }
                     default -> { }

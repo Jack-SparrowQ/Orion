@@ -16,8 +16,11 @@ import com.compiler.lexer.Tokenizer;
 import com.compiler.parser.ast.NodoAsignacion;
 import com.compiler.parser.ast.NodoBloque;
 import com.compiler.parser.ast.NodoDeclaracion;
+import com.compiler.parser.ast.NodoFuncion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
+import com.compiler.parser.ast.NodoLlamada;
+import com.compiler.parser.ast.NodoReturn;
 import com.compiler.parser.ast.NodoSalto;
 import com.compiler.parser.ast.NodoWhile;
 import com.compiler.parser.ast.Sentencia;
@@ -75,6 +78,42 @@ public class ParserTest {
         assertInstanceOf(NodoDeclaracion.class, programa.get(1));
         NodoIf nodoIf = assertInstanceOf(NodoIf.class, programa.get(2));
         assertEquals(2, nodoIf.bloqueTrue().sentencias().size());
+    }
+
+    /** fn con parámetros tipados, tipo de retorno, return y llamada en una expresión. */
+    @Test
+    void funcion() {
+        List<Sentencia> programa = parse("fn sumar(a: int, b: int): int { return a + b; }\nprint(sumar(1, 2));");
+        assertEquals("", errores());
+        NodoFuncion fn = assertInstanceOf(NodoFuncion.class, programa.get(0));
+        assertEquals(2, fn.parametros().size());
+        assertEquals("int", fn.tipoRetorno().lexema);
+        assertInstanceOf(NodoReturn.class, fn.cuerpo().sentencias().get(0));
+        assertEquals("sumar(1, 2)", ((NodoImprimir) programa.get(1)).expresion().toString());
+    }
+
+    /** Sin ': tipo' la función es void; "return;" no lleva valor. */
+    @Test
+    void funcionVoidYReturnSinValor() {
+        NodoFuncion fn = (NodoFuncion) parse("fn f() { return; }").get(0);
+        assertEquals("", errores());
+        assertNull(fn.tipoRetorno());
+        assertNull(((NodoReturn) fn.cuerpo().sentencias().get(0)).valor());
+    }
+
+    /** Una llamada puede ser sentencia; otra expresión que empieza igual no (E205). */
+    @Test
+    void llamadaComoSentencia() {
+        assertInstanceOf(NodoLlamada.class, parse("f(1, x);").get(0));
+        assertEquals("", errores());
+        assertEquals("E205", codigos("f(1) + 2;"));
+    }
+
+    /** fn solo en el nivel superior; los parámetros exigen tipo. */
+    @Test
+    void erroresDeFuncion() {
+        assertEquals("E202", codigos("if (a) { fn f() { } }"));
+        assertEquals("E201", codigos("fn f(a) { }"));
     }
 
     /** while con break y continue en el cuerpo. */

@@ -148,6 +148,72 @@ public class SemanticAnalyzerTest {
         assertEquals("E303", analizar("{ let t = 1; print(t); }\nprint(t);"));
     }
 
+    // ------------------------------------------------------------
+    // Funciones
+    // ------------------------------------------------------------
+
+    /** Funciones elevadas: se pueden llamar antes de declararlas y de forma recursiva. */
+    @Test
+    void funcionesElevadasYRecursivas() {
+        assertEquals("", analizar("""
+                print(fact(5));
+                fn fact(n: int): int {
+                    if (n <= 1) { return 1; } else { return n * fact(n - 1); }
+                }
+                let r = fact(3) + 1;
+                """));
+        assertEquals(Type.INT, tipoDe("r"));
+        assertEquals(SymbolCategory.FUNCION, tabla.buscar("fact").getCategoria());
+    }
+
+    @Test
+    void erroresDeLlamada() {
+        assertEquals("E301", analizar("g();"));
+        assertEquals("E314", analizar("let x = 1;\nx();"));
+        assertEquals("E315", analizar("fn f(a: int) { }\nf();"));
+        assertEquals("E307", analizar("fn f(a: int) { }\nf(true);"));
+    }
+
+    @Test
+    void erroresDeReturn() {
+        assertEquals("E316", analizar("return;"));
+        assertEquals("E317", analizar("fn f() { return 1; }"));
+        assertEquals("E317", analizar("fn f(): int { return; }"));
+        assertEquals("E307", analizar("fn f(): int { return true; }"));
+        assertEquals("", analizar("fn f(): float { return 1; }"));
+    }
+
+    /** Predicado R: un if sin else o un while no garantizan el return. */
+    @Test
+    void retornoEnTodosLosCaminos() {
+        assertEquals("E318", analizar("fn f(a: bool): int { if (a) { return 1; } }"));
+        assertEquals("E318", analizar("fn f(): int { while (true) { return 1; } }"));
+        assertEquals("", analizar("fn f(a: bool): int { if (a) { return 1; } return 2; }"));
+    }
+
+    /** Desde una función solo se ven las globales declaradas antes de ella. */
+    @Test
+    void globalesVisiblesDesdeFunciones() {
+        assertEquals("", analizar("let a = 1;\nfn f(): int { return a; }"));
+        assertEquals("E303", analizar("fn f(): int { return b; }\nlet b = 1;"));
+    }
+
+    /** Parámetros y cuerpo comparten ámbito; funciones y variables comparten nombres. */
+    @Test
+    void nombresDeFuncionesYParametros() {
+        assertEquals("E302", analizar("fn f(a: int) { let a = 2; }"));
+        assertEquals("E302", analizar("fn f() { }\nlet f = 1;"));
+        assertEquals("", analizar("fn f(a: int) { }\nfn g(a: bool) { }"));
+    }
+
+    /** Un valor void no se imprime ni se usa para inferir un tipo; una función no es un valor. */
+    @Test
+    void usosInvalidosDeFunciones() {
+        assertEquals("E306", analizar("fn f() { }\nprint(f());"));
+        assertEquals("E312", analizar("fn f() { }\nlet x = f();"));
+        assertEquals("E306", analizar("fn f() { }\nprint(f);"));
+    }
+
     /** La condición del while debe ser bool. */
     @Test
     void condicionDelWhileNoBooleana() {

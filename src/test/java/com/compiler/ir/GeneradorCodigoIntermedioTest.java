@@ -38,6 +38,27 @@ public class GeneradorCodigoIntermedioTest {
                 """, tac("while (i < 3) { continue; break; }"));
     }
 
+    /** Los argumentos se evalúan antes de los param; una void recibe return implícito. */
+    @Test
+    void funcionesYLlamadas() {
+        assertEquals("""
+                func sumar, 2
+                    t1 = a + b
+                    return t1
+                endfunc
+                func nada, 0
+                    return
+                endfunc
+                    t2 = 1 * 2
+                    param t2
+                    param 3
+                    t3 = call sumar, 2
+                    print t3
+                    call nada, 0
+                """, tac("fn sumar(a: int, b: int): int { return a + b; }\nfn nada() { }\n"
+                        + "print(sumar(1 * 2, 3));\nnada();"));
+    }
+
     /** En ciclos anidados, break afecta solo al más interno. */
     @Test
     void breakEnCicloAnidado() {

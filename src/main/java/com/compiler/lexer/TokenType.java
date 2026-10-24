@@ -35,6 +35,7 @@ public enum TokenType {
     CORCHETE_DER,     // ]
     PUNTO_Y_COMA,     // ;
     DOS_PUNTOS,       // :
+    COMA,             // ,
     PUNTO,             // .
 
     //Operadores de comparacion
