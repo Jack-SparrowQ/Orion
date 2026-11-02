@@ -1,6 +1,7 @@
 package com.compiler;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -17,6 +18,7 @@ import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
+import com.compiler.parser.ast.Expresion;
 import com.compiler.parser.ast.Sentencia;
 import com.compiler.semantic.*;
 import com.compiler.util.ASTPrinter;
@@ -157,9 +159,9 @@ public class Compiler {
 
         SymbolTable symbolsTable = construirSymbolsTable(ASTTree.get(), errorHandler);
 
-        if(!analizarSemantica(ASTTree.get(), symbolsTable, errorHandler)) {
-            return EXIT_SOURCE_ERRORS;
-        }
+        Optional<Map<Expresion, Type>> tipos = analizarSemantica(ASTTree.get(), symbolsTable, errorHandler);
+
+        if(tipos.isEmpty()) { return EXIT_SOURCE_ERRORS; }
 
         if(mode == Mode.CHECK) {
             if(!quiet) {
@@ -170,7 +172,7 @@ public class Compiler {
 
         String tacCode = generateIntermediateCode(ASTTree.get());
 
-        String artifact = mode == Mode.EMIT_IR ? tacCode : generarJavaScript(ASTTree.get());
+        String artifact = mode == Mode.EMIT_IR ? tacCode : generarJavaScript(ASTTree.get(), tipos.get());
 
         int exitCode = writeArtifact(artifact, output, quiet);
 
@@ -383,23 +385,23 @@ public class Compiler {
      * @param arbolAST
      * @param symbolsTable
      * @param errorHandler
-     * @return true if there are no errors; false if there were.
+     * @return the type of each expression, or empty if there were errors.
      */
-    private static boolean analizarSemantica(
+    private static Optional<Map<Expresion, Type>> analizarSemantica(
         List<Sentencia> arbolAST,
         SymbolTable symbolsTable,
         ErrorHandler errorHandler
     ) {
         info.println("=== 4. ANALISIS SEMANTICO ===");
 
-        SemanticAnalyzer.analyzeSemantic(
+        Map<Expresion, Type> tipos = SemanticAnalyzer.analyzeSemantic(
                 arbolAST,
                 symbolsTable,
                 errorHandler
         );
 
         if (reportarSiHayErrores(errorHandler, "SEMANTICO")) {
-            return false;
+            return Optional.empty();
         }
 
         info.println(
@@ -408,7 +410,7 @@ public class Compiler {
 
         info.println();
 
-        return true;
+        return Optional.of(tipos);
     }
 
     /**
@@ -442,12 +444,13 @@ public class Compiler {
     /**
      * Phase 6: JS code generation.
      * @param arbolAST list of AST elements.
+     * @param tipos type of each expression, from the semantic analysis.
      * @return JavaScript code.
      */
-    private static String generarJavaScript(List<Sentencia> arbolAST) {
+    private static String generarJavaScript(List<Sentencia> arbolAST, Map<Expresion, Type> tipos) {
         info.println("=== 6. GENERACION DE CODIGO JAVASCRIPT ===");
 
-        JSGenerator generador = new JSGenerator();
+        JSGenerator generador = new JSGenerator(tipos);
 
         String JavaScriptCode =
                 generador.generar(arbolAST);

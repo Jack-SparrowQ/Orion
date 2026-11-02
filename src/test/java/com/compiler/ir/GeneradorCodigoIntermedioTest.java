@@ -34,6 +34,15 @@ public class GeneradorCodigoIntermedioTest {
                 """, tac("print(\"t1\" + \"a b\");\nprint('c');"));
     }
 
+    @Test
+    void nullEsUnLiteral() {
+        assertEquals("""
+                    s = null
+                    t1 = s != null
+                    print t1
+                """, tac("let s: string = null;\nprint(s != null);"));
+    }
+
     /** Los elementos se evalúan antes de crear el arreglo, también los anidados. */
     @Test
     void literalDeArreglo() {

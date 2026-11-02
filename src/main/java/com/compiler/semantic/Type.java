@@ -52,10 +52,10 @@ public final class Type {
     }
 
     /**
-     * @return true si es '[]' o un arreglo que lo contiene, como el de [[]]
+     * @return true si es un arreglo que no aclara el tipo de sus elementos: [], [[]] o [null]
      */
-    public boolean contieneVacio() {
-        return this == VACIO || (esArreglo() && elemento.contieneVacio());
+    public boolean indeterminado() {
+        return this == VACIO || (esArreglo() && (elemento == NULL || elemento.indeterminado()));
     }
 
     public String name() {

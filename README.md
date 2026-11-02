@@ -108,6 +108,7 @@ if (c > max) {
 
 - Números enteros (`10`) y decimales (`3.5`).
 - Booleanos `true` y `false`.
+- `null`, compatible solo con `string` y con arreglos.
 - Cadenas (`"hola\n"`) y caracteres (`'a'`), con los escapes `\n \t \r \0 \\ \" \'`.
 - Identificadores: letra o `_` seguida de letras, dígitos o `_`.
 - Comentarios de línea: `// ...`.
@@ -135,7 +136,7 @@ termino      -> factor ( ("+" | "-") factor )*
 factor       -> unario ( ("*" | "/" | "%") unario )*
 unario       -> ("!" | "-") unario | postfija
 postfija     -> primario ( "[" expresion "]" | "." IDENTIFICADOR )*
-primario     -> NUMERO | CADENA | CARACTER | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+primario     -> NUMERO | CADENA | CARACTER | IDENTIFICADOR | "true" | "false" | "null" | "(" expresion ")"
               | "[" ( expresion ( "," expresion )* )? "]"
 ```
 
@@ -156,10 +157,10 @@ El análisis semántico se hace en dos pasadas:
 | `+`                             | `string`                           | `string` (concatenación)                          |
 | `/`                             | numéricos                          | `float` (en JavaScript, `7 / 2` es `3.5`)         |
 | `< <= > >=`                     | numéricos, o ambos `char`          | `bool`                                            |
-| `== !=`                         | del mismo tipo, o ambos numéricos  | `bool`                                            |
+| `== !=`                         | del mismo tipo, o ambos numéricos  | `bool`; también `string` o `T[]` con `null`       |
 | `&& \|\|` y `!`                 | `bool`                             | `bool`                                            |
 | `-x`                            | numérico                           | el tipo de `x`                                    |
-| `x = valor`                     | mismo tipo que `x`                 | se admite asignar un `int` a una variable `float` |
+| `x = valor`                     | mismo tipo que `x`                 | también `int` a `float` y `null` a `string`/`T[]` |
 | `if (condición)`                | `bool`                             | —                                                 |
 | `for (x in e)`                  | `e` es `string` o `T[]`            | `x` es `char` o `T`, de solo lectura              |
 | `[e1, e2]`                      | con un tipo común `T`              | `T[]`; `[]` toma el tipo del contexto             |
@@ -168,7 +169,7 @@ El análisis semántico se hace en dos pasadas:
 
 Las variables declaradas dentro de un bloque solo son visibles en ese bloque, igual que `let`/`const` en el JavaScript generado. Cuando una expresión tiene un error, su tipo queda como desconocido y no provoca más errores en cascada.
 
-Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por referencia. Un índice fuera de rango detiene el programa con un error en tiempo de ejecución.
+Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por referencia. Un índice fuera de rango detiene el programa con un error en tiempo de ejecución, y lo mismo ocurre al concatenar, indexar, medir o recorrer una cadena o un arreglo que vale `null`.
 
 ### Códigos de error
 
@@ -194,7 +195,7 @@ Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por r
 | E308   | Semántica   | La condición de un `if` no es `bool`.                                   |
 | E310   | Semántica   | Índice que no es `int` o valor que no se puede indexar.                 |
 | E311   | Semántica   | Propiedad inexistente: solo existe `.length`.                           |
-| E312   | Semántica   | No se puede inferir el tipo (`void` o `[]` sin contexto).               |
+| E312   | Semántica   | No se puede inferir el tipo (`void`, `null` o `[]` sin contexto).       |
 | E319   | Semántica   | `for ... in` sobre un valor que no se puede recorrer.                   |
 
 ## Generación de código intermedio
@@ -273,7 +274,7 @@ Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de 
 
 ## Alcance y trabajo futuro
 
-- `null`, potencia `**`, comentarios de bloque y `print` con varios argumentos.
+- Potencia `**`, comentarios de bloque y `print` con varios argumentos.
 - Optimizaciones sobre el código intermedio.
 
 ## Documentación académica

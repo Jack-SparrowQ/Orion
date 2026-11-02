@@ -51,6 +51,13 @@ public class ParserTest {
     }
 
     @Test
+    void nullEsUnaExpresion() {
+        assertEquals("null", expr("null"));
+        assertEquals("(s == null)", expr("s == null"));
+        assertEquals("[null, \"a\"]", expr("[null, \"a\"]"));
+    }
+
+    @Test
     void cadenasYCaracteres_sonExpresiones() {
         assertEquals("(\"a\" + \"b\")", expr("\"a\" + \"b\""));
         assertEquals("(x == 'c')", expr("x == 'c'"));

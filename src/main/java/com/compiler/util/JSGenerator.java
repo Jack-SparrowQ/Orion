@@ -1,20 +1,23 @@
 package com.compiler.util;
 
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.compiler.parser.ast.*;
+import com.compiler.semantic.Type;
 
 public class JSGenerator {
 
     // Consume los escapes por pares para no confundir el "\0" de "\\0" (barra y un cero)
     private static final Pattern ESCAPE_O_CR = Pattern.compile("\\\\.|\r");
 
-    // Ayudantes que necesitan los accesos a elementos. JS devolvería undefined fuera de rango,
-    // pero en Orion debe detener el programa; y .length y s[i] de JS cuentan unidades UTF-16,
-    // mientras for...of recorre caracteres Unicode. Orion no admite '$' en un identificador:
-    // estos nombres no pueden chocar con los del programa.
+    // Ayudantes que necesitan los accesos a elementos y las concatenaciones. JS devolvería
+    // undefined fuera de rango y "anull" al concatenar null, pero en Orion ambos deben detener
+    // el programa; y .length y s[i] de JS cuentan unidades UTF-16, mientras for...of recorre
+    // caracteres Unicode. Orion no admite '$' en un identificador: estos nombres no pueden
+    // chocar con los del programa.
     private static final String AYUDANTES = """
             function $elementos(v) {
                 return typeof v === "string" ? Array.from(v) : v;
@@ -35,10 +38,27 @@ public class JSGenerator {
             function $asignar(v, i, valor) {
                 v[$indice(v, i)] = valor(v[i]);
             }
+            function $concatenar(a, b) {
+                if (a == null || b == null) {
+                    throw new TypeError("No se puede concatenar una cadena null");
+                }
+                return a + b;
+            }
             """;
 
-    /** Se activa al generar un acceso a elementos: los demás programas no llevan los ayudantes. */
+    /** Tipo de cada expresión, calculado por el análisis semántico. */
+    private final Map<Expresion, Type> tipos;
+
+    /** Se activa al generar un uso de los ayudantes: los demás programas no los llevan. */
     private boolean usaAyudantes;
+
+    /**
+     * @param tipos tipo de cada expresión, por identidad de nodo
+     *              (ver {@link com.compiler.semantic.SemanticAnalyzer#analyzeSemantic})
+     */
+    public JSGenerator(Map<Expresion, Type> tipos) {
+        this.tipos = tipos;
+    }
 
     public String generar(List<Sentencia> programa) {
         usaAyudantes = false;
@@ -71,12 +91,16 @@ public class JSGenerator {
             case NodoAsignacionElemento asig -> {
                 usaAyudantes = true;
                 String valor = generarExpresion(asig.valor());
+                String funcion;
+                if (asig.operador() == null) {
+                    funcion = "() => " + valor;
+                } else if (tipos.get(asig.valor()) == Type.STRING) { // '+=' es el único compuesto de cadenas
+                    funcion = "($v) => " + concatenacion("$v", valor);
+                } else {
+                    funcion = "($v) => $v " + asig.operador().lexema + " (" + valor + ")";
+                }
                 yield indentacion + "$asignar(" + generarExpresion(asig.destino().objeto()) + ", "
-                        + generarExpresion(asig.destino().indice()) + ", "
-                        + (asig.operador() == null
-                                ? "() => " + valor
-                                : "($v) => $v " + asig.operador().lexema + " (" + valor + ")")
-                        + ");\n";
+                        + generarExpresion(asig.destino().indice()) + ", " + funcion + ");\n";
             }
 
             // 2. Traducir una Impresión (print(x) -> console.log(x))
@@ -166,6 +190,11 @@ public class JSGenerator {
         return "    ".repeat(Math.max(0, nivel)); // 4 espacios por nivel
     }
 
+    private String concatenacion(String izquierda, String derecha) {
+        usaAyudantes = true;
+        return "$concatenar(" + izquierda + ", " + derecha + ")";
+    }
+
     // Un literal de Orion ya es válido en JS, salvo dos casos que aquí cambian de forma:
     // "\01" sería un escape octal (en Orion es NUL y '1') y un CR crudo cortaría la cadena.
     private static String literalJS(String lexema) {
@@ -187,8 +216,14 @@ public class JSGenerator {
 
             // shortcut: '<' entre char compara unidades UTF-16, no códigos Unicode: difiere de
             // grammar.md solo entre emojis y U+E000-U+FFFF; compararlos con codePointAt si importa.
-            case NodoBinario b -> generarExpresion(b.izquierda()) + " " + b.operador().lexema
-                    + " " + generarExpresion(b.derecha());
+            case NodoBinario b -> {
+                String izquierda = generarExpresion(b.izquierda());
+                String derecha = generarExpresion(b.derecha());
+                // El único '+' que da string es la concatenación
+                yield tipos.get(b) == Type.STRING
+                        ? concatenacion(izquierda, derecha)
+                        : izquierda + " " + b.operador().lexema + " " + derecha;
+            }
 
             case NodoUnario u -> {
                 String operando = generarExpresion(u.operando());

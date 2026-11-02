@@ -18,7 +18,7 @@ package com.compiler.ir;
 //   ([],      t1, t2, x )   ->  x = t1[t2]     (elemento en esa posición, contando desde 0)
 //   ([]=,     t1, t2, x )   ->  t1[t2] = x
 //   (array,   3,  _,  t1)   ->  t1 = array 3   (arreglo nuevo de 3 elementos)
-// Un índice fuera de rango en [] o []= detiene el programa.
+// Un índice fuera de rango en [] o []= detiene el programa, igual que usar null en [], []=, len o '+'.
 public class Cuadrupla {
     public final String op;
     public final String arg1;

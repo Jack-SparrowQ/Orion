@@ -2,6 +2,7 @@ package com.compiler.semantic;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -27,10 +28,10 @@ import com.compiler.parser.ast.*;
  *   +                string + string -> string
  *   /                numérico / numérico -> float  (en JS, 7 / 2 es 3.5)
  *   &lt; &lt;= &gt; &gt;=      numérico op numérico -> bool ; char op char -> bool
- *   == !=            mismo tipo, o ambos numéricos -> bool
+ *   == !=            mismo tipo, o ambos numéricos, o string/T[] con null -> bool
  *   &amp;&amp; ||  !         bool -> bool
  *   -x               numérico -> mismo tipo
- *   x = valor        mismo tipo, o int en una variable float
+ *   x = valor        mismo tipo, int en una variable float, o null en string/T[]
  *   if (c)           c debe ser bool
  *   for (x in e)     e es string (x: char) o T[] (x: T); x es de solo lectura
  *   [e1..en]         T[], con T el tipo común de los elementos; '[]' toma el tipo del contexto
@@ -86,7 +87,7 @@ public final class SemanticAnalyzer {
                     Type type = declaration.tipo() != null
                             ? tipoAnotado(declaration.tipo())
                             : new Verificador(symbolsTable, null).tipo(declaration.valor());
-                    if (type != null && type.contieneVacio()) {
+                    if (type == Type.NULL || (type != null && type.indeterminado())) {
                         type = null; // let v = []; es E312: desconocido para no repetir el error en cada uso
                     }
 
@@ -185,8 +186,10 @@ public final class SemanticAnalyzer {
      * @param nodes sentencias del programa
      * @param symbolsTable tabla global, ya llenada por {@link #analyzeSymbols}
      * @param errorHandler destino de los errores
+     * @return el tipo de cada expresión, para las fases que lo necesitan. Se busca por
+     *         identidad: dos nodos iguales en sitios distintos son expresiones distintas
      */
-    public static void analyzeSemantic(
+    public static Map<Expresion, Type> analyzeSemantic(
         List<Sentencia> nodes,
         SymbolTable symbolsTable,
         ErrorHandler errorHandler
@@ -200,6 +203,7 @@ public final class SemanticAnalyzer {
             }
         }
         verificador.sentencias(nodes);
+        return verificador.tipos;
     }
 
     /**
@@ -228,6 +232,9 @@ public final class SemanticAnalyzer {
 
         /** Función cuyo cuerpo se está verificando, o null en el nivel superior (E316). */
         private NodoFuncion funcionActual;
+
+        /** Tipo calculado de cada expresión visitada (null si es desconocido). */
+        private final Map<Expresion, Type> tipos = new IdentityHashMap<>();
 
         /**
          * @param tabla ámbito donde empieza el recorrido (el global en la fase 4)
@@ -373,13 +380,14 @@ public final class SemanticAnalyzer {
                             reportar("E307", "No se puede asignar un valor " + nombreTipo(valor)
                                     + " a '" + declaracion.identificador().lexema + "', que es de tipo "
                                     + anotado.lexema + ".", declaracion.identificador());
-                        } else if (anotado == null && valor == Type.VOID) {
+                        } else if (anotado == null && (valor == Type.VOID || valor == Type.NULL)) {
                             reportar("E312", "No se puede inferir el tipo de '"
-                                    + declaracion.identificador().lexema + "': el valor es void.",
-                                    declaracion.identificador());
-                        } else if (anotado == null && valor != null && valor.contieneVacio()) {
+                                    + declaracion.identificador().lexema + "': el valor es "
+                                    + nombreTipo(valor) + ".", declaracion.identificador());
+                        } else if (anotado == null && valor != null && valor.indeterminado()) {
                             reportar("E312", "No se puede inferir el tipo de '"
-                                    + declaracion.identificador().lexema + "': el arreglo está vacío.",
+                                    + declaracion.identificador().lexema
+                                    + "': el arreglo no aclara el tipo de sus elementos.",
                                     declaracion.identificador());
                         }
                     }
@@ -557,17 +565,18 @@ public final class SemanticAnalyzer {
         }
 
         /**
-         * Reporta E312 si se usa un '[]' donde nada aporta su tipo, como en print([]).
+         * Reporta E312 si se usa un arreglo indeterminado donde nada aporta su tipo,
+         * como en print([]) o print([null]).
          *
          * @param tipo      tipo de la expresión, puede ser null
          * @param expresion expresión, para ubicar el error
          * @return true si se reportó
          */
         private boolean sinTipoDeContexto(Type tipo, Expresion expresion) {
-            if (tipo == null || !tipo.contieneVacio()) {
+            if (tipo == null || !tipo.indeterminado()) {
                 return false;
             }
-            reportar("E312", "No se puede inferir el tipo de un arreglo vacío aquí.", primerToken(expresion));
+            reportar("E312", "No se puede inferir aquí el tipo de los elementos del arreglo.", primerToken(expresion));
             return true;
         }
 
@@ -624,12 +633,19 @@ public final class SemanticAnalyzer {
 
         /** Tipo de la expresión, o null si no puede determinarse (error ya reportado). */
         Type tipo(Expresion expresion) {
+            Type tipo = calcularTipo(expresion);
+            tipos.put(expresion, tipo);
+            return tipo;
+        }
+
+        private Type calcularTipo(Expresion expresion) {
             return switch (expresion) {
 
                 case NodoLiteral literal -> switch (literal.valor().tipo) {
                     case NUMERO -> literal.valor().lexema.contains(".") ? Type.FLOAT : Type.INT;
                     case CADENA -> Type.STRING;
                     case CARACTER -> Type.CHAR;
+                    case NULL -> Type.NULL;
                     default -> Type.BOOL;
                 };
 
@@ -763,7 +779,9 @@ public final class SemanticAnalyzer {
             case MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL ->
                     numericos || (izquierda == Type.CHAR && derecha == Type.CHAR) ? Type.BOOL : null;
             case COMPARACION_IGUAL, DIFERENTE ->
-                    izquierda != Type.VOID && (izquierda == derecha || numericos) ? Type.BOOL : null;
+                    izquierda != Type.VOID && (izquierda == derecha || numericos
+                            || (izquierda == Type.NULL && admiteNull(derecha))
+                            || (derecha == Type.NULL && admiteNull(izquierda))) ? Type.BOOL : null;
             case AND_LOGICO, OR_LOGICO ->
                     izquierda == Type.BOOL && derecha == Type.BOOL ? Type.BOOL : null;
             default -> null;
@@ -778,18 +796,27 @@ public final class SemanticAnalyzer {
     private static boolean asignable(Type valor, Type destino) {
         return valor == null || destino == null || valor == destino
                 || (valor == Type.INT && destino == Type.FLOAT)
-                || vacioEncaja(valor, destino);
+                || sinTipoEncaja(valor, destino);
+    }
+
+    /** Solo las cadenas y los arreglos pueden valer null. */
+    private static boolean admiteNull(Type tipo) {
+        return tipo == Type.STRING || tipo == Type.VACIO || tipo.esArreglo();
     }
 
     /**
-     * Un '[]' toma el tipo del destino, también anidado: [[]] encaja en int[][].
-     * Fuera de eso los arreglos son invariantes: int[] no encaja en float[].
+     * Un '[]' o un null toman el tipo del destino, también anidados: [[]] encaja en
+     * int[][] y [null] en string[]. Fuera de eso los arreglos son invariantes:
+     * int[] no encaja en float[].
      */
-    private static boolean vacioEncaja(Type valor, Type destino) {
+    private static boolean sinTipoEncaja(Type valor, Type destino) {
         if (valor == Type.VACIO) {
             return destino.esArreglo();
         }
-        return valor.esArreglo() && destino.esArreglo() && vacioEncaja(valor.elemento(), destino.elemento());
+        if (valor == Type.NULL) {
+            return admiteNull(destino);
+        }
+        return valor.esArreglo() && destino.esArreglo() && sinTipoEncaja(valor.elemento(), destino.elemento());
     }
 
     /** Tipo común de dos elementos de un arreglo (grammar.md 11.4), o null si no existe. */
@@ -800,10 +827,10 @@ public final class SemanticAnalyzer {
         if (esNumerico(a) && esNumerico(b)) {
             return Type.FLOAT;
         }
-        if (vacioEncaja(a, b)) {
+        if (sinTipoEncaja(a, b)) {
             return b;
         }
-        return vacioEncaja(b, a) ? a : null;
+        return sinTipoEncaja(b, a) ? a : null;
     }
 
     /**
@@ -811,7 +838,7 @@ public final class SemanticAnalyzer {
      * @return T para T[], char para string; null si no tiene elementos o aún se desconocen
      */
     private static Type tipoElemento(Type tipo) {
-        if (tipo == null || tipo.contieneVacio()) {
+        if (tipo == null || tipo.indeterminado()) {
             return null;
         }
         return tipo == Type.STRING ? Type.CHAR : tipo.elemento();

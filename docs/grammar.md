@@ -650,6 +650,8 @@ numérico recibe un `int` y un `float`, el `int` se promueve a `float`.
   E306), ni entre `char` y `string`, ni entre `bool` y los números.
 - `==` entre arreglos compara **identidad**, no contenido.
 - `==` entre cadenas compara **contenido**.
+- El literal `null` no es un operando válido de `+` (E306). Una cadena
+  que vale `null` en ejecución detiene el programa (sección 14.5).
 
 ### 11.3 Sufijos
 
@@ -835,6 +837,24 @@ es `true`.
 - Acceder a un índice fuera de `[0, length − 1]` es un error en tiempo
   de ejecución que detiene el programa.
 
+### 14.5 Valores `null`
+
+Una cadena o un arreglo pueden valer `null` en ejecución, algo que el
+análisis estático no detecta porque su tipo sigue siendo `string` o
+`T[]`. Usar ese valor en una operación que necesita su contenido es un
+error en tiempo de ejecución que detiene el programa:
+
+| Operación                  | Ejemplo con `s: string` o `v: T[]` que vale `null` |
+| -------------------------- | -------------------------------------------------- |
+| Concatenación              | `"a" + s`, `s + "a"`, `s += "a"`                   |
+| Acceso a un elemento       | `s[0]`, `v[0]`, `v[0] = x`, `v[0] += x`            |
+| Longitud                   | `s.length`, `v.length`                             |
+| Recorrido                  | `for (x in s)`, `for (x in v)`                     |
+
+Con `null` sí se puede asignar, pasar como argumento, devolver, comparar
+con `==` o `!=` e imprimir (`print` escribe `null`). Los operandos se
+evalúan antes de detectar el error.
+
 ---
 
 ## 15. Códigos de error
@@ -869,7 +889,7 @@ compilador no genera código.
 | E309   | Semántica  | Variable leída sin haber sido asignada                                    | Propuesto                   |
 | E310   | Semántica  | Índice no entero o valor no indexable                                     | Implementado                |
 | E311   | Semántica  | Propiedad inexistente                                                     | Implementado                |
-| E312   | Semántica  | No se puede inferir el tipo (o se usa un valor `void`)                    | Implementado (sin `null`)   |
+| E312   | Semántica  | No se puede inferir el tipo (o se usa un valor `void`)                    | Implementado                |
 | E313   | Semántica  | `break` o `continue` fuera de un ciclo                                    | Implementado                |
 | E314   | Semántica  | Se llama a algo que no es una función                                     | Implementado                |
 | E315   | Semántica  | Número de argumentos incorrecto                                           | Implementado                |
@@ -903,7 +923,7 @@ de `src/main/java/com/compiler`:
 | `+` `-` `*` `/` `%`, `!` y `-` unarios            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `**`                                              | ✘ (el token existe, el lexer no lo produce) |                   ✘                   |     ✘     |       ✘       |
 | Literales `ENTERO`, `DECIMAL`, `true`, `false`    |      ✔ (como un único token `NUMERO`)       |                   ✔                   |     ✔     |       ✔       |
-| `null`                                            |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
+| `null`                                            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `CADENA`, `CARACTER`                              |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | Literales de arreglo, `a[i]`, `.length`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | Comentario de línea `//`                          |                      ✔                      |                   —                   |     —     |       —       |

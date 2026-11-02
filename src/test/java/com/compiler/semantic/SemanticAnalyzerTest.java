@@ -440,6 +440,138 @@ public class SemanticAnalyzerTest {
     }
 
     // ------------------------------------------------------------
+    // null
+    // ------------------------------------------------------------
+
+    @Test
+    void null_enCadenasYArreglos() {
+        assertEquals("", analizar("""
+                let s: string = null;
+                let v: int[] = null;
+                let m: float[][] = null;
+                const c: string = null;
+                s = null;
+                v = null;
+                fn f(p: string, q: int[]): string[] { return null; }
+                let r = f(null, null);
+                fn g(): string { return null; }
+                let cadenas = ["a", "b"];
+                cadenas[0] = null;
+                let filas = [[1]];
+                filas[0] = null;
+                """));
+        assertEquals(Type.STRING, tipoDe("s"));
+        assertEquals(Type.STRING.arreglo(), tipoDe("r"));
+    }
+
+    @Test
+    void null_incompatible_E307() {
+        assertEquals("E307", analizar("let a: int = null;"));
+        assertEquals("E307", analizar("let a: float = null;"));
+        assertEquals("E307", analizar("let a: bool = null;"));
+        assertEquals("E307", analizar("let a: char = null;"));
+        assertEquals("E307", analizar("let a = 1;\na = null;"));
+        assertEquals("E307", analizar("fn f(p: int) { }\nf(null);"));
+        assertEquals("E307", analizar("fn f(): int { return null; }"));
+        assertEquals("E307", analizar("let a = [1];\na[0] = null;"));
+    }
+
+    @Test
+    void null_comparaciones() {
+        assertEquals("", analizar("""
+                let s = "a";
+                let v = [1];
+                let a = s == null;
+                let b = null != v;
+                let c = null == null;
+                let d = [] == null;
+                if (s != null) { print(s); }
+                """));
+        assertEquals(Type.BOOL, tipoDe("a"));
+        assertEquals(Type.BOOL, tipoDe("b"));
+        assertEquals("E306", analizar("let a = 1 == null;"));
+        assertEquals("E306", analizar("let a = null != 'a';"));
+        assertEquals("E306", analizar("let a = true == null;"));
+        assertEquals("E306", analizar("fn f() { }\nlet a = f() == null;"));
+    }
+
+    @Test
+    void null_operacionesNoValidas_E306() {
+        assertEquals("E306", analizar("let a = null + \"x\";"));
+        assertEquals("E306", analizar("let a = \"x\" + null;"));
+        assertEquals("E306", analizar("let a = 1 + null;"));
+        assertEquals("E306", analizar("let a = null < 1;"));
+        assertEquals("E306", analizar("let a = -null;"));
+        assertEquals("E306", analizar("let a = !null;"));
+        assertEquals("E306", analizar("let a = null && true;"));
+        assertEquals("E306", analizar("let s = \"a\";\ns += null;"));
+    }
+
+    @Test
+    void null_sinTipoInferible_E312() {
+        assertEquals("E312", analizar("let x = null;"));
+        assertEquals("E312", analizar("const x = null;"));
+        assertEquals("E312", analizar("let x = [null];"));
+        assertEquals("E312", analizar("let x = [[null]];"));
+        assertEquals("E312", analizar("let x = [null, null];"));
+        assertEquals("E312", analizar("print([null]);"));
+    }
+
+    @Test
+    void null_sinErroresEnCascada() {
+        assertEquals("E312", analizar("let x = null;\nx = 1;\nprint(x + 1);\nprint(x[0]);"));
+    }
+
+    /** print acepta cualquier tipo salvo void; [] necesita contexto, null no. */
+    @Test
+    void null_seImprime() {
+        assertEquals("", analizar("print(null);"));
+    }
+
+    @Test
+    void null_noSeRecorreNiIndexa() {
+        assertEquals("E319", analizar("for (x in null) { }"));
+        assertEquals("E310", analizar("print(null[0]);"));
+        assertEquals("E311", analizar("print(null.length);"));
+    }
+
+    @Test
+    void null_noEsCondicion_E308() {
+        assertEquals("E308", analizar("if (null) { }"));
+        assertEquals("E308", analizar("while (null) { }"));
+    }
+
+    @Test
+    void null_enArreglos_tipoComun() {
+        assertEquals("", analizar("""
+                let a = [null, "x"];
+                let b = ["x", null, "y"];
+                let c = [null, [1]];
+                let d = [[1], null, []];
+                let e = [[null], ["x"]];
+                let f: string[] = [null];
+                let g: string[] = [null, null];
+                let h: int[][] = [null];
+                let i: string[][] = [[null], null, []];
+                """));
+        assertEquals(Type.STRING.arreglo(), tipoDe("a"));
+        assertEquals(Type.STRING.arreglo(), tipoDe("b"));
+        assertEquals(Type.INT.arreglo().arreglo(), tipoDe("c"));
+        assertEquals(Type.INT.arreglo().arreglo(), tipoDe("d"));
+        assertEquals(Type.STRING.arreglo().arreglo(), tipoDe("e"));
+    }
+
+    @Test
+    void null_enArreglos_incompatible_E307() {
+        assertEquals("E307", analizar("let a = [1, null];"));
+        assertEquals("E307", analizar("let a = [null, true];"));
+        assertEquals("E307", analizar("let a = [null, 'c'];"));
+        assertEquals("E307", analizar("let a = [[1], [null]];"));
+        assertEquals("E307", analizar("let a: int[] = [null];"));
+        assertEquals("E307", analizar("let a: bool[] = [null, null];"));
+    }
+
+    // ------------------------------------------------------------
     // E306: operandos incompatibles
     // ------------------------------------------------------------
 

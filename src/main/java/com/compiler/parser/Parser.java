@@ -533,10 +533,11 @@ public class Parser {
         }
     }
 
-    // primario -> NUMERO | CADENA | CARACTER | IDENTIFICADOR [ argumentos ] | "true" | "false"
+    // primario -> NUMERO | CADENA | CARACTER | IDENTIFICADOR [ argumentos ] | "true" | "false" | "null"
     //           | "(" expresion ")" | "[" [ listaExpresiones ] "]"
     private Expresion primario() {
-        if (coinciden(TokenType.NUMERO, TokenType.CADENA, TokenType.CARACTER, TokenType.TRUE, TokenType.FALSE)) {
+        if (coinciden(TokenType.NUMERO, TokenType.CADENA, TokenType.CARACTER,
+                TokenType.TRUE, TokenType.FALSE, TokenType.NULL)) {
             return new NodoLiteral(anterior());
         }
 
