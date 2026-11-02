@@ -1,8 +1,6 @@
-
-let name = "carlos";
-
-if(name != "rivera") {
-    print(name);
-} else {
-    print("the name");
-}
+let a =1 /* Comment */ + 2;
+/* varias
+    lines */
+print(a);
+/***/
+/* con ** dentro **/

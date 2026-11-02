@@ -133,6 +133,20 @@ public class Lexer {
                         }
                         continue;
                     }
+                    if(match('*')) {
+                        // Comentario de bloque: se descarta hasta el primer */
+                        while(posicionActual < codigoFuente.length() &&  (
+                            caracterActual() != '*' || siguienteCaracter() != '/' )) {
+                            avanzar();
+                        }
+                        if(posicionActual >= codigoFuente.length()) {
+                            gestorErrores.agregar("E105", ErrorType.LEXICO, "Comentario de bloque sin cerrar: falta '*/'.", startLine, startColumn);
+                        } else {
+                            avanzar(); //*
+                            avanzar(); // /
+                        }
+                        continue;
+                    }
                     if (match('=')) {
                         return createToken(TokenType.DIVISION_Y_ASIGNACION, "/=");
                     }

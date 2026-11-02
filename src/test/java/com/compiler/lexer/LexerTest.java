@@ -109,6 +109,51 @@ public class LexerTest {
     }
 
     @Test
+    void comentarioDeBloque() {
+        assertEquals("NUMERO SUMA NUMERO", tipos("1 /* x */ + 2"));
+        assertEquals("NUMERO", tipos("/* varias\nlineas */ 1"));
+        assertEquals("", tipos("/**/"));
+        assertEquals("", tipos("/***/"));
+        assertEquals("", tipos("/* a * b / c ** d **/"));
+        assertEquals("", tipos("/* una // adentro */"));
+        assertEquals("", codigosDeError());
+    }
+
+    /** Termina en el primer cierre: el segundo queda como tokens normales. */
+    @Test
+    void comentarioDeBloque_noSeAnida() {
+        assertEquals("MULTI DIVISION", tipos("/* /* x */ */"));
+    }
+
+    @Test
+    void comentarioDeBloque_conservaLaLinea() {
+        assertEquals(3, lex("/* uno\ndos\n*/ 1").get(0).line);
+    }
+
+    @Test
+    void comentarioDeBloque_noSeAbreEnUnComentarioDeLinea() {
+        assertEquals("NUMERO", tipos("// /* no abre\n1"));
+        assertEquals("", codigosDeError());
+    }
+
+    @Test
+    void comentarioDeBloqueSinCerrar_E105() {
+        assertEquals("NUMERO", tipos("1 /* nunca cierra"));
+        assertEquals("", tipos("/*"));
+        assertEquals("", tipos("/*/"));
+        assertEquals("", tipos("/* casi *"));
+        assertEquals("E105 E105 E105 E105", codigosDeError());
+    }
+
+    /** E105 señala dónde se abrió el comentario, no el final del archivo. */
+    @Test
+    void comentarioDeBloqueSinCerrar_posicion() {
+        lex("1\n  /* x\ny");
+        assertEquals("E105[LEXICO] Línea 2, columna 3: Comentario de bloque sin cerrar: falta '*/'.",
+                errores.obtenerErrores().get(0).toString().strip());
+    }
+
+    @Test
     void numerosDecimales() {
         List<Token> tokens = lex("3.14 10 2.0");
         assertEquals("3.14", tokens.get(0).lexema);

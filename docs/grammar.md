@@ -870,7 +870,7 @@ compilador no genera código.
 | E102   | Léxica     | `\|` aislado: se esperaba `\|\|`                                          | Implementado                |
 | E103   | Léxica     | Cadena o carácter sin cerrar                                              | Implementado                |
 | E104   | Léxica     | Secuencia de escape no válida                                             | Implementado                |
-| E105   | Léxica     | Comentario de bloque sin cerrar                                           | Propuesto                   |
+| E105   | Léxica     | Comentario de bloque sin cerrar                                           | Implementado                |
 | E106   | Léxica     | Literal entero fuera de rango                                             | Propuesto                   |
 | E107   | Léxica     | Literal de carácter vacío o con más de un carácter                        | Implementado                |
 | E201   | Sintáctica | Se esperaba un token concreto                                             | Implementado                |
@@ -927,7 +927,7 @@ de `src/main/java/com/compiler`:
 | `CADENA`, `CARACTER`                              |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | Literales de arreglo, `a[i]`, `.length`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | Comentario de línea `//`                          |                      ✔                      |                   —                   |     —     |       —       |
-| Comentario de bloque `/* */`                      |                      ✘                      |                   —                   |     —     |       —       |
+| Comentario de bloque `/* */`                      |                      ✔                      |                   —                   |     —     |       —       |
 | Recuperación de errores en modo pánico            |                      —                      |                   ✔                   |     —     |       —       |
 
 Diferencias del compilador actual que deben corregirse:

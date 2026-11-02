@@ -111,7 +111,7 @@ if (c > max) {
 - `null`, compatible solo con `string` y con arreglos.
 - Cadenas (`"hola\n"`) y caracteres (`'a'`), con los escapes `\n \t \r \0 \\ \" \'`.
 - Identificadores: letra o `_` seguida de letras, dígitos o `_`.
-- Comentarios de línea: `// ...`.
+- Comentarios de línea `// ...` y de bloque `/* ... */`, que no se anidan.
 - Operadores: `+ - * / %`, `== != < <= > >=`, `&& || !`, `= += -= *= /= %=`.
 
 ### Gramática
@@ -180,6 +180,7 @@ Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por r
 | E102   | Léxica      | `\|` suelto: se esperaba `\|\|`.                                        |
 | E103   | Léxica      | Cadena o carácter sin cerrar.                                           |
 | E104   | Léxica      | Secuencia de escape no válida.                                          |
+| E105   | Léxica      | Comentario de bloque sin cerrar.                                        |
 | E107   | Léxica      | Literal de carácter vacío o con más de un carácter.                     |
 | E201   | Sintáctica  | Falta un elemento obligatorio (`;`, `=`, `)`, `}`...).                  |
 | E202   | Sintáctica  | Instrucción no reconocida.                                              |
@@ -274,7 +275,7 @@ Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de 
 
 ## Alcance y trabajo futuro
 
-- Potencia `**`, comentarios de bloque y `print` con varios argumentos.
+- Potencia `**` y `print` con varios argumentos.
 - Optimizaciones sobre el código intermedio.
 
 ## Documentación académica
