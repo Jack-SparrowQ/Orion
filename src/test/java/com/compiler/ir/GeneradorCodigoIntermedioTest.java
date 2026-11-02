@@ -34,6 +34,17 @@ public class GeneradorCodigoIntermedioTest {
                 """, tac("print(\"t1\" + \"a b\");\nprint('c');"));
     }
 
+    /** El exponente se calcula antes que la potencia que lo usa; la negación, al final. */
+    @Test
+    void potencia() {
+        assertEquals("""
+                    t1 = 3 ** 2
+                    t2 = 2 ** t1
+                    t3 = -t2
+                    print t3
+                """, tac("print(-2 ** 3 ** 2);"));
+    }
+
     /** Con un argumento sigue siendo print x; printn no se confunde con imprimir el literal 2. */
     @Test
     void printSegunElNumeroDeArgumentos() {

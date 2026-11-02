@@ -134,13 +134,14 @@ igualdad     -> comparacion ( ("==" | "!=") comparacion )*
 comparacion  -> termino ( ("<" | "<=" | ">" | ">=") termino )*
 termino      -> factor ( ("+" | "-") factor )*
 factor       -> unario ( ("*" | "/" | "%") unario )*
-unario       -> ("!" | "-") unario | postfija
+unario       -> ("!" | "-") unario | potencia
+potencia     -> postfija ( "**" unario )?
 postfija     -> primario ( "[" expresion "]" | "." IDENTIFICADOR )*
 primario     -> NUMERO | CADENA | CARACTER | IDENTIFICADOR | "true" | "false" | "null" | "(" expresion ")"
               | "[" ( expresion ( "," expresion )* )? "]"
 ```
 
-La precedencia y la asociatividad (por la izquierda) coinciden con las de JavaScript. Una asignación compuesta `a += b` se traduce a `a = a + b`.
+La precedencia y la asociatividad (por la izquierda, salvo `**`, que asocia por la derecha) coinciden con las de JavaScript. Una asignación compuesta `a += b` se traduce a `a = a + b`.
 
 ## Análisis semántico
 
@@ -156,6 +157,7 @@ El análisis semántico se hace en dos pasadas:
 | `+ - * %`                       | numéricos                          | `int` si ambos son `int`; si no, `float`          |
 | `+`                             | `string`                           | `string` (concatenación)                          |
 | `/`                             | numéricos                          | `float` (en JavaScript, `7 / 2` es `3.5`)         |
+| `**`                            | numéricos                          | `float`, aunque ambos sean `int`                  |
 | `< <= > >=`                     | numéricos, o ambos `char`          | `bool`                                            |
 | `== !=`                         | del mismo tipo, o ambos numéricos  | `bool`; también `string` o `T[]` con `null`       |
 | `&& \|\|` y `!`                 | `bool`                             | `bool`                                            |
@@ -275,7 +277,6 @@ Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de 
 
 ## Alcance y trabajo futuro
 
-- Potencia `**`.
 - Optimizaciones sobre el código intermedio.
 
 ## Documentación académica

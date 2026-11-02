@@ -98,6 +98,35 @@ public class ParserTest {
     }
 
     @Test
+    void potencia_asociaPorLaDerecha() {
+        assertEquals("(2 ** (3 ** 2))", expr("2 ** 3 ** 2"));
+    }
+
+    /** Liga más que los unarios por la izquierda, pero el exponente puede ser unario. */
+    @Test
+    void potencia_conUnarios() {
+        assertEquals("(-(2 ** 2))", expr("-2 ** 2"));
+        assertEquals("(group((-2)) ** 2)", expr("(-2) ** 2"));
+        assertEquals("(2 ** (-1))", expr("2 ** -1"));
+        assertEquals("(2 ** (-(3 ** 2)))", expr("2 ** -3 ** 2"));
+    }
+
+    @Test
+    void potencia_precedencia() {
+        assertEquals("(a * (b ** c))", expr("a * b ** c"));
+        assertEquals("((a ** b) * c)", expr("a ** b * c"));
+        assertEquals("(v[0] ** (f(1) ** s.length))", expr("v[0] ** f(1) ** s.length"));
+    }
+
+    @Test
+    void potencia_malFormada() {
+        assertEquals("E203", codigos("print(2 **);"));
+        assertEquals("E203", codigos("print(** 2);"));
+        assertEquals("E203", codigos("print(2 * * 3);"));
+        assertEquals("E203", codigos("x **= 2;"));
+    }
+
+    @Test
     void unariosYAgrupacion() {
         assertEquals("(-(!a))", expr("-!a"));
         assertEquals("(group((a + b)) * c)", expr("(a + b) * c"));

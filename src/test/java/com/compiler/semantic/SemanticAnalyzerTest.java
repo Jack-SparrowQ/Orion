@@ -598,6 +598,25 @@ public class SemanticAnalyzerTest {
         assertEquals("E306", analizar("let x = 1 + true;"));
     }
 
+    /** El resultado es float también con dos int, así que no cabe en un int. */
+    @Test
+    void potencia_siempreEsFloat() {
+        assertEquals("", analizar("let a: float = 2 ** 3;\nlet b: float = 2.5 ** 2;\nprint(2 ** -1);"));
+        assertEquals("E307", analizar("let a: int = 2 ** 3;"));
+    }
+
+    @Test
+    void potencia_soloNumeros() {
+        assertEquals("E306 E306 E306 E306", analizar(
+                "let a = \"a\" ** 2;\nlet b = 2 ** true;\nlet c = null ** 2;\nlet d = [1] ** 2;"));
+    }
+
+    /** ** no cuenta como expresión constante: su resultado no da E304. */
+    @Test
+    void potencia_noEsConstanteParaE304() {
+        assertEquals("", analizar("let a = 1 / (2 ** 0 - 1);\nlet b = 1 / 0 ** 2;"));
+    }
+
     @Test
     void operadoresUnariosIncompatibles() {
         assertEquals("E306 E306", analizar("let a = !5;\nlet b = -true;"));

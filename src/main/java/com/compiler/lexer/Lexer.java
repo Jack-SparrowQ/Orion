@@ -120,6 +120,9 @@ public class Lexer {
                     return createToken(TokenType.RESTA, "-");
                 case '*':
                     avanzar();
+                    if (match('*')) {
+                        return createToken(TokenType.POTENCIA, "**");
+                    }
                     if (match('=')) {
                         return createToken(TokenType.MULTI_Y_ASIGNACION, "*=");
                     }

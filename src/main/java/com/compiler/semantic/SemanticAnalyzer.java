@@ -777,7 +777,7 @@ public final class SemanticAnalyzer {
         return switch (operador) {
             case SUMA, RESTA, MULTI, MODULO -> !numericos ? null
                     : (izquierda == Type.INT && derecha == Type.INT ? Type.INT : Type.FLOAT);
-            case DIVISION -> numericos ? Type.FLOAT : null;
+            case DIVISION, POTENCIA -> numericos ? Type.FLOAT : null;
             case MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL ->
                     numericos || (izquierda == Type.CHAR && derecha == Type.CHAR) ? Type.BOOL : null;
             case COMPARACION_IGUAL, DIFERENTE ->

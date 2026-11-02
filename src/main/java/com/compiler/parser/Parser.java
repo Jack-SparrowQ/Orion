@@ -505,14 +505,25 @@ public class Parser {
         return izquierda;
     }
 
-    // unario -> ("!" | "-") unario | postfija
+    // unario -> ("!" | "-") unario | potencia
     private Expresion unario() {
         if (coinciden(TokenType.NEGACION_LOGICA, TokenType.RESTA)) {
             Token operador = anterior();
             Expresion operando = unario();
             return new NodoUnario(operador, operando);
         }
-        return postfija();
+        return potencia();
+    }
+
+    // potencia -> postfija [ "**" unario ]
+    // El exponente vuelve a pasar por unario: así admite 2 ** -1 y asocia por la derecha
+    private Expresion potencia() {
+        Expresion base = postfija();
+        if (coinciden(TokenType.POTENCIA)) {
+            Token operador = anterior();
+            return new NodoBinario(base, operador, unario());
+        }
+        return base;
     }
 
     // postfija -> primario { "[" expresion "]" | "." IDENTIFICADOR }

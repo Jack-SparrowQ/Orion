@@ -33,6 +33,17 @@ public class JSGeneratorTest {
         return new JSGenerator(SemanticAnalyzer.analyzeSemantic(programa, tabla, errores)).generar(programa);
     }
 
+    /** JS rechaza un unario justo antes de **: esos paréntesis los pone el generador. */
+    @Test
+    void potencia() {
+        assertEquals("console.log(2 ** 3 ** 2);\n", js("print(2 ** 3 ** 2);"));
+        assertEquals("console.log(-(2 ** 2));\n", js("print(-2 ** 2);"));
+        assertEquals("console.log(- -(2 ** 2));\n", js("print(- -2 ** 2);"));
+        assertEquals("console.log(2 ** -(3 ** 2));\n", js("print(2 ** -3 ** 2);"));
+        assertEquals("console.log((-2) ** 2);\n", js("print((-2) ** 2);"));
+        assertEquals("console.log(2 ** -1);\n", js("print(2 ** -1);"));
+    }
+
     @Test
     void print_segunElNumeroDeArgumentos() {
         assertEquals("console.log();\n", js("print();"));

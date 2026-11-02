@@ -920,7 +920,7 @@ de `src/main/java/com/compiler`:
 | `fn`, parámetros, `return`, llamadas              |          ✔ / ✘ (falta `,`)                  |                   ✘                   |     ✘     |       ✘       |
 | `\|\|` `&&` `==` `!=` `<` `<=` `>` `>=`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `+` `-` `*` `/` `%`, `!` y `-` unarios            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| `**`                                              | ✘ (el token existe, el lexer no lo produce) |                   ✘                   |     ✘     |       ✘       |
+| `**`                                              |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | Literales `ENTERO`, `DECIMAL`, `true`, `false`    |      ✔ (como un único token `NUMERO`)       |                   ✔                   |     ✔     |       ✔       |
 | `null`                                            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `CADENA`, `CARACTER`                              |                      ✔                      |                   ✔                   |     ✔     |       ✔       |

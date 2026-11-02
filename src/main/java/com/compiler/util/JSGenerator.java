@@ -217,8 +217,8 @@ public class JSGenerator {
     }
 
     // Traduce una expresión (recursivamente) a su texto en JavaScript.
-    // La precedencia de Orion es la misma que la de JS, así que no se
-    // reordena nada: solo se conservan los paréntesis que escribió el programador.
+    // La precedencia de Orion es la misma que la de JS, así que no se reordena nada: solo se
+    // conservan los paréntesis que escribió el programador, más los que exige -a ** b.
     private String generarExpresion(Expresion expr) {
         return switch (expr) {
             case NodoLiteral l -> literalJS(l.valor().lexema);
@@ -238,6 +238,10 @@ public class JSGenerator {
 
             case NodoUnario u -> {
                 String operando = generarExpresion(u.operando());
+                // JS rechaza -a ** b sin paréntesis
+                if (u.operando() instanceof NodoBinario b && b.operador().lexema.equals("**")) {
+                    operando = "(" + operando + ")";
+                }
                 // Evita que "- -x" se convierta en "--x", que en JS es un decremento
                 if (u.operador().lexema.equals("-") && operando.startsWith("-")) {
                     operando = " " + operando;

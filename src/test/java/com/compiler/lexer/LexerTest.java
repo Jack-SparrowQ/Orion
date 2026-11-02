@@ -49,6 +49,17 @@ public class LexerTest {
                 tipos("== != <= >= && || += -= *= /= %="));
     }
 
+    /** Coincidencia más larga: "**" gana a "*", y "**=" no existe. */
+    @Test
+    void potencia() {
+        assertEquals("POTENCIA", tipos("**"));
+        assertEquals("MULTI MULTI", tipos("* *"));
+        assertEquals("POTENCIA MULTI", tipos("***"));
+        assertEquals("POTENCIA IGUAL", tipos("**="));
+        assertEquals("MULTI_Y_ASIGNACION", tipos("*="));
+        assertEquals("", codigosDeError());
+    }
+
     @Test
     void operadoresDeUnCaracter() {
         assertEquals("IGUAL MENOR MAYOR NEGACION_LOGICA SUMA RESTA MULTI DIVISION MODULO PUNTO",
