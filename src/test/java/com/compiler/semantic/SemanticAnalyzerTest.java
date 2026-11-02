@@ -1,6 +1,8 @@
 package com.compiler.semantic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -212,6 +214,229 @@ public class SemanticAnalyzerTest {
         Symbol c = tabla.getHijos().get(0).buscar("c");
         assertEquals(SymbolCategory.ITERACION, c.getCategoria());
         assertEquals(Type.CHAR, c.getTipo());
+    }
+
+    // ------------------------------------------------------------
+    // Arreglos
+    // ------------------------------------------------------------
+
+    /** Hay una sola instancia por tipo: el analizador compara con ==. */
+    @Test
+    void tiposDeArreglo_sonUnicos() {
+        assertSame(Type.INT.arreglo(), Type.INT.arreglo());
+        assertNotSame(Type.INT.arreglo(), Type.FLOAT.arreglo());
+        assertSame(Type.INT, Type.INT.arreglo().elemento());
+        assertEquals("INT[][]", Type.INT.arreglo().arreglo().toString());
+    }
+
+    @Test
+    void arreglos_inferencia() {
+        assertEquals("", analizar("""
+                let a = [1, 2];
+                let b = [1, 2.5];
+                let c = ["x"];
+                let d = ['a', 'b'];
+                let e = [true];
+                let m = [[1], [2, 3]];
+                let conVacio = [[], [1]];
+                let elemento = m[0][1];
+                let fila = m[0];
+                let largo = a.length;
+                let letra = "hola"[0];
+                let igual = a == [1];
+                """));
+        assertEquals(Type.INT.arreglo(), tipoDe("a"));
+        assertEquals(Type.FLOAT.arreglo(), tipoDe("b"));
+        assertEquals(Type.STRING.arreglo(), tipoDe("c"));
+        assertEquals(Type.CHAR.arreglo(), tipoDe("d"));
+        assertEquals(Type.BOOL.arreglo(), tipoDe("e"));
+        assertEquals(Type.INT.arreglo().arreglo(), tipoDe("m"));
+        assertEquals(Type.INT.arreglo().arreglo(), tipoDe("conVacio"));
+        assertEquals(Type.INT, tipoDe("elemento"));
+        assertEquals(Type.INT.arreglo(), tipoDe("fila"));
+        assertEquals(Type.INT, tipoDe("largo"));
+        assertEquals(Type.CHAR, tipoDe("letra"));
+        assertEquals(Type.BOOL, tipoDe("igual"));
+    }
+
+    @Test
+    void arreglos_anotacion() {
+        assertEquals("", analizar("""
+                let a: int[] = [1];
+                let m: float[][] = [[1.5]];
+                let v: string[];
+                fn f(p: int[]): int[] { return p; }
+                let r = f(a);
+                """));
+        assertEquals(Type.FLOAT.arreglo().arreglo(), tipoDe("m"));
+        assertEquals(Type.STRING.arreglo(), tipoDe("v"));
+        assertEquals(Type.INT.arreglo(), tipoDe("r"));
+    }
+
+    @Test
+    void arregloVacio_tomaElTipoDelContexto() {
+        assertEquals("", analizar("""
+                let a: int[] = [];
+                let m: int[][] = [[]];
+                a = [];
+                fn f(p: string[]): bool[] { return []; }
+                let r = f([]);
+                """));
+    }
+
+    @Test
+    void arregloVacio_sinContexto_E312() {
+        assertEquals("E312", analizar("let v = [];"));
+        assertEquals("E312", analizar("let v = [[]];"));
+        assertEquals("E312", analizar("print([]);"));
+        assertEquals("E312", analizar("print([].length);"));
+        assertEquals("E312", analizar("print([][0]);"));
+        assertEquals("E312", analizar("for (x in []) { }"));
+    }
+
+    /** El tipo queda desconocido: el error se informa una vez, no en cada uso. */
+    @Test
+    void arregloVacio_sinErroresEnCascada() {
+        assertEquals("E312", analizar("let v = [];\nv = [1];\nprint(v[0]);\nv[0] = 1;"));
+    }
+
+    @Test
+    void arreglos_sinTipoComun_E307() {
+        assertEquals("E307", analizar("let a = [1, \"x\"];"));
+        assertEquals("E307", analizar("let a = [1, true];"));
+        assertEquals("E307", analizar("let a = ['a', \"b\"];"));
+        assertEquals("E307", analizar("let a = [[1], 2];"));
+        assertEquals("E307", analizar("let a = [[1], [2.5]];")); // invariantes
+    }
+
+    @Test
+    void arreglos_elementoVoid_E306() {
+        assertEquals("E306", analizar("fn f() { }\nlet a = [f()];"));
+    }
+
+    @Test
+    void arreglos_asignacionIncompatible_E307() {
+        assertEquals("E307", analizar("let a: int[] = [1.5];"));
+        assertEquals("E307", analizar("let a: int = [1];"));
+        assertEquals("E307", analizar("let a: int[] = 1;"));
+        assertEquals("E307", analizar("let a: int[] = \"x\";"));
+        assertEquals("E307", analizar("let a: int[][] = [1];"));
+        assertEquals("E307", analizar("let a: int = [];"));
+        assertEquals("E307", analizar("fn f(p: int[]) { }\nf([\"x\"]);"));
+        assertEquals("E307", analizar("fn f(): int[] { return 1; }"));
+    }
+
+    /** Los arreglos son invariantes: int no se promueve dentro de un arreglo. */
+    @Test
+    void arreglos_invariantes_E307() {
+        assertEquals("E307", analizar("let a: float[] = [1, 2];"));
+        assertEquals("E307", analizar("let a = [1];\nlet b: float[] = a;"));
+        assertEquals("", analizar("let a: float[] = [1, 2.5];"));
+    }
+
+    @Test
+    void arreglos_operadoresNoValidos_E306() {
+        assertEquals("E306", analizar("let a = [1] + [2];"));
+        assertEquals("E306", analizar("let a = [1] < [2];"));
+        assertEquals("E306", analizar("let a = -[1];"));
+        assertEquals("E306", analizar("let a = [1] == [1.5];"));
+        assertEquals("E306", analizar("let a = [1] == 1;"));
+    }
+
+    @Test
+    void indiceNoValido_E310() {
+        assertEquals("E310", analizar("let a = [1];\nprint(a[1.5]);"));
+        assertEquals("E310", analizar("let a = [1];\nprint(a[\"x\"]);"));
+        assertEquals("E310", analizar("let a = [1];\nprint(a[true]);"));
+        assertEquals("E310", analizar("let a = [1];\nprint(a[4 / 2]);")); // '/' siempre da float
+        assertEquals("E310", analizar("let n = 1;\nprint(n[0]);"));
+        assertEquals("E310", analizar("print('a'[0]);"));
+        assertEquals("E310", analizar("fn f() { }\nprint(f()[0]);"));
+        assertEquals("E310", analizar("let m = [[1]];\nprint(m[0][0][0]);"));
+    }
+
+    @Test
+    void propiedadNoValida_E311() {
+        assertEquals("E311", analizar("let a = [1];\nprint(a.size);"));
+        assertEquals("E311", analizar("let n = 1;\nprint(n.length);"));
+        assertEquals("E311", analizar("print(true.length);"));
+    }
+
+    @Test
+    void indiceYPropiedad_sinErroresEnCascada() {
+        assertEquals("E301", analizar("print(nada[0]);"));
+        assertEquals("E301", analizar("print(nada.length);"));
+        assertEquals("E301", analizar("let v = [1];\nprint(v[nada]);"));
+    }
+
+    @Test
+    void asignacionAElemento_tipos() {
+        assertEquals("", analizar("""
+                let a = [1];
+                let m = [[1.5]];
+                let s = ["x"];
+                a[0] = 2;
+                a[0] += 1;
+                a[0] %= 2;
+                m[0][0] = 3;
+                m[0] = [2.5];
+                s[0] += "y";
+                """));
+        assertEquals("E307", analizar("let a = [1];\na[0] = \"x\";"));
+        assertEquals("E307", analizar("let a = [1];\na[0] = 1.5;"));
+        assertEquals("E307", analizar("let m = [[1]];\nm[0] = 1;"));
+    }
+
+    @Test
+    void asignacionCompuestaAElemento() {
+        assertEquals("E306", analizar("let a = [\"x\"];\na[0] -= \"y\";"));
+        assertEquals("E306", analizar("let a = [1];\na[0] += \"y\";"));
+        assertEquals("E307", analizar("let a = [1];\na[0] /= 2;")); // '/' da float
+        assertEquals("", analizar("let a = [1.5];\na[0] /= 2;"));
+        assertEquals("E304", analizar("let a = [1.5];\na[0] /= 0;"));
+    }
+
+    @Test
+    void elementosDeSoloLectura_E305() {
+        assertEquals("E305", analizar("const v = [1];\nv[0] = 2;"));
+        assertEquals("E305", analizar("const m = [[1]];\nm[0][0] = 2;"));
+        assertEquals("E305", analizar("let s = \"ab\";\ns[0] = 'c';"));
+        assertEquals("E305", analizar("let m = [[1]];\nfor (f in m) { f[0] = 2; }"));
+    }
+
+    @Test
+    void elementoDeVariableNoDeclarada_E301() {
+        assertEquals("E301", analizar("v[0] = 1;"));
+    }
+
+    @Test
+    void forIn_sobreArreglo() {
+        assertEquals("", analizar("""
+                let v = [1, 2];
+                let suma = 0;
+                for (x in v) { suma += x; }
+                for (f in [[1.5]]) { for (y in f) { print(y * 2); } }
+                """));
+        assertEquals("E307", analizar("for (x in [1]) { let s: string = x; }"));
+        assertEquals("E305", analizar("for (x in [1]) { x = 2; }"));
+    }
+
+    @Test
+    void reglasDelEjemploDeGrammar() {
+        assertEquals("", analizar("""
+                fn sumaPares(v: int[]): int {
+                    let total = 0;
+                    for (x in v) {
+                        if (x % 2 != 0) {
+                            continue;
+                        }
+                        total += x;
+                    }
+                    return total;
+                }
+                const datos: int[] = [3, 8, 5, 10, 1];
+                let resultado = sumaPares(datos);
+                """));
     }
 
     // ------------------------------------------------------------

@@ -153,13 +153,15 @@ public class SymbolTable {
 
         // El ancho de la columna Nombre se ajusta al identificador más largo
         int anchoNombre = "Nombre".length();
+        int anchoTipo = "STRING".length(); // los arreglos pueden ser más largos: STRING[][]
         for (Fila f : filas) {
             anchoNombre = Math.max(anchoNombre, f.symbol().getNombre().length());
+            anchoTipo = Math.max(anchoTipo, String.valueOf(f.symbol().getTipo()).length());
         }
 
-        String formato = "| %-" + anchoNombre + "s | %-6s | %-9s | %5s | %5s | %7s |%n";
+        String formato = "| %-" + anchoNombre + "s | %-" + anchoTipo + "s | %-9s | %5s | %5s | %7s |%n";
         String separador = "+" + "-".repeat(anchoNombre + 2)
-                + "+" + "-".repeat(8)
+                + "+" + "-".repeat(anchoTipo + 2)
                 + "+" + "-".repeat(11)
                 + "+" + "-".repeat(7)
                 + "+" + "-".repeat(7)

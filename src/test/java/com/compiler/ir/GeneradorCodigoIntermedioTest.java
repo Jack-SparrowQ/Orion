@@ -34,6 +34,52 @@ public class GeneradorCodigoIntermedioTest {
                 """, tac("print(\"t1\" + \"a b\");\nprint('c');"));
     }
 
+    /** Los elementos se evalúan antes de crear el arreglo, también los anidados. */
+    @Test
+    void literalDeArreglo() {
+        assertEquals("""
+                    t1 = 1 + 2
+                    t2 = array 1
+                    t2[0] = 3
+                    t3 = array 2
+                    t3[0] = t1
+                    t3[1] = t2
+                    m = t3
+                """, tac("let m = [1 + 2, [3]];"));
+    }
+
+    @Test
+    void indiceYLength() {
+        assertEquals("""
+                    t1 = i + 1
+                    t2 = m[t1]
+                    t3 = t2[0]
+                    t4 = len v
+                    t5 = t3 + t4
+                    print t5
+                """, tac("print(m[i + 1][0] + v.length);"));
+    }
+
+    @Test
+    void asignacionAElemento() {
+        assertEquals("""
+                    t1 = m[0]
+                    t2 = a + 1
+                    t1[i] = t2
+                """, tac("m[0][i] = a + 1;"));
+    }
+
+    /** v[f()] += 1 llama a f una sola vez: el índice se reutiliza en la lectura y en la escritura. */
+    @Test
+    void asignacionCompuesta_evaluaElIndiceUnaVez() {
+        assertEquals("""
+                    t1 = call f, 0
+                    t2 = v[t1]
+                    t3 = t2 + 1
+                    v[t1] = t3
+                """, tac("v[f()] += 1;"));
+    }
+
     /** El iterable se copia una vez; continue pasa por el incremento y break sale del ciclo. */
     @Test
     void forInConBreakYContinue() {

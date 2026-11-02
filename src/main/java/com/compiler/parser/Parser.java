@@ -66,11 +66,6 @@ public class Parser {
         return tokens.get(actual - 1);
     }
 
-    // Mira el token posterior al actual (el EOF si no hay más)
-    private Token siguiente() {
-        return tokens.get(Math.min(actual + 1, tokens.size() - 1));
-    }
-
     // Devuelve el último token consumido
     private Token anterior() {
         return tokens.get(actual - 1);
@@ -165,14 +160,8 @@ public class Parser {
         if (coinciden(TokenType.LLAVE_IZQ)) {
             return parsearBloque();
         }
-        // Un identificador solo empieza sentencia si le sigue '=' (asignación)
-        if (verificar(TokenType.IDENTIFICADOR)
-                && (siguiente().tipo == TokenType.IGUAL || OPERADOR_COMPUESTO.containsKey(siguiente().tipo))) {
-            return asignacion();
-        }
-        // ...o '(' (llamada usada como sentencia)
-        if (verificar(TokenType.IDENTIFICADOR) && siguiente().tipo == TokenType.PARENTESIS_IZQ) {
-            return llamadaComoSentencia();
+        if (verificar(TokenType.IDENTIFICADOR)) {
+            return sentenciaSimple();
         }
 
         // Si no es ninguna de las anteriores, lanzamos error (por ahora)
@@ -209,38 +198,88 @@ public class Parser {
         return new NodoDeclaracion(palabraClave, identificador, tipo, valor);
     }
 
-    // Regla: tipo -> "int" | "float" | "char" | "string" | "bool"
+    // Regla: tipo -> ( "int" | "float" | "char" | "string" | "bool" ) { "[" "]" }
     // 'void' no está: solo es válido como tipo de retorno.
-    // shortcut: sin arreglos (T[]); añadir el bucle { "[" "]" } cuando existan los literales de arreglo.
+    // El token devuelto lleva el lexema completo ("int[][]"), así el AST no necesita un nodo de tipo.
     private Token tipo() {
-        if (coinciden(TokenType.INT, TokenType.FLOAT, TokenType.CHAR, TokenType.STRING, TokenType.BOOL)) {
-            return anterior();
+        if (!coinciden(TokenType.INT, TokenType.FLOAT, TokenType.CHAR, TokenType.STRING, TokenType.BOOL)) {
+            throw error(peek(), "E201",
+                    "Se esperaba un tipo (int, float, char, string o bool). Se encontró " + describir(peek()) + ".");
         }
-        throw error(peek(), "E201",
-                "Se esperaba un tipo (int, float, char, string o bool). Se encontró " + describir(peek()) + ".");
+
+        Token base = anterior();
+        String lexema = base.lexema;
+        while (coinciden(TokenType.CORCHETE_IZQ)) {
+            consumir(TokenType.CORCHETE_DER, "Se esperaba ']' en el tipo arreglo.");
+            lexema += "[]";
+        }
+        return new Token(base.tipo, lexema, base.line, base.column);
     }
 
-    // Regla: asignacion -> IDENTIFICADOR "=" expresion ";"
-    //                   | IDENTIFICADOR ("+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
-    private Sentencia asignacion() {
-        Token identificador = avanzar();
-        Token operador = avanzar(); // '=' o compuesto (ya comprobado en sentencia())
+    /**
+     * Regla: sentenciaSimple -> expresion [ operadorAsignacion expresion ] ";".
+     * Asignación y llamada empiezan igual y un destino como v[i + 1] tiene longitud
+     * arbitraria: se parsea la expresión completa y después se mira qué la sigue.
+     *
+     * @return la asignación o la llamada
+     */
+    private Sentencia sentenciaSimple() {
+        Token inicio = peek();
+        Expresion expresion = expresion();
 
+        if (verificar(TokenType.IGUAL) || OPERADOR_COMPUESTO.containsKey(peek().tipo)) {
+            return asignacion(inicio, expresion);
+        }
+        if (!(expresion instanceof NodoLlamada llamada)) {
+            throw error(inicio, "E205", "Una expresión usada como sentencia debe ser una llamada a funcion.");
+        }
+        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la llamada.");
+        return llamada;
+    }
+
+    /**
+     * Regla: asignacion -> destino ("=" | "+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
+     * con destino -> IDENTIFICADOR { "[" expresion "]" } (E204 si es otra cosa).
+     *
+     * @param inicio  primer token de la sentencia, para ubicar el error
+     * @param destino expresión ya parseada a la izquierda del operador
+     * @return la asignación
+     */
+    private Sentencia asignacion(Token inicio, Expresion destino) {
+        if (!esDestinoAsignable(destino)) {
+            throw error(inicio, "E204", "Destino de asignación no válido.");
+        }
+
+        Token operador = avanzar();
         Expresion valor = expresion();
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la asignación.");
 
         TokenType binario = OPERADOR_COMPUESTO.get(operador.tipo);
-        if (binario != null) {
+        Token op = binario == null ? null
+                : new Token(binario, operador.lexema.substring(0, 1), operador.line, operador.column);
+
+        if (destino instanceof NodoIndice elemento) {
+            return new NodoAsignacionElemento(elemento, op, valor);
+        }
+
+        NodoVariable variable = (NodoVariable) destino;
+        if (op != null) {
             // a += b se traduce a a = a + b: las demás fases no necesitan un nodo nuevo.
             // Los paréntesis conservan el orden: a *= b + 1 es a = a * (b + 1).
             if (valor instanceof NodoBinario) {
                 valor = new NodoAgrupacion(valor);
             }
-            Token op = new Token(binario, operador.lexema.substring(0, 1), operador.line, operador.column);
-            valor = new NodoBinario(new NodoVariable(identificador), op, valor);
+            valor = new NodoBinario(variable, op, valor);
         }
+        return new NodoAsignacion(variable.nombre(), valor);
+    }
 
-        return new NodoAsignacion(identificador, valor);
+    // Una variable, o subíndices sobre una variable: x, v[i], m[i][j]
+    private boolean esDestinoAsignable(Expresion expresion) {
+        while (expresion instanceof NodoIndice indice) {
+            expresion = indice.objeto();
+        }
+        return expresion instanceof NodoVariable;
     }
 
     // Regla: "print" "(" expresion ")" ";"
@@ -324,22 +363,6 @@ public class Parser {
         Expresion valor = verificar(TokenType.PUNTO_Y_COMA) ? null : expresion();
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final del return.");
         return new NodoReturn(palabraClave, valor);
-    }
-
-    /**
-     * Regla: llamada ";". Se parsea la expresión completa y luego se exige
-     * que sea una llamada: "f(1) + 2;" no tiene efecto (E205).
-     *
-     * @return la llamada
-     */
-    private Sentencia llamadaComoSentencia() {
-        Token inicio = peek();
-        Expresion expresion = expresion();
-        if (!(expresion instanceof NodoLlamada llamada)) {
-            throw error(inicio, "E205", "Una expresión usada como sentencia debe ser una llamada a funcion.");
-        }
-        consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' después de la llamada.");
-        return llamada;
     }
 
     /**
@@ -482,17 +505,36 @@ public class Parser {
         return izquierda;
     }
 
-    // unario -> ("!" | "-") unario | primario
+    // unario -> ("!" | "-") unario | postfija
     private Expresion unario() {
         if (coinciden(TokenType.NEGACION_LOGICA, TokenType.RESTA)) {
             Token operador = anterior();
             Expresion operando = unario();
             return new NodoUnario(operador, operando);
         }
-        return primario();
+        return postfija();
     }
 
-    // primario -> NUMERO | CADENA | CARACTER | IDENTIFICADOR [ argumentos ] | "true" | "false" | "(" expresion ")"
+    // postfija -> primario { "[" expresion "]" | "." IDENTIFICADOR }
+    private Expresion postfija() {
+        Expresion expresion = primario();
+        while (true) {
+            if (coinciden(TokenType.CORCHETE_IZQ)) {
+                Token corchete = anterior();
+                Expresion indice = expresion();
+                consumir(TokenType.CORCHETE_DER, "Se esperaba ']' después del índice.");
+                expresion = new NodoIndice(expresion, corchete, indice);
+            } else if (coinciden(TokenType.PUNTO)) {
+                expresion = new NodoPropiedad(expresion,
+                        consumir(TokenType.IDENTIFICADOR, "Se esperaba el nombre de una propiedad después de '.'."));
+            } else {
+                return expresion;
+            }
+        }
+    }
+
+    // primario -> NUMERO | CADENA | CARACTER | IDENTIFICADOR [ argumentos ] | "true" | "false"
+    //           | "(" expresion ")" | "[" [ listaExpresiones ] "]"
     private Expresion primario() {
         if (coinciden(TokenType.NUMERO, TokenType.CADENA, TokenType.CARACTER, TokenType.TRUE, TokenType.FALSE)) {
             return new NodoLiteral(anterior());
@@ -510,6 +552,13 @@ public class Parser {
             return new NodoAgrupacion(interior);
         }
 
+        if (coinciden(TokenType.CORCHETE_IZQ)) {
+            Token corchete = anterior();
+            List<Expresion> elementos = listaExpresiones(TokenType.CORCHETE_DER);
+            consumir(TokenType.CORCHETE_DER, "Se esperaba ']' al final del arreglo.");
+            return new NodoArreglo(corchete, elementos);
+        }
+
         throw error(peek(), "E203",
                 "Se esperaba una expresión (literal, variable o '('). Se encontró "
                         + describir(peek()) + ".");
@@ -523,14 +572,25 @@ public class Parser {
      * @return la llamada con sus argumentos
      */
     private NodoLlamada llamada(Token nombre) {
-        List<Expresion> argumentos = new ArrayList<>();
-        if (!verificar(TokenType.PARENTESIS_DER)) {
-            do {
-                argumentos.add(expresion());
-            } while (coinciden(TokenType.COMA));
-        }
+        List<Expresion> argumentos = listaExpresiones(TokenType.PARENTESIS_DER);
         consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de los argumentos.");
         return new NodoLlamada(nombre, argumentos);
+    }
+
+    /**
+     * Regla: [ expresion { "," expresion } ]. No consume el token de cierre.
+     *
+     * @param cierre token que indica que la lista está vacía
+     * @return las expresiones, en orden
+     */
+    private List<Expresion> listaExpresiones(TokenType cierre) {
+        List<Expresion> expresiones = new ArrayList<>();
+        if (!verificar(cierre)) {
+            do {
+                expresiones.add(expresion());
+            } while (coinciden(TokenType.COMA));
+        }
+        return expresiones;
     }
 
     // Modo pánico: descarta tokens hasta pasar un ';' o hasta el inicio de otra

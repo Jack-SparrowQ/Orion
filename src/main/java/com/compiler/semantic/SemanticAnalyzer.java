@@ -32,7 +32,10 @@ import com.compiler.parser.ast.*;
  *   -x               numérico -> mismo tipo
  *   x = valor        mismo tipo, o int en una variable float
  *   if (c)           c debe ser bool
- *   for (x in e)     e debe ser string; x es char y de solo lectura
+ *   for (x in e)     e es string (x: char) o T[] (x: T); x es de solo lectura
+ *   [e1..en]         T[], con T el tipo común de los elementos; '[]' toma el tipo del contexto
+ *   a[i]             i int; a T[] -> T ; a string -> char (no asignable)
+ *   a.length         a T[] o string -> int
  *   f(a1..an)        n parámetros, cada ai asignable al suyo -> tipo de retorno de f
  *   return e         e asignable al tipo de retorno de la función
  * </pre>
@@ -83,6 +86,9 @@ public final class SemanticAnalyzer {
                     Type type = declaration.tipo() != null
                             ? tipoAnotado(declaration.tipo())
                             : new Verificador(symbolsTable, null).tipo(declaration.valor());
+                    if (type != null && type.contieneVacio()) {
+                        type = null; // let v = []; es E312: desconocido para no repetir el error en cada uso
+                    }
 
                     declarar(symbolsTable, new Symbol(
                             declaration.identificador().lexema,
@@ -129,7 +135,7 @@ public final class SemanticAnalyzer {
                     SymbolTable ambito = symbolsTable.abrirAmbito();
                     declarar(ambito, new Symbol(
                             nodeFor.variable().lexema,
-                            iterable == Type.STRING ? Type.CHAR : null, // null: E319 lo reporta la fase 4
+                            tipoElemento(iterable), // null: E319 lo reporta la fase 4
                             SymbolCategory.ITERACION,
                             nodeFor.variable().line,
                             nodeFor.variable().column), errorHandler);
@@ -139,6 +145,7 @@ public final class SemanticAnalyzer {
                 //PRINT, ASIGNACIÓN, BREAK y CONTINUE: no declaran símbolos
                 case NodoImprimir print -> { }
                 case NodoAsignacion asignacion -> { }
+                case NodoAsignacionElemento asignacion -> { }
                 case NodoSalto salto -> { }
 
                 //BLOQUE: registra sus declaraciones en un ámbito nuevo
@@ -172,7 +179,8 @@ public final class SemanticAnalyzer {
 
     /**
      * Fase 4: uso de identificadores (E301, E303, E305), división entre cero (E304),
-     * tipos (E306, E307, E308, E312), break/continue fuera de un ciclo (E313),
+     * tipos (E306, E307, E308, E312), índices y propiedades (E310, E311),
+     * break/continue fuera de un ciclo (E313),
      * llamadas (E314, E315), return (E316, E317, E318) y for (E319).
      * @param nodes sentencias del programa
      * @param symbolsTable tabla global, ya llenada por {@link #analyzeSymbols}
@@ -369,6 +377,10 @@ public final class SemanticAnalyzer {
                             reportar("E312", "No se puede inferir el tipo de '"
                                     + declaracion.identificador().lexema + "': el valor es void.",
                                     declaracion.identificador());
+                        } else if (anotado == null && valor != null && valor.contieneVacio()) {
+                            reportar("E312", "No se puede inferir el tipo de '"
+                                    + declaracion.identificador().lexema + "': el arreglo está vacío.",
+                                    declaracion.identificador());
                         }
                     }
                     // shortcut: "let x: T;" sin valor no se rastrea; leerla antes de asignarla es E309 (pendiente).
@@ -400,6 +412,8 @@ public final class SemanticAnalyzer {
                     }
                 }
 
+                case NodoAsignacionElemento asignacion -> asignacionElemento(asignacion);
+
                 case NodoIf nodoIf -> {
                     condicion(nodoIf.condicion(), "if");
                     bloque(nodoIf.bloqueTrue());
@@ -415,7 +429,8 @@ public final class SemanticAnalyzer {
 
                 case NodoFor nodoFor -> {
                     Type iterable = tipo(nodoFor.iterable());
-                    if (iterable != null && iterable != Type.STRING) {
+                    if (!sinTipoDeContexto(iterable, nodoFor.iterable())
+                            && iterable != null && tipoElemento(iterable) == null) {
                         reportar("E319", "'for' no puede recorrer un valor " + nombreTipo(iterable) + ".",
                                 primerToken(nodoFor.iterable()));
                     }
@@ -437,9 +452,11 @@ public final class SemanticAnalyzer {
                 }
 
                 case NodoImprimir print -> {
-                    if (tipo(print.expresion()) == Type.VOID) {
+                    Type tipo = tipo(print.expresion());
+                    if (tipo == Type.VOID) {
                         reportar("E306", "No se puede imprimir un valor void.", primerToken(print.expresion()));
                     }
+                    sinTipoDeContexto(tipo, print.expresion());
                 }
 
                 case NodoBloque b -> bloque(b);
@@ -451,6 +468,144 @@ public final class SemanticAnalyzer {
                 // Llamada como sentencia: el valor de retorno se descarta
                 case NodoLlamada llamada -> llamada(llamada);
             }
+        }
+
+        /**
+         * Verifica v[i] = e o v[i] op= e. El destino se resuelve por partes porque
+         * hace falta saber qué se indexa: las cadenas son inmutables (E305), y también
+         * lo son los elementos de una const y de una variable de iteración.
+         *
+         * @param asignacion la asignación a verificar
+         */
+        private void asignacionElemento(NodoAsignacionElemento asignacion) {
+            NodoIndice destino = asignacion.destino();
+            Type objeto = tipo(destino.objeto());
+            Type elemento = tipoIndice(destino, objeto);
+            Type valor = tipo(asignacion.valor());
+
+            Token raiz = variableRaiz(destino);
+            Symbol symbol = actual.buscar(raiz.lexema);
+            if (objeto == Type.STRING) {
+                reportar("E305", "Las cadenas son inmutables: no se puede asignar a uno de sus caracteres.",
+                        destino.corchete());
+                return;
+            }
+            if (symbol != null && symbol.getCategoria() == SymbolCategory.CONSTANTE) {
+                reportar("E305", "No se puede modificar la constante '" + raiz.lexema
+                        + "' (declarada en la linea: " + symbol.getLinea() + ").", raiz);
+                return;
+            }
+            if (symbol != null && symbol.getCategoria() == SymbolCategory.ITERACION) {
+                reportar("E305", "La variable de iteración '" + raiz.lexema + "' es de solo lectura.", raiz);
+                return;
+            }
+
+            Token operador = asignacion.operador();
+            if (operador != null) {
+                if (operador.tipo == TokenType.DIVISION && isAConstantZero(asignacion.valor())) {
+                    reportar("E304", "División entre cero: el divisor de la "
+                            + "operación no puede ser 0.", operador);
+                }
+                if (elemento == null || valor == null) {
+                    return;
+                }
+                Type resultado = tipoBinario(operador.tipo, elemento, valor);
+                if (resultado == null) {
+                    reportar("E306", "Operación inválida: no se puede aplicar '" + operador.lexema + "' a "
+                            + nombreTipo(elemento) + " y " + nombreTipo(valor) + ".", operador);
+                    return;
+                }
+                valor = resultado; // el resultado es lo que se guarda: v[0] /= 2 da float
+            }
+            if (!asignable(valor, elemento)) {
+                reportar("E307", "No se puede asignar un valor " + nombreTipo(valor)
+                        + " a un elemento de tipo " + nombreTipo(elemento) + ".", destino.corchete());
+            }
+        }
+
+        /** Variable de la que parte un destino: la v de v[i][j]. */
+        private Token variableRaiz(NodoIndice destino) {
+            Expresion expresion = destino;
+            while (expresion instanceof NodoIndice indice) {
+                expresion = indice.objeto();
+            }
+            return ((NodoVariable) expresion).nombre();
+        }
+
+        /**
+         * Tipo de un elemento: comprueba que el índice sea int y el objeto indexable (E310).
+         *
+         * @param indice el acceso a verificar
+         * @param objeto tipo ya calculado de lo que se indexa
+         * @return el tipo del elemento, o null si no puede determinarse
+         */
+        private Type tipoIndice(NodoIndice indice, Type objeto) {
+            Type posicion = tipo(indice.indice());
+            if (posicion != null && posicion != Type.INT) {
+                reportar("E310", "El índice debe ser int, no " + nombreTipo(posicion) + ".",
+                        primerToken(indice.indice()));
+            }
+
+            if (objeto == null || sinTipoDeContexto(objeto, indice.objeto())) {
+                return null;
+            }
+            Type elemento = tipoElemento(objeto);
+            if (elemento == null) {
+                reportar("E310", "Un valor " + nombreTipo(objeto) + " no se puede indexar.", indice.corchete());
+            }
+            return elemento;
+        }
+
+        /**
+         * Reporta E312 si se usa un '[]' donde nada aporta su tipo, como en print([]).
+         *
+         * @param tipo      tipo de la expresión, puede ser null
+         * @param expresion expresión, para ubicar el error
+         * @return true si se reportó
+         */
+        private boolean sinTipoDeContexto(Type tipo, Expresion expresion) {
+            if (tipo == null || !tipo.contieneVacio()) {
+                return false;
+            }
+            reportar("E312", "No se puede inferir el tipo de un arreglo vacío aquí.", primerToken(expresion));
+            return true;
+        }
+
+        /**
+         * Tipo de un literal de arreglo: T[], con T el tipo común de los elementos.
+         *
+         * @param arreglo el literal
+         * @return el tipo del arreglo, VACIO si no tiene elementos, o null si hubo error
+         */
+        private Type tipoArreglo(NodoArreglo arreglo) {
+            List<Type> elementos = arreglo.elementos().stream().map(this::tipo).toList();
+            if (elementos.isEmpty()) {
+                return Type.VACIO;
+            }
+
+            for (int i = 0; i < elementos.size(); i++) {
+                if (elementos.get(i) == Type.VOID) {
+                    reportar("E306", "Un arreglo no puede contener un valor void.",
+                            primerToken(arreglo.elementos().get(i)));
+                    return null;
+                }
+            }
+            if (elementos.contains(null)) {
+                return null;
+            }
+
+            Type comun = elementos.get(0);
+            for (int i = 1; i < elementos.size(); i++) {
+                Type siguiente = tipoComun(comun, elementos.get(i));
+                if (siguiente == null) {
+                    reportar("E307", "Los elementos del arreglo no tienen un tipo común: "
+                            + nombreTipo(comun) + " y " + nombreTipo(elementos.get(i)) + ".",
+                            primerToken(arreglo.elementos().get(i)));
+                    return null;
+                }
+                comun = siguiente;
+            }
+            return comun.arreglo();
         }
 
         /**
@@ -491,6 +646,28 @@ public final class SemanticAnalyzer {
                 case NodoAgrupacion grupo -> tipo(grupo.expresion());
 
                 case NodoLlamada llamada -> llamada(llamada);
+
+                case NodoArreglo arreglo -> tipoArreglo(arreglo);
+
+                case NodoIndice indice -> tipoIndice(indice, tipo(indice.objeto()));
+
+                case NodoPropiedad propiedad -> {
+                    Type objeto = tipo(propiedad.objeto());
+                    if (!propiedad.nombre().lexema.equals("length")) {
+                        reportar("E311", "La propiedad '" + propiedad.nombre().lexema + "' no existe.",
+                                propiedad.nombre());
+                        yield null;
+                    }
+                    if (objeto == null || sinTipoDeContexto(objeto, propiedad.objeto())) {
+                        yield null;
+                    }
+                    if (tipoElemento(objeto) == null) {
+                        reportar("E311", "Un valor " + nombreTipo(objeto) + " no tiene la propiedad 'length'.",
+                                propiedad.nombre());
+                        yield null;
+                    }
+                    yield Type.INT;
+                }
 
                 case NodoUnario unario -> {
                     Type operando = tipo(unario.operando());
@@ -600,12 +777,60 @@ public final class SemanticAnalyzer {
     /** Un tipo desconocido (null) se acepta para no generar errores en cascada. */
     private static boolean asignable(Type valor, Type destino) {
         return valor == null || destino == null || valor == destino
-                || (valor == Type.INT && destino == Type.FLOAT);
+                || (valor == Type.INT && destino == Type.FLOAT)
+                || vacioEncaja(valor, destino);
     }
 
-    /** Tipo de una anotación: los tokens INT, FLOAT... se llaman igual que los valores de Type. */
+    /**
+     * Un '[]' toma el tipo del destino, también anidado: [[]] encaja en int[][].
+     * Fuera de eso los arreglos son invariantes: int[] no encaja en float[].
+     */
+    private static boolean vacioEncaja(Type valor, Type destino) {
+        if (valor == Type.VACIO) {
+            return destino.esArreglo();
+        }
+        return valor.esArreglo() && destino.esArreglo() && vacioEncaja(valor.elemento(), destino.elemento());
+    }
+
+    /** Tipo común de dos elementos de un arreglo (grammar.md 11.4), o null si no existe. */
+    private static Type tipoComun(Type a, Type b) {
+        if (a == b) {
+            return a;
+        }
+        if (esNumerico(a) && esNumerico(b)) {
+            return Type.FLOAT;
+        }
+        if (vacioEncaja(a, b)) {
+            return b;
+        }
+        return vacioEncaja(b, a) ? a : null;
+    }
+
+    /**
+     * @param tipo tipo de lo que se recorre o se indexa, puede ser null
+     * @return T para T[], char para string; null si no tiene elementos o aún se desconocen
+     */
+    private static Type tipoElemento(Type tipo) {
+        if (tipo == null || tipo.contieneVacio()) {
+            return null;
+        }
+        return tipo == Type.STRING ? Type.CHAR : tipo.elemento();
+    }
+
+    /** Tipo de una anotación: el token es el del tipo base y cada "[]" del lexema añade una dimensión. */
     private static Type tipoAnotado(Token tipo) {
-        return Type.valueOf(tipo.tipo.name());
+        Type resultado = switch (tipo.tipo) {
+            case INT -> Type.INT;
+            case FLOAT -> Type.FLOAT;
+            case CHAR -> Type.CHAR;
+            case STRING -> Type.STRING;
+            case BOOL -> Type.BOOL;
+            default -> Type.VOID;
+        };
+        for (int i = tipo.lexema.indexOf('['); i >= 0; i = tipo.lexema.indexOf('[', i + 1)) {
+            resultado = resultado.arreglo();
+        }
+        return resultado;
     }
 
     /**
@@ -646,6 +871,9 @@ public final class SemanticAnalyzer {
             case NodoUnario unario -> unario.operador();
             case NodoBinario binario -> primerToken(binario.izquierda());
             case NodoLlamada llamada -> llamada.nombre();
+            case NodoArreglo arreglo -> arreglo.corchete();
+            case NodoIndice indice -> primerToken(indice.objeto());
+            case NodoPropiedad propiedad -> primerToken(propiedad.objeto());
         };
     }
 
@@ -696,6 +924,12 @@ public final class SemanticAnalyzer {
             case NodoVariable variable -> null;
 
             case NodoLlamada llamada -> null;
+
+            case NodoArreglo arreglo -> null;
+
+            case NodoIndice indice -> null;
+
+            case NodoPropiedad propiedad -> null;
 
             case NodoAgrupacion g -> evaluateNumericConstant(g.expresion());
 

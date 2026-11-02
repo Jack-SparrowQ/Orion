@@ -6,7 +6,7 @@ import com.compiler.lexer.Token;
  * nombre ":" tipo ” un parametro de funcion. El tipo es obligatorio.
  *
  * @param nombre nombre del parametro
- * @param tipo   tipo anotado (int, float, char, string o bool)
+ * @param tipo   tipo anotado (int, float, char, string, bool o un arreglo de ellos)
  */
 public record NodoParametro(Token nombre, Token tipo) {
 

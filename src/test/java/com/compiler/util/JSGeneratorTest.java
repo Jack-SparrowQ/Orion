@@ -1,6 +1,7 @@
 package com.compiler.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -22,6 +23,30 @@ public class JSGeneratorTest {
         List<Sentencia> programa = new Parser(tokenizer.getTokensList(), errores).parsear();
         assertEquals(List.of(), errores.obtenerErrores());
         return new JSGenerator().generar(programa);
+    }
+
+    /** Un programa sin accesos a elementos no lleva los ayudantes. */
+    @Test
+    void arregloSinAccesos_sinAyudantes() {
+        assertEquals("let v = [1, [2, 3], []];\n", js("let v = [1, [2, 3], []];"));
+    }
+
+    @Test
+    void accesosUsanAyudantes() {
+        String codigo = js("print(m[0][i].length);");
+        assertTrue(codigo.startsWith("function $elementos"), codigo);
+        assertTrue(codigo.endsWith("console.log($longitud($en($en(m, 0), i)));\n"), codigo);
+    }
+
+    @Test
+    void asignacionAElemento() {
+        assertTrue(js("m[0][i] = a + 1;").endsWith("$asignar($en(m, 0), i, () => a + 1);\n"));
+    }
+
+    /** El paréntesis conserva el orden: v[0] *= b + 1 es v[0] * (b + 1). */
+    @Test
+    void asignacionCompuestaAElemento() {
+        assertTrue(js("v[0] *= b + 1;").endsWith("$asignar(v, 0, ($v) => $v * (b + 1));\n"));
     }
 
     @Test

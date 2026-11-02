@@ -119,7 +119,8 @@ if (c > max) {
 programa     -> sentencia* EOF
 sentencia    -> declaracion | asignacion | imprimir | if | for
 declaracion  -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
-asignacion   -> IDENTIFICADOR ("=" | "+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
+asignacion   -> destino ("=" | "+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
+destino      -> IDENTIFICADOR ( "[" expresion "]" )*
 imprimir     -> "print" "(" expresion ")" ";"
 if           -> "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?
 for          -> "for" "(" IDENTIFICADOR "in" expresion ")" bloque
@@ -132,8 +133,10 @@ igualdad     -> comparacion ( ("==" | "!=") comparacion )*
 comparacion  -> termino ( ("<" | "<=" | ">" | ">=") termino )*
 termino      -> factor ( ("+" | "-") factor )*
 factor       -> unario ( ("*" | "/" | "%") unario )*
-unario       -> ("!" | "-") unario | primario
+unario       -> ("!" | "-") unario | postfija
+postfija     -> primario ( "[" expresion "]" | "." IDENTIFICADOR )*
 primario     -> NUMERO | CADENA | CARACTER | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+              | "[" ( expresion ( "," expresion )* )? "]"
 ```
 
 La precedencia y la asociatividad (por la izquierda) coinciden con las de JavaScript. Una asignación compuesta `a += b` se traduce a `a = a + b`.
@@ -158,9 +161,14 @@ El análisis semántico se hace en dos pasadas:
 | `-x`                            | numérico                           | el tipo de `x`                                    |
 | `x = valor`                     | mismo tipo que `x`                 | se admite asignar un `int` a una variable `float` |
 | `if (condición)`                | `bool`                             | —                                                 |
-| `for (x in e)`                  | `e` es `string`                    | `x` es `char` y de solo lectura                   |
+| `for (x in e)`                  | `e` es `string` o `T[]`            | `x` es `char` o `T`, de solo lectura              |
+| `[e1, e2]`                      | con un tipo común `T`              | `T[]`; `[]` toma el tipo del contexto             |
+| `a[i]`                          | `i` es `int`; `a` es `T[]`/`string`| `T`, o `char` en una cadena (no asignable)        |
+| `a.length`                      | `a` es `T[]` o `string`            | `int`                                             |
 
 Las variables declaradas dentro de un bloque solo son visibles en ese bloque, igual que `let`/`const` en el JavaScript generado. Cuando una expresión tiene un error, su tipo queda como desconocido y no provoca más errores en cascada.
+
+Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por referencia. Un índice fuera de rango detiene el programa con un error en tiempo de ejecución.
 
 ### Códigos de error
 
@@ -175,6 +183,7 @@ Las variables declaradas dentro de un bloque solo son visibles en ese bloque, ig
 | E201   | Sintáctica  | Falta un elemento obligatorio (`;`, `=`, `)`, `}`...).                  |
 | E202   | Sintáctica  | Instrucción no reconocida.                                              |
 | E203   | Sintáctica  | Se esperaba una expresión.                                              |
+| E204   | Sintáctica  | Destino de asignación no válido.                                        |
 | E301   | Semántica   | Identificador no declarado.                                             |
 | E302   | Semántica   | Identificador declarado dos veces.                                      |
 | E303   | Semántica   | Identificador usado antes de su declaración o fuera de su bloque.       |
@@ -183,6 +192,9 @@ Las variables declaradas dentro de un bloque solo son visibles en ese bloque, ig
 | E306   | Semántica   | Operador aplicado a tipos incompatibles.                                |
 | E307   | Semántica   | Asignación de un valor de tipo incompatible.                            |
 | E308   | Semántica   | La condición de un `if` no es `bool`.                                   |
+| E310   | Semántica   | Índice que no es `int` o valor que no se puede indexar.                 |
+| E311   | Semántica   | Propiedad inexistente: solo existe `.length`.                           |
+| E312   | Semántica   | No se puede inferir el tipo (`void` o `[]` sin contexto).               |
 | E319   | Semántica   | `for ... in` sobre un valor que no se puede recorrer.                   |
 
 ## Generación de código intermedio
@@ -219,7 +231,7 @@ L4:
 L2:
 ```
 
-Los temporales (`t1`, `t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`L1`, `L2`...) implementan los saltos del `if`/`else`. Un `for ... in` se traduce a un ciclo con índice mediante dos operaciones propias: `t2 = len t1` y `c = t1[t0]`.
+Los temporales (`t1`, `t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`L1`, `L2`...) implementan los saltos del `if`/`else`. Los arreglos usan `t1 = array 3`, `x = t1[i]`, `t1[i] = x` y `t2 = len t1`, y un `for ... in` se traduce a un ciclo con índice mediante esas mismas operaciones.
 
 ## Ejecución
 
@@ -261,7 +273,7 @@ Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de 
 
 ## Alcance y trabajo futuro
 
-- Arreglos: `for ... in` solo recorre cadenas por ahora.
+- `null`, potencia `**`, comentarios de bloque y `print` con varios argumentos.
 - Optimizaciones sobre el código intermedio.
 
 ## Documentación académica

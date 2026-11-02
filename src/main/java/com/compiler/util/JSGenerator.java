@@ -11,7 +11,37 @@ public class JSGenerator {
     // Consume los escapes por pares para no confundir el "\0" de "\\0" (barra y un cero)
     private static final Pattern ESCAPE_O_CR = Pattern.compile("\\\\.|\r");
 
+    // Ayudantes que necesitan los accesos a elementos. JS devolvería undefined fuera de rango,
+    // pero en Orion debe detener el programa; y .length y s[i] de JS cuentan unidades UTF-16,
+    // mientras for...of recorre caracteres Unicode. Orion no admite '$' en un identificador:
+    // estos nombres no pueden chocar con los del programa.
+    private static final String AYUDANTES = """
+            function $elementos(v) {
+                return typeof v === "string" ? Array.from(v) : v;
+            }
+            function $indice(e, i) {
+                if (!(i >= 0 && i < e.length)) {
+                    throw new RangeError("Indice fuera de rango: " + i + " (longitud " + e.length + ")");
+                }
+                return i;
+            }
+            function $en(v, i) {
+                const e = $elementos(v);
+                return e[$indice(e, i)];
+            }
+            function $longitud(v) {
+                return $elementos(v).length;
+            }
+            function $asignar(v, i, valor) {
+                v[$indice(v, i)] = valor(v[i]);
+            }
+            """;
+
+    /** Se activa al generar un acceso a elementos: los demás programas no llevan los ayudantes. */
+    private boolean usaAyudantes;
+
     public String generar(List<Sentencia> programa) {
+        usaAyudantes = false;
         StringBuilder codigoJS = new StringBuilder();
 
         // Recorremos la lista de sentencias del programa
@@ -19,7 +49,7 @@ public class JSGenerator {
             codigoJS.append(visitarNodo(nodo, 0));
         }
 
-        return codigoJS.toString();
+        return usaAyudantes ? AYUDANTES + codigoJS : codigoJS.toString();
     }
 
     // El método central que decide qué código JavaScript generar dependiendo del nodo
@@ -35,6 +65,19 @@ public class JSGenerator {
             // Traducir una Asignación (x = 5;)
             case NodoAsignacion asig -> indentacion + asig.identificador().lexema
                     + " = " + generarExpresion(asig.valor()) + ";\n";
+
+            // Traducir una asignación a un elemento. El valor va en una función para evaluarlo
+            // después de comprobar el índice, y solo una vez aunque sea compuesta.
+            case NodoAsignacionElemento asig -> {
+                usaAyudantes = true;
+                String valor = generarExpresion(asig.valor());
+                yield indentacion + "$asignar(" + generarExpresion(asig.destino().objeto()) + ", "
+                        + generarExpresion(asig.destino().indice()) + ", "
+                        + (asig.operador() == null
+                                ? "() => " + valor
+                                : "($v) => $v " + asig.operador().lexema + " (" + valor + ")")
+                        + ");\n";
+            }
 
             // 2. Traducir una Impresión (print(x) -> console.log(x))
             case NodoImprimir imp -> indentacion + "console.log(" + generarExpresion(imp.expresion()) + ");\n";
@@ -160,6 +203,19 @@ public class JSGenerator {
 
             case NodoLlamada llamada -> llamada.nombre().lexema + "("
                     + String.join(", ", llamada.argumentos().stream().map(this::generarExpresion).toList()) + ")";
+
+            case NodoArreglo arreglo -> "["
+                    + String.join(", ", arreglo.elementos().stream().map(this::generarExpresion).toList()) + "]";
+
+            case NodoIndice indice -> {
+                usaAyudantes = true;
+                yield "$en(" + generarExpresion(indice.objeto()) + ", " + generarExpresion(indice.indice()) + ")";
+            }
+
+            case NodoPropiedad propiedad -> {
+                usaAyudantes = true;
+                yield "$longitud(" + generarExpresion(propiedad.objeto()) + ")";
+            }
         };
     }
 }

@@ -14,6 +14,7 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.lexer.Lexer;
 import com.compiler.lexer.Tokenizer;
 import com.compiler.parser.ast.NodoAsignacion;
+import com.compiler.parser.ast.NodoAsignacionElemento;
 import com.compiler.parser.ast.NodoBloque;
 import com.compiler.parser.ast.NodoDeclaracion;
 import com.compiler.parser.ast.NodoFor;
@@ -163,7 +164,7 @@ public class ParserTest {
     /** Un for de estilo C no existe en Orion. El modo pánico para en cada ';' de la cabecera: hay cascada. */
     @Test
     void forDeEstiloC_noEsValido() {
-        assertEquals("E201 E202 E201", codigos("for (let i = 0; i < 3; i += 1) { }"));
+        assertEquals("E201 E205 E201", codigos("for (let i = 0; i < 3; i += 1) { }"));
     }
 
     /** break sin ';' es E201; el parser no exige estar en un ciclo (eso es E313). */
@@ -226,11 +227,108 @@ public class ParserTest {
         assertEquals("(a + 1) | (a - b) | (a * group((b + 1))) | (a / 2) | (a % 3)", valores);
     }
 
-    /** Un identificador sin '=' detrás no es una sentencia. */
+    /** Una expresión sin efecto no es una sentencia. */
     @Test
     void expresionSuelta_noEsSentencia() {
         parse("a + 1;\na = ;");
-        assertEquals("E202@1 E203@2", codigosYLineas());
+        assertEquals("E205@1 E203@2", codigosYLineas());
+    }
+
+    @Test
+    void tipoArreglo() {
+        NodoDeclaracion d = (NodoDeclaracion) parse("let m: int[][] = x;").get(0);
+        assertEquals("", errores());
+        assertEquals("int[][]", d.tipo().lexema);
+
+        NodoFuncion f = (NodoFuncion) parse("fn f(v: string[]): bool[] { return x; }").get(0);
+        assertEquals("", errores());
+        assertEquals("v: string[]", f.parametros().get(0).toString());
+        assertEquals("bool[]", f.tipoRetorno().lexema);
+    }
+
+    @Test
+    void tipoArreglo_noValido() {
+        assertEquals("E201", codigos("let a: int[3];"));
+        assertEquals("E201", codigos("let a: void[];"));
+        assertEquals("E201", codigos("fn f(): void[] { }"));
+    }
+
+    @Test
+    void literalDeArreglo() {
+        assertEquals("[]", expr("[]"));
+        assertEquals("[1, (a + 2)]", expr("[1, a + 2]"));
+        assertEquals("[[1], []]", expr("[[1], []]"));
+    }
+
+    @Test
+    void literalDeArreglo_malFormado() {
+        assertEquals("E203", codigos("let a = [1,];"));
+        assertEquals("E201", codigos("let a = [1;"));
+        assertEquals("E201", codigos("let a = [1 2];"));
+    }
+
+    /** Los sufijos se agrupan por la izquierda y ligan más que cualquier operador. */
+    @Test
+    void sufijos() {
+        assertEquals("m[1][2]", expr("m[1][2]"));
+        assertEquals("v[i].length", expr("v[i].length"));
+        assertEquals("f()[0]", expr("f()[0]"));
+        assertEquals("[1, 2][0]", expr("[1, 2][0]"));
+        assertEquals("\"ab\".length", expr("\"ab\".length"));
+        assertEquals("(a + (v[(i + 1)] * 2))", expr("a + v[i + 1] * 2"));
+    }
+
+    @Test
+    void sufijos_malFormados() {
+        assertEquals("E203", codigos("print(v[]);"));
+        assertEquals("E201", codigos("print(v[1);"));
+        assertEquals("E201", codigos("print(v.);"));
+        assertEquals("E201", codigos("print(v.5);"));
+    }
+
+    @Test
+    void asignacionAElemento() {
+        List<Sentencia> programa = parse("m[i][j + 1] = 2;\nv[0] *= a + 1;");
+        assertEquals("", errores());
+
+        NodoAsignacionElemento simple = assertInstanceOf(NodoAsignacionElemento.class, programa.get(0));
+        assertEquals("m[i][(j + 1)]", simple.destino().toString());
+        assertNull(simple.operador());
+
+        NodoAsignacionElemento compuesta = assertInstanceOf(NodoAsignacionElemento.class, programa.get(1));
+        assertEquals("*", compuesta.operador().lexema);
+        assertEquals("(a + 1)", compuesta.valor().toString());
+    }
+
+    @Test
+    void destinoNoValido_E204() {
+        assertEquals("E204", codigos("f() = 3;"));
+        assertEquals("E204", codigos("f()[0] = 3;"));
+        assertEquals("E204", codigos("v.length = 3;"));
+        assertEquals("E204", codigos("v.length[0] = 3;"));
+        assertEquals("E204", codigos("a + 1 = 3;"));
+        assertEquals("", codigos("x = 1;\nv[0] = 1;\nm[0][1] = 1;"));
+    }
+
+    /** Tras E204 se descarta hasta el ';': lo siguiente se analiza con normalidad. */
+    @Test
+    void destinoNoValido_seRecupera() {
+        parse("f() = 3;\nlet = 1;");
+        assertEquals("E204@1 E201@2", codigosYLineas());
+    }
+
+    @Test
+    void sufijoSinEfecto_E205() {
+        assertEquals("E205", codigos("x;"));
+        assertEquals("E205", codigos("v[0];"));
+        assertEquals("E205", codigos("v.length;"));
+        assertEquals("", codigos("f();"));
+    }
+
+    /** La asignación es una sentencia, no una expresión. */
+    @Test
+    void asignacionEncadenada_noEsValida() {
+        assertEquals("E201", codigos("a = b = 1;"));
     }
 
     @Test

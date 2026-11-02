@@ -61,6 +61,21 @@ public class GeneradorCodigoIntermedio {
                 String valor = generarExpresion(asig.valor());
                 emitir("=", valor, null, asig.identificador().lexema);
             }
+            case NodoAsignacionElemento asig -> {
+                // Primero el destino: sus subíndices se evalúan una vez y antes que el valor
+                String objeto = generarExpresion(asig.destino().objeto());
+                String indice = generarExpresion(asig.destino().indice());
+                if (asig.operador() == null) {
+                    emitir("[]=", objeto, indice, generarExpresion(asig.valor()));
+                } else {
+                    String anterior = nuevoTemporal();
+                    emitir("[]", objeto, indice, anterior);
+                    String derecha = generarExpresion(asig.valor());
+                    String resultado = nuevoTemporal();
+                    emitir(asig.operador().lexema, anterior, derecha, resultado);
+                    emitir("[]=", objeto, indice, resultado);
+                }
+            }
             case NodoImprimir imp -> {
                 String valor = generarExpresion(imp.expresion());
                 emitir("print", valor, null, null);
@@ -205,6 +220,32 @@ public class GeneradorCodigoIntermedio {
             case NodoAgrupacion g -> generarExpresion(g.expresion());
 
             case NodoLlamada llamada -> generarLlamada(llamada, true);
+
+            case NodoArreglo arreglo -> {
+                // Se evalúan todos antes de crearlo: un elemento puede ser otro arreglo
+                List<String> elementos = arreglo.elementos().stream().map(this::generarExpresion).toList();
+                String temporal = nuevoTemporal();
+                emitir("array", String.valueOf(elementos.size()), null, temporal);
+                for (int i = 0; i < elementos.size(); i++) {
+                    emitir("[]=", temporal, String.valueOf(i), elementos.get(i));
+                }
+                yield temporal;
+            }
+
+            case NodoIndice i -> {
+                String objeto = generarExpresion(i.objeto());
+                String indice = generarExpresion(i.indice());
+                String temporal = nuevoTemporal();
+                emitir("[]", objeto, indice, temporal);
+                yield temporal;
+            }
+
+            case NodoPropiedad p -> {
+                String objeto = generarExpresion(p.objeto());
+                String temporal = nuevoTemporal();
+                emitir("len", objeto, null, temporal);
+                yield temporal;
+            }
         };
     }
 

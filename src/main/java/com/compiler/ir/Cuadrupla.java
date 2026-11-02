@@ -14,8 +14,11 @@ package com.compiler.ir;
 //   (param,   a,  _,  _ )   ->  param a        (argumento de la próxima llamada)
 //   (call,    f,  2,  t4)   ->  t4 = call f, 2 (sin resultado: call f, 2)
 //   (return,  t4, _,  _ )   ->  return t4      (sin valor: return)
-//   (len,     t1, _,  t2)   ->  t2 = len t1    (número de caracteres Unicode)
-//   ([],      t1, t2, x )   ->  x = t1[t2]     (carácter en esa posición, contando desde 0)
+//   (len,     t1, _,  t2)   ->  t2 = len t1    (elementos de un arreglo o caracteres Unicode de una cadena)
+//   ([],      t1, t2, x )   ->  x = t1[t2]     (elemento en esa posición, contando desde 0)
+//   ([]=,     t1, t2, x )   ->  t1[t2] = x
+//   (array,   3,  _,  t1)   ->  t1 = array 3   (arreglo nuevo de 3 elementos)
+// Un índice fuera de rango en [] o []= detiene el programa.
 public class Cuadrupla {
     public final String op;
     public final String arg1;
@@ -57,6 +60,10 @@ public class Cuadrupla {
                 return resultado + " = len " + arg1;
             case "[]":
                 return resultado + " = " + arg1 + "[" + arg2 + "]";
+            case "[]=":
+                return arg1 + "[" + arg2 + "] = " + resultado;
+            case "array":
+                return resultado + " = array " + arg1;
             default:
                 if (arg2 == null) { // operador unario
                     return resultado + " = " + op + arg1;

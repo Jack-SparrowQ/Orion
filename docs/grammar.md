@@ -591,7 +591,9 @@ parámetro.
 - Una `const` no puede ser destino de una asignación, simple o compuesta
   (E305). Tampoco puede serlo un elemento de una `const` de tipo
   arreglo: `const v = [1, 2]; v[0] = 5;` es E305.
-- La variable de iteración de un `for` es de solo lectura (E305).
+- La variable de iteración de un `for` es de solo lectura (E305), y
+  tampoco se pueden asignar sus elementos si es un arreglo.
+- Asignar a un carácter de una cadena es E305: `s[0] = 'a';`.
 
 ### 10.4 Variables sin inicializar
 
@@ -854,7 +856,7 @@ compilador no genera código.
 | E201   | Sintáctica | Se esperaba un token concreto                                             | Implementado                |
 | E202   | Sintáctica | Sentencia no reconocida                                                   | Implementado                |
 | E203   | Sintáctica | Se esperaba una expresión                                                 | Implementado                |
-| E204   | Sintáctica | Destino de asignación no válido                                           | Propuesto                   |
+| E204   | Sintáctica | Destino de asignación no válido                                           | Implementado                |
 | E205   | Sintáctica | Una expresión usada como sentencia debe ser una llamada                   | Implementado                |
 | E301   | Semántica  | Identificador no declarado                                                | Implementado                |
 | E302   | Semántica  | Identificador ya declarado                                                | Implementado                |
@@ -865,9 +867,9 @@ compilador no genera código.
 | E307   | Semántica  | Tipos incompatibles en asignación, argumento o retorno                    | Implementado (asignación)   |
 | E308   | Semántica  | Condición que no es `bool`                                                | Implementado                |
 | E309   | Semántica  | Variable leída sin haber sido asignada                                    | Propuesto                   |
-| E310   | Semántica  | Índice no entero o valor no indexable                                     | Propuesto                   |
-| E311   | Semántica  | Propiedad inexistente                                                     | Propuesto                   |
-| E312   | Semántica  | No se puede inferir el tipo (o se usa un valor `void`)                    | Implementado (solo `void`)  |
+| E310   | Semántica  | Índice no entero o valor no indexable                                     | Implementado                |
+| E311   | Semántica  | Propiedad inexistente                                                     | Implementado                |
+| E312   | Semántica  | No se puede inferir el tipo (o se usa un valor `void`)                    | Implementado (sin `null`)   |
 | E313   | Semántica  | `break` o `continue` fuera de un ciclo                                    | Implementado                |
 | E314   | Semántica  | Se llama a algo que no es una función                                     | Implementado                |
 | E315   | Semántica  | Número de argumentos incorrecto                                           | Implementado                |
@@ -887,15 +889,15 @@ de `src/main/java/com/compiler`:
 | Construcción                                      |                    Lexer                    |                Parser                 | Semántico | Generación JS |
 | ------------------------------------------------- | :-----------------------------------------: | :-----------------------------------: | :-------: | :-----------: |
 | `let` / `const` con inicializador, sin tipo       |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| Anotación de tipo `: Tipo`, `let x: T;`           |                      ✔                      |           ✔ (sin `T[]`)               | ✔ (sin E309) |       ✔       |
+| Anotación de tipo `: Tipo`, `let x: T;`           |                      ✔                      |                   ✔                   | ✔ (sin E309) |       ✔       |
 | Asignación `=` y compuesta sobre un identificador |                      ✔                      | ✔ (LL(2), se reduce a `a = a op (e)`) |     ✔     |       ✔       |
-| Asignación a `v[i]`                               |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
+| Asignación a `v[i]`                               |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `print(e)` con un solo argumento                  |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `print` con 0 o varios argumentos                 |                ✘ (falta `,`)                |                   ✘                   |     ✘     |       ✘       |
 | `if` / `else` / `else if`                         |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `Bloque` como sentencia independiente             |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
 | `while`, `break`, `continue`                      |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| `for … in`                                        |                      ✔                      |                   ✔                   | ✔ (solo `string`) |       ✔       |
+| `for … in`                                        |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `fn`, parámetros, `return`, llamadas              |          ✔ / ✘ (falta `,`)                  |                   ✘                   |     ✘     |       ✘       |
 | `\|\|` `&&` `==` `!=` `<` `<=` `>` `>=`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `+` `-` `*` `/` `%`, `!` y `-` unarios            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
@@ -903,7 +905,7 @@ de `src/main/java/com/compiler`:
 | Literales `ENTERO`, `DECIMAL`, `true`, `false`    |      ✔ (como un único token `NUMERO`)       |                   ✔                   |     ✔     |       ✔       |
 | `null`                                            |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
 | `CADENA`, `CARACTER`                              |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| Literales de arreglo, `a[i]`, `.length`           |              ✔ (`[`, `]`, `.`)              |                   ✘                   |     ✘     |       ✘       |
+| Literales de arreglo, `a[i]`, `.length`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | Comentario de línea `//`                          |                      ✔                      |                   —                   |     —     |       —       |
 | Comentario de bloque `/* */`                      |                      ✘                      |                   —                   |     —     |       —       |
 | Recuperación de errores en modo pánico            |                      —                      |                   ✔                   |     —     |       —       |

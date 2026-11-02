@@ -117,6 +117,10 @@ public class ASTPrinter {
             case NodoAsignacion a -> new Arbol("Asignacion", SENTENCIA,
                     pintar(a.identificador().lexema, NOMBRE), expresion(a.valor()));
 
+            case NodoAsignacionElemento a -> new Arbol("AsignacionElemento", SENTENCIA,
+                    a.operador() == null ? "=" : a.operador().lexema + "=",
+                    expresion(a.destino()), expresion(a.valor()));
+
             case NodoImprimir imp -> new Arbol("Imprimir", SENTENCIA, "", expresion(imp.expresion()));
 
             case NodoIf nIf -> {
@@ -171,6 +175,10 @@ public class ASTPrinter {
             case NodoUnario u -> new Arbol("Unario", OPERADOR, u.operador().lexema, expresion(u.operando()));
             case NodoAgrupacion g -> new Arbol("Agrupacion", OPERADOR, "( )", expresion(g.expresion()));
             case NodoLlamada l -> llamada(l);
+            case NodoArreglo a -> new Arbol("Arreglo", OPERADOR, a.elementos().isEmpty() ? "(vacio)" : "",
+                    a.elementos().stream().map(ASTPrinter::expresion).toList());
+            case NodoIndice i -> new Arbol("Indice", OPERADOR, "[ ]", expresion(i.objeto()), expresion(i.indice()));
+            case NodoPropiedad p -> new Arbol("Propiedad", OPERADOR, p.nombre().lexema, expresion(p.objeto()));
         };
     }
 
