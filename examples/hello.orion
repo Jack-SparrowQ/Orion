@@ -1,3 +1,8 @@
-fn sum(a: int, b: int): void {
-    print(a+b);
+
+let name = "carlos";
+
+if(name != "rivera") {
+    print(name);
+} else {
+    print("the name");
 }

@@ -119,6 +119,66 @@ public class LexerTest {
         assertEquals("NUMERO PUNTO IDENTIFICADOR", tipos("3.x"));
     }
 
+    /** El lexema es el texto fuente: conserva comillas y escapes sin traducir. */
+    @Test
+    void cadenasYCaracteres() {
+        assertEquals("LET IDENTIFICADOR IGUAL CADENA PUNTO_Y_COMA CARACTER",
+                tipos("let s = \"hola\"; 'a'"));
+        List<Token> tokens = lex("\"a\\n\\\"b\" '\\''");
+        assertEquals("\"a\\n\\\"b\"", tokens.get(0).lexema);
+        assertEquals("'\\''", tokens.get(1).lexema);
+        assertEquals(3, lex("  \"x\"").get(0).column);
+        assertEquals("", codigosDeError());
+    }
+
+    @Test
+    void comentarioDentroDeUnaCadena_noEsComentario() {
+        assertEquals("CADENA NUMERO", tipos("\"// no /* tampoco\" 1"));
+        assertEquals("", codigosDeError());
+    }
+
+    @Test
+    void todosLosEscapes() {
+        assertEquals("CADENA", tipos("\"\\n\\t\\r\\0\\\\\\\"\\'\""));
+        assertEquals("", codigosDeError());
+    }
+
+    @Test
+    void literalSinCerrar_E103() {
+        assertEquals("CADENA NUMERO", tipos("\"abc\n1"));   // fin de línea
+        assertEquals("CADENA", tipos("\"abc"));             // fin del archivo
+        assertEquals("CADENA", tipos("\"abc\\"));           // barra al final del archivo
+        assertEquals("CARACTER", tipos("'a"));
+        assertEquals("CARACTER", tipos("'"));
+        assertEquals("E103 E103 E103 E103 E103", codigosDeError());
+    }
+
+    /** Un CRLF no cierra el literal, pero su LF sí lo corta. */
+    @Test
+    void literalSinCerrarConCrlf_E103() {
+        assertEquals("CADENA NUMERO", tipos("\"abc\r\n1"));
+        assertEquals("E103", codigosDeError());
+    }
+
+    @Test
+    void escapeNoValido_E104_seInformanTodos() {
+        assertEquals("CADENA NUMERO", tipos("\"\\q \\w\" 1"));
+        assertEquals("E104 E104", codigosDeError());
+    }
+
+    @Test
+    void caracterConLongitudIncorrecta_E107() {
+        assertEquals("CARACTER CARACTER", tipos("'' 'ab'"));
+        assertEquals("E107 E107", codigosDeError());
+    }
+
+    /** Un emoji son dos char de Java, pero un solo carácter Unicode. */
+    @Test
+    void caracterFueraDelBmp_esUnSoloCaracter() {
+        assertEquals("CARACTER", tipos("'😀'"));
+        assertEquals("", codigosDeError());
+    }
+
     @Test
     void entradaVacia() {
         assertEquals("", tipos(""));

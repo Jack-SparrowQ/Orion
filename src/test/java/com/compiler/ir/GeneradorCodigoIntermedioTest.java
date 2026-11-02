@@ -24,6 +24,16 @@ public class GeneradorCodigoIntermedioTest {
         return GeneradorCodigoIntermedio.aTexto(new GeneradorCodigoIntermedio().generar(programa));
     }
 
+    /** Los literales conservan sus comillas: "t1" no se confunde con el temporal t1. */
+    @Test
+    void cadenasYCaracteres() {
+        assertEquals("""
+                    t1 = "t1" + "a b"
+                    print t1
+                    print 'c'
+                """, tac("print(\"t1\" + \"a b\");\nprint('c');"));
+    }
+
     /** La condición se reevalúa tras Linicio; continue salta a Linicio y break a Lfin. */
     @Test
     void whileConBreakYContinue() {

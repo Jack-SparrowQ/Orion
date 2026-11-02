@@ -49,6 +49,12 @@ public class ParserTest {
     }
 
     @Test
+    void cadenasYCaracteres_sonExpresiones() {
+        assertEquals("(\"a\" + \"b\")", expr("\"a\" + \"b\""));
+        assertEquals("(x == 'c')", expr("x == 'c'"));
+    }
+
+    @Test
     void precedencia() {
         assertEquals("(a + (b * 2))", expr("a + b * 2"));
         assertEquals("((a * b) + 2)", expr("a * b + 2"));

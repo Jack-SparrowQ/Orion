@@ -23,6 +23,8 @@ public enum TokenType {
     //Literales e identificadores
     IDENTIFICADOR,
     NUMERO,
+    CADENA,
+    CARACTER,
 
     //Operadores y delimitadores
     IGUAL, SUMA, RESTA,MULTI, DIVISION,

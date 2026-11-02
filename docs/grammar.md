@@ -176,8 +176,8 @@ Escape            = "\" , ( "n" | "t" | "r" | "0" | "\" | '"' | "'" ) ;
 | `\'`   | Comilla simple        |
 
 - Una cadena o un carácter no pueden contener un salto de línea literal.
-  Una cadena sin cerrar antes del fin de línea o del archivo es el error
-  E103.
+  Una cadena o un carácter sin cerrar antes del fin de línea o del
+  archivo es el error E103.
 - Un escape no listado (por ejemplo `\q`) es el error E104.
 - Un literal de carácter contiene **exactamente un** carácter o un
   escape: `''` y `'ab'` son el error E107.
@@ -846,11 +846,11 @@ compilador no genera código.
 | E100   | Léxica     | Carácter no reconocido                                                    | Implementado                |
 | E101   | Léxica     | `&` aislado: se esperaba `&&`                                             | Implementado                |
 | E102   | Léxica     | `\|` aislado: se esperaba `\|\|`                                          | Implementado                |
-| E103   | Léxica     | Cadena sin cerrar                                                         | Propuesto                   |
-| E104   | Léxica     | Secuencia de escape no válida                                             | Propuesto                   |
+| E103   | Léxica     | Cadena o carácter sin cerrar                                              | Implementado                |
+| E104   | Léxica     | Secuencia de escape no válida                                             | Implementado                |
 | E105   | Léxica     | Comentario de bloque sin cerrar                                           | Propuesto                   |
 | E106   | Léxica     | Literal entero fuera de rango                                             | Propuesto                   |
-| E107   | Léxica     | Literal de carácter vacío o con más de un carácter                        | Propuesto                   |
+| E107   | Léxica     | Literal de carácter vacío o con más de un carácter                        | Implementado                |
 | E201   | Sintáctica | Se esperaba un token concreto                                             | Implementado                |
 | E202   | Sintáctica | Sentencia no reconocida                                                   | Implementado                |
 | E203   | Sintáctica | Se esperaba una expresión                                                 | Implementado                |
@@ -901,7 +901,7 @@ de `src/main/java/com/compiler`:
 | `**`                                              | ✘ (el token existe, el lexer no lo produce) |                   ✘                   |     ✘     |       ✘       |
 | Literales `ENTERO`, `DECIMAL`, `true`, `false`    |      ✔ (como un único token `NUMERO`)       |                   ✔                   |     ✔     |       ✔       |
 | `null`                                            |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
-| `CADENA`, `CARACTER`                              |                      ✘                      |                   ✘                   |     ✘     |       ✘       |
+| `CADENA`, `CARACTER`                              |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | Literales de arreglo, `a[i]`, `.length`           |              ✔ (`[`, `]`, `.`)              |                   ✘                   |     ✘     |       ✘       |
 | Comentario de línea `//`                          |                      ✔                      |                   —                   |     —     |       —       |
 | Comentario de bloque `/* */`                      |                      ✘                      |                   —                   |     —     |       —       |

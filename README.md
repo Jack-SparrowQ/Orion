@@ -108,6 +108,7 @@ if (c > max) {
 
 - Números enteros (`10`) y decimales (`3.5`).
 - Booleanos `true` y `false`.
+- Cadenas (`"hola\n"`) y caracteres (`'a'`), con los escapes `\n \t \r \0 \\ \" \'`.
 - Identificadores: letra o `_` seguida de letras, dígitos o `_`.
 - Comentarios de línea: `// ...`.
 - Operadores: `+ - * / %`, `== != < <= > >=`, `&& || !`, `= += -= *= /= %=`.
@@ -131,7 +132,7 @@ comparacion  -> termino ( ("<" | "<=" | ">" | ">=") termino )*
 termino      -> factor ( ("+" | "-") factor )*
 factor       -> unario ( ("*" | "/" | "%") unario )*
 unario       -> ("!" | "-") unario | primario
-primario     -> NUMERO | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
+primario     -> NUMERO | CADENA | CARACTER | IDENTIFICADOR | "true" | "false" | "(" expresion ")"
 ```
 
 La precedencia y la asociatividad (por la izquierda) coinciden con las de JavaScript. Una asignación compuesta `a += b` se traduce a `a = a + b`.
@@ -148,8 +149,9 @@ El análisis semántico se hace en dos pasadas:
 | Expresión                       | Operandos                          | Resultado                                         |
 | ------------------------------- | ---------------------------------- | ------------------------------------------------- |
 | `+ - * %`                       | numéricos                          | `int` si ambos son `int`; si no, `float`          |
+| `+`                             | `string`                           | `string` (concatenación)                          |
 | `/`                             | numéricos                          | `float` (en JavaScript, `7 / 2` es `3.5`)         |
-| `< <= > >=`                     | numéricos                          | `bool`                                            |
+| `< <= > >=`                     | numéricos, o ambos `char`          | `bool`                                            |
 | `== !=`                         | del mismo tipo, o ambos numéricos  | `bool`                                            |
 | `&& \|\|` y `!`                 | `bool`                             | `bool`                                            |
 | `-x`                            | numérico                           | el tipo de `x`                                    |
@@ -165,6 +167,9 @@ Las variables declaradas dentro de un bloque solo son visibles en ese bloque, ig
 | E100   | Léxica      | Carácter no reconocido.                                                 |
 | E101   | Léxica      | `&` suelto: se esperaba `&&`.                                           |
 | E102   | Léxica      | `\|` suelto: se esperaba `\|\|`.                                        |
+| E103   | Léxica      | Cadena o carácter sin cerrar.                                           |
+| E104   | Léxica      | Secuencia de escape no válida.                                          |
+| E107   | Léxica      | Literal de carácter vacío o con más de un carácter.                     |
 | E201   | Sintáctica  | Falta un elemento obligatorio (`;`, `=`, `)`, `}`...).                  |
 | E202   | Sintáctica  | Instrucción no reconocida.                                              |
 | E203   | Sintáctica  | Se esperaba una expresión.                                              |

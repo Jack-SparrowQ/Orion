@@ -472,9 +472,9 @@ public class Parser {
         return primario();
     }
 
-    // primario -> NUMERO | IDENTIFICADOR [ argumentos ] | "true" | "false" | "(" expresion ")"
+    // primario -> NUMERO | CADENA | CARACTER | IDENTIFICADOR [ argumentos ] | "true" | "false" | "(" expresion ")"
     private Expresion primario() {
-        if (coinciden(TokenType.NUMERO, TokenType.TRUE, TokenType.FALSE)) {
+        if (coinciden(TokenType.NUMERO, TokenType.CADENA, TokenType.CARACTER, TokenType.TRUE, TokenType.FALSE)) {
             return new NodoLiteral(anterior());
         }
 
@@ -491,7 +491,7 @@ public class Parser {
         }
 
         throw error(peek(), "E203",
-                "Se esperaba una expresión (número, variable, true/false o '('). Se encontró "
+                "Se esperaba una expresión (literal, variable o '('). Se encontró "
                         + describir(peek()) + ".");
     }
 

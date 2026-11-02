@@ -2,7 +2,7 @@ package com.compiler.parser.ast;
 
 import com.compiler.lexer.Token;
 
-/** Valor literal: número, true o false. */
+/** Valor literal: número, cadena, carácter, true o false. */
 public record NodoLiteral(Token valor) implements Expresion {
 
     @Override

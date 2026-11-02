@@ -24,8 +24,9 @@ import com.compiler.parser.ast.*;
  * Reglas de tipos (int se promueve a float donde hace falta):
  * <pre>
  *   + - * %          int op int -> int ; numérico op numérico -> float
+ *   +                string + string -> string
  *   /                numérico / numérico -> float  (en JS, 7 / 2 es 3.5)
- *   &lt; &lt;= &gt; &gt;=      numérico op numérico -> bool
+ *   &lt; &lt;= &gt; &gt;=      numérico op numérico -> bool ; char op char -> bool
  *   == !=            mismo tipo, o ambos numéricos -> bool
  *   &amp;&amp; ||  !         bool -> bool
  *   -x               numérico -> mismo tipo
@@ -436,9 +437,12 @@ public final class SemanticAnalyzer {
         Type tipo(Expresion expresion) {
             return switch (expresion) {
 
-                case NodoLiteral literal -> literal.valor().tipo == TokenType.NUMERO
-                        ? (literal.valor().lexema.contains(".") ? Type.FLOAT : Type.INT)
-                        : Type.BOOL;
+                case NodoLiteral literal -> switch (literal.valor().tipo) {
+                    case NUMERO -> literal.valor().lexema.contains(".") ? Type.FLOAT : Type.INT;
+                    case CADENA -> Type.STRING;
+                    case CARACTER -> Type.CHAR;
+                    default -> Type.BOOL;
+                };
 
                 case NodoVariable variable -> {
                     Symbol symbol = buscarVisible(variable.nombre());
@@ -537,11 +541,16 @@ public final class SemanticAnalyzer {
     private static Type tipoBinario(TokenType operador, Type izquierda, Type derecha) {
         boolean numericos = esNumerico(izquierda) && esNumerico(derecha);
 
+        if (operador == TokenType.SUMA && izquierda == Type.STRING && derecha == Type.STRING) {
+            return Type.STRING;
+        }
+
         return switch (operador) {
             case SUMA, RESTA, MULTI, MODULO -> !numericos ? null
                     : (izquierda == Type.INT && derecha == Type.INT ? Type.INT : Type.FLOAT);
             case DIVISION -> numericos ? Type.FLOAT : null;
-            case MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL -> numericos ? Type.BOOL : null;
+            case MENOR, MENOR_IGUAL, MAYOR, MAYOR_IGUAL ->
+                    numericos || (izquierda == Type.CHAR && derecha == Type.CHAR) ? Type.BOOL : null;
             case COMPARACION_IGUAL, DIFERENTE ->
                     izquierda != Type.VOID && (izquierda == derecha || numericos) ? Type.BOOL : null;
             case AND_LOGICO, OR_LOGICO ->

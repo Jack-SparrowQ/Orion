@@ -70,6 +70,54 @@ public class SemanticAnalyzerTest {
     }
 
     // ------------------------------------------------------------
+    // Cadenas y caracteres
+    // ------------------------------------------------------------
+
+    @Test
+    void cadenasYCaracteres_tipos() {
+        assertEquals("", analizar("""
+                let s = "a" + "b";
+                let c = 'x';
+                let orden = c < 'y';
+                let igual = s == "ab";
+                let anotada: string = s;
+                let d: char = c;
+                s += "c";
+                fn eco(t: string): string { return t; }
+                print(eco("hola"));
+                print(c);
+                """));
+        assertEquals(Type.STRING, tipoDe("s"));
+        assertEquals(Type.CHAR, tipoDe("c"));
+        assertEquals(Type.BOOL, tipoDe("orden"));
+        assertEquals(Type.BOOL, tipoDe("igual"));
+    }
+
+    /** Sin conversiones implícitas: char y string tampoco se mezclan. */
+    @Test
+    void cadenasYCaracteres_operacionesInvalidas() {
+        assertEquals("E306", analizar("let x = \"n=\" + 5;"));
+        assertEquals("E306", analizar("let x = \"a\" + 'b';"));
+        assertEquals("E306", analizar("let x = 'a' + 'b';"));
+        assertEquals("E306", analizar("let x = \"a\" - \"b\";"));
+        assertEquals("E306", analizar("let x = \"a\" < \"b\";"));
+        assertEquals("E306", analizar("let x = \"a\" == 'a';"));
+        assertEquals("E306", analizar("let x = -\"a\";"));
+    }
+
+    @Test
+    void cadenasYCaracteres_asignacionIncompatible() {
+        assertEquals("E307", analizar("let e: int = \"texto\";"));
+        assertEquals("E307", analizar("let c: char = \"a\";"));
+        assertEquals("E307", analizar("let s: string = 'a';"));
+    }
+
+    @Test
+    void cadenaComoCondicion_E308() {
+        assertEquals("E308", analizar("if (\"a\") { }"));
+    }
+
+    // ------------------------------------------------------------
     // E306: operandos incompatibles
     // ------------------------------------------------------------
 

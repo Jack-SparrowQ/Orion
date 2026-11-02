@@ -1,10 +1,15 @@
 package com.compiler.util;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.compiler.parser.ast.*;
 
 public class JSGenerator {
+
+    // Consume los escapes por pares para no confundir el "\0" de "\\0" (barra y un cero)
+    private static final Pattern ESCAPE_O_CR = Pattern.compile("\\\\.|\r");
 
     public String generar(List<Sentencia> programa) {
         StringBuilder codigoJS = new StringBuilder();
@@ -107,15 +112,27 @@ public class JSGenerator {
         return "    ".repeat(Math.max(0, nivel)); // 4 espacios por nivel
     }
 
+    // Un literal de Orion ya es válido en JS, salvo dos casos que aquí cambian de forma:
+    // "\01" sería un escape octal (en Orion es NUL y '1') y un CR crudo cortaría la cadena.
+    private static String literalJS(String lexema) {
+        return ESCAPE_O_CR.matcher(lexema).replaceAll(m -> switch (m.group()) {
+            case "\\0" -> "\\\\x00";
+            case "\r" -> "\\\\r";
+            default -> Matcher.quoteReplacement(m.group());
+        });
+    }
+
     // Traduce una expresión (recursivamente) a su texto en JavaScript.
     // La precedencia de Orion es la misma que la de JS, así que no se
     // reordena nada: solo se conservan los paréntesis que escribió el programador.
     private String generarExpresion(Expresion expr) {
         return switch (expr) {
-            case NodoLiteral l -> l.valor().lexema;
+            case NodoLiteral l -> literalJS(l.valor().lexema);
 
             case NodoVariable v -> v.nombre().lexema;
 
+            // shortcut: '<' entre char compara unidades UTF-16, no códigos Unicode: difiere de
+            // grammar.md solo entre emojis y U+E000-U+FFFF; compararlos con codePointAt si importa.
             case NodoBinario b -> generarExpresion(b.izquierda()) + " " + b.operador().lexema
                     + " " + generarExpresion(b.derecha());
 

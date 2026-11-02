@@ -17,6 +17,9 @@ public class Lexer {
     // Diccionario de búsqueda rápida para palabras reservadas
     private static final Map<String, TokenType> PALABRAS_RESERVADAS;
 
+    // Lo que puede seguir a '\' dentro de un literal
+    private static final String ESCAPES = "ntr0\\\"'";
+
     private final ErrorHandler gestorErrores;
 
     static {
@@ -171,6 +174,10 @@ public class Lexer {
                     avanzar();
                     return createToken(TokenType.PUNTO, ".");
 
+                case '"':
+                case '\'':
+                    return literalDeTexto(c);
+
                 case '!':
                     avanzar(); // Consumimos el '!'
                     if (match('=')) {
@@ -283,6 +290,67 @@ public class Lexer {
         // Si el bucle termina, llegamos al final del archivo
         // Posición real del final (no la del inicio del último token).
         return new Token(TokenType.EOF, "", line, column);
+    }
+
+    /**
+     * Lee una CADENA o un CARACTER (grammar.md 3.6). El lexema conserva el texto
+     * fuente, con comillas y escapes, para que el literal siga ocupando una línea
+     * en --tokens, --ast y el TAC. Tras un error el token se devuelve igual: el
+     * compilador se detiene al acabar esta fase y así se informan todos los errores.
+     *
+     * @param comilla '"' para una cadena, '\'' para un carácter
+     * @return el token del literal, cerrado o no
+     */
+    private Token literalDeTexto(char comilla) {
+        int inicio = posicionActual;
+        int contenido = 0; // caracteres Unicode o escapes: 'x' debe tener exactamente uno
+        avanzar();
+
+        while (!enFinDeLinea() && caracterActual() != comilla) {
+            if (caracterActual() == '\\') {
+                int columnaEscape = column;
+                avanzar();
+                if (enFinDeLinea()) {
+                    break; // la barra no escapa nada: es un literal sin cerrar (E103)
+                }
+                if (ESCAPES.indexOf(caracterActual()) < 0) {
+                    gestorErrores.agregar("E104", ErrorType.LEXICO,
+                            "Secuencia de escape no válida: '\\" + Character.toString(codigoFuente.codePointAt(posicionActual)) + "'.",
+                            line, columnaEscape);
+                }
+            }
+            avanzarCaracterUnicode();
+            contenido++;
+        }
+
+        boolean esCadena = comilla == '"';
+        if (enFinDeLinea()) {
+            gestorErrores.agregar("E103", ErrorType.LEXICO,
+                    (esCadena ? "Cadena" : "Carácter") + " sin cerrar: falta " + comilla + " antes del fin de línea.",
+                    startLine, startColumn);
+        } else {
+            avanzar(); // comilla de cierre
+            if (!esCadena && contenido != 1) {
+                gestorErrores.agregar("E107", ErrorType.LEXICO,
+                        "Un literal de carácter debe contener exactamente un carácter.",
+                        startLine, startColumn);
+            }
+        }
+
+        return createToken(esCadena ? TokenType.CADENA : TokenType.CARACTER,
+                codigoFuente.substring(inicio, posicionActual));
+    }
+
+    // FinDeLinea en grammar.md es solo LF: un CR puede formar parte de un literal
+    private boolean enFinDeLinea() {
+        return posicionActual >= codigoFuente.length() || caracterActual() == '\n';
+    }
+
+    // Avanza un carácter Unicode completo (dos char de Java si está fuera del BMP, como un emoji)
+    private void avanzarCaracterUnicode() {
+        for (int i = Character.charCount(codigoFuente.codePointAt(posicionActual)); i > 0; i--) {
+            avanzar();
+        }
     }
 
     // Solo dígitos ASCII: Character.isDigit acepta también '٣', '৩'... que luego no se pueden convertir a número.
