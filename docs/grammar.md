@@ -912,8 +912,7 @@ de `src/main/java/com/compiler`:
 | Anotación de tipo `: Tipo`, `let x: T;`           |                      ✔                      |                   ✔                   | ✔ (sin E309) |       ✔       |
 | Asignación `=` y compuesta sobre un identificador |                      ✔                      | ✔ (LL(2), se reduce a `a = a op (e)`) |     ✔     |       ✔       |
 | Asignación a `v[i]`                               |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| `print(e)` con un solo argumento                  |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| `print` con 0 o varios argumentos                 |                ✘ (falta `,`)                |                   ✘                   |     ✘     |       ✘       |
+| `print` con cualquier número de argumentos        |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `if` / `else` / `else if`                         |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `Bloque` como sentencia independiente             |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
 | `while`, `break`, `continue`                      |                      ✔                      |                   ✔                   |     ✔     |       ✔       |

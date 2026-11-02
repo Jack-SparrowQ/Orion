@@ -104,7 +104,7 @@ public class JSGenerator {
             }
 
             // 2. Traducir una Impresión (print(x) -> console.log(x))
-            case NodoImprimir imp -> indentacion + "console.log(" + generarExpresion(imp.expresion()) + ");\n";
+            case NodoImprimir imp -> indentacion + "console.log(" + argumentosDePrint(imp.argumentos()) + ");\n";
 
             // 3. Traducir un IF
             case NodoIf nIf -> {
@@ -188,6 +188,17 @@ public class JSGenerator {
     // Método auxiliar para que el código JS generado se vea bonito
     private String crearIndentacion(int nivel) {
         return "    ".repeat(Math.max(0, nivel)); // 4 espacios por nivel
+    }
+
+    // Con más de un argumento, console.log toma el primero como formato: un texto con
+    // "%d" se consumiría al siguiente argumento. "%s" hace que ese texto se escriba tal cual.
+    private String argumentosDePrint(List<Expresion> argumentos) {
+        String lista = String.join(", ", argumentos.stream().map(this::generarExpresion).toList());
+        if (argumentos.size() < 2) {
+            return lista;
+        }
+        Type primero = tipos.get(argumentos.get(0));
+        return primero == Type.STRING || primero == Type.CHAR ? "\"%s\", " + lista : lista;
     }
 
     private String concatenacion(String izquierda, String derecha) {

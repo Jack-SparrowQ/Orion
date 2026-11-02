@@ -121,7 +121,8 @@ public class ASTPrinter {
                     a.operador() == null ? "=" : a.operador().lexema + "=",
                     expresion(a.destino()), expresion(a.valor()));
 
-            case NodoImprimir imp -> new Arbol("Imprimir", SENTENCIA, "", expresion(imp.expresion()));
+            case NodoImprimir imp -> new Arbol("Imprimir", SENTENCIA, imp.argumentos().isEmpty() ? "(vacio)" : "",
+                    imp.argumentos().stream().map(ASTPrinter::expresion).toList());
 
             case NodoIf nIf -> {
                 List<Arbol> hijos = new ArrayList<>();

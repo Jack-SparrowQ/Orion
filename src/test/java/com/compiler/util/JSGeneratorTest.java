@@ -34,6 +34,21 @@ public class JSGeneratorTest {
     }
 
     @Test
+    void print_segunElNumeroDeArgumentos() {
+        assertEquals("console.log();\n", js("print();"));
+        assertEquals("console.log(1);\n", js("print(1);"));
+        assertEquals("console.log(1, \"a\");\n", js("print(1, \"a\");"));
+    }
+
+    /** Un texto como primer argumento no debe interpretarse como formato de console.log. */
+    @Test
+    void print_primerArgumentoDeTexto() {
+        assertEquals("console.log(\"%s\", \"a\", 1);\n", js("print(\"a\", 1);"));
+        assertEquals("console.log(\"%s\", 'c', 1);\n", js("print('c', 1);"));
+        assertEquals("console.log(\"100%\");\n", js("print(\"100%\");")); // con uno solo no hay formato
+    }
+
+    @Test
     void concatenacion_usaElAyudante() {
         String codigo = js("let s = \"a\";\nprint(s + \"b\" + s);");
         assertTrue(codigo.startsWith("function $elementos"), codigo);

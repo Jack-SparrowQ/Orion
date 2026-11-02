@@ -122,7 +122,7 @@ sentencia    -> declaracion | asignacion | imprimir | if | for
 declaracion  -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
 asignacion   -> destino ("=" | "+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
 destino      -> IDENTIFICADOR ( "[" expresion "]" )*
-imprimir     -> "print" "(" expresion ")" ";"
+imprimir     -> "print" "(" ( expresion ( "," expresion )* )? ")" ";"
 if           -> "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?
 for          -> "for" "(" IDENTIFICADOR "in" expresion ")" bloque
 bloque       -> "{" sentencia* "}"
@@ -275,7 +275,7 @@ Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de 
 
 ## Alcance y trabajo futuro
 
-- Potencia `**` y `print` con varios argumentos.
+- Potencia `**`.
 - Optimizaciones sobre el código intermedio.
 
 ## Documentación académica

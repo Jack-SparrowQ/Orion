@@ -282,16 +282,16 @@ public class Parser {
         return expresion instanceof NodoVariable;
     }
 
-    // Regla: "print" "(" expresion ")" ";"
+    // Regla: "print" "(" [ expresion { "," expresion } ] ")" ";"
     private Sentencia declaracionImprimir() {
         consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' despues de 'print'.");
-        
-        Expresion valorAImprimir = expresion(); // Leemos lo que está adentro
-        
-        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' despues del valor a imprimir.");
+
+        List<Expresion> argumentos = listaExpresiones(TokenType.PARENTESIS_DER);
+
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' despues de los valores a imprimir.");
         consumir(TokenType.PUNTO_Y_COMA, "Se esperaba ';' al final de la instrucción print.");
-        
-        return new NodoImprimir(valorAImprimir);
+
+        return new NodoImprimir(argumentos);
     }
 
     // Regla: "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?

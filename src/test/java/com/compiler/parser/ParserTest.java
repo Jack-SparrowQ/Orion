@@ -41,13 +41,33 @@ public class ParserTest {
     private String expr(String expresion) {
         List<Sentencia> programa = parse("print(" + expresion + ");");
         assertEquals("", errores(), "errores inesperados");
-        return ((NodoImprimir) programa.get(0)).expresion().toString();
+        return ((NodoImprimir) programa.get(0)).argumentos().get(0).toString();
     }
 
     private String errores() {
         return errores.obtenerErrores().stream()
                 .map(CompilationError::toString)
                 .collect(Collectors.joining("\n"));
+    }
+
+    @Test
+    void printConVariosArgumentos() {
+        NodoImprimir varios = (NodoImprimir) parse("print(1, a + 2, \"x\");").get(0);
+        assertEquals("", errores());
+        assertEquals("[1, (a + 2), \"x\"]", varios.argumentos().toString());
+
+        NodoImprimir vacio = (NodoImprimir) parse("print();").get(0);
+        assertEquals("", errores());
+        assertEquals(0, vacio.argumentos().size());
+    }
+
+    @Test
+    void printMalFormado() {
+        assertEquals("E203", codigos("print(1,);"));
+        assertEquals("E203", codigos("print(,1);"));
+        assertEquals("E201", codigos("print(1 2);"));
+        assertEquals("E201", codigos("print(1, 2"));
+        assertEquals("E201", codigos("print(1, 2)"));
     }
 
     @Test
@@ -104,7 +124,7 @@ public class ParserTest {
         assertEquals(2, fn.parametros().size());
         assertEquals("int", fn.tipoRetorno().lexema);
         assertInstanceOf(NodoReturn.class, fn.cuerpo().sentencias().get(0));
-        assertEquals("sumar(1, 2)", ((NodoImprimir) programa.get(1)).expresion().toString());
+        assertEquals("sumar(1, 2)", ((NodoImprimir) programa.get(1)).argumentos().get(0).toString());
     }
 
     /** Sin ': tipo' la función es void; "return;" no lleva valor. */

@@ -77,8 +77,14 @@ public class GeneradorCodigoIntermedio {
                 }
             }
             case NodoImprimir imp -> {
-                String valor = generarExpresion(imp.expresion());
-                emitir("print", valor, null, null);
+                // Se evalúan todos antes del primer param: un argumento puede contener una llamada
+                List<String> valores = imp.argumentos().stream().map(this::generarExpresion).toList();
+                if (valores.size() == 1) {
+                    emitir("print", valores.get(0), null, null);
+                } else {
+                    valores.forEach(v -> emitir("param", v, null, null));
+                    emitir("printn", String.valueOf(valores.size()), null, null);
+                }
             }
             case NodoIf nIf -> {
                 String condicion = generarExpresion(nIf.condicion());

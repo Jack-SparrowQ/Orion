@@ -34,6 +34,31 @@ public class GeneradorCodigoIntermedioTest {
                 """, tac("print(\"t1\" + \"a b\");\nprint('c');"));
     }
 
+    /** Con un argumento sigue siendo print x; printn no se confunde con imprimir el literal 2. */
+    @Test
+    void printSegunElNumeroDeArgumentos() {
+        assertEquals("""
+                    print 2
+                    printn 0
+                    t1 = a + 1
+                    param "x"
+                    param t1
+                    printn 2
+                """, tac("print(2);\nprint();\nprint(\"x\", a + 1);"));
+    }
+
+    /** Las llamadas dentro de los argumentos terminan antes del primer param del print. */
+    @Test
+    void printConLlamadaEnUnArgumento() {
+        assertEquals("""
+                    param 1
+                    t1 = call f, 1
+                    param 2
+                    param t1
+                    printn 2
+                """, tac("print(2, f(1));"));
+    }
+
     @Test
     void nullEsUnLiteral() {
         assertEquals("""

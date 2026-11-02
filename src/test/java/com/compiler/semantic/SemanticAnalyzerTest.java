@@ -440,6 +440,24 @@ public class SemanticAnalyzerTest {
     }
 
     // ------------------------------------------------------------
+    // print
+    // ------------------------------------------------------------
+
+    @Test
+    void print_aceptaCualquierTipoSalvoVoid() {
+        assertEquals("", analizar("print();\nprint(1, 2.5, \"a\", 'b', true, null, [1]);"));
+    }
+
+    /** Cada argumento se verifica por separado: se informan todos los errores. */
+    @Test
+    void print_verificaCadaArgumento() {
+        assertEquals("E306", analizar("fn f() { }\nprint(1, f());"));
+        assertEquals("E301 E301", analizar("print(a, 1, b);"));
+        assertEquals("E312", analizar("print(1, []);"));
+        assertEquals("E306 E304", analizar("print(1 + true, 1 / 0);"));
+    }
+
+    // ------------------------------------------------------------
     // null
     // ------------------------------------------------------------
 

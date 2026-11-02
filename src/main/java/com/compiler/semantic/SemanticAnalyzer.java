@@ -460,11 +460,13 @@ public final class SemanticAnalyzer {
                 }
 
                 case NodoImprimir print -> {
-                    Type tipo = tipo(print.expresion());
-                    if (tipo == Type.VOID) {
-                        reportar("E306", "No se puede imprimir un valor void.", primerToken(print.expresion()));
+                    for (Expresion argumento : print.argumentos()) {
+                        Type tipo = tipo(argumento);
+                        if (tipo == Type.VOID) {
+                            reportar("E306", "No se puede imprimir un valor void.", primerToken(argumento));
+                        }
+                        sinTipoDeContexto(tipo, argumento);
                     }
-                    sinTipoDeContexto(tipo, print.expresion());
                 }
 
                 case NodoBloque b -> bloque(b);
