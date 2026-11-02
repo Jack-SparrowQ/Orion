@@ -32,6 +32,7 @@ import com.compiler.parser.ast.*;
  *   -x               numérico -> mismo tipo
  *   x = valor        mismo tipo, o int en una variable float
  *   if (c)           c debe ser bool
+ *   for (x in e)     e debe ser string; x es char y de solo lectura
  *   f(a1..an)        n parámetros, cada ai asignable al suyo -> tipo de retorno de f
  *   return e         e asignable al tipo de retorno de la función
  * </pre>
@@ -121,6 +122,20 @@ public final class SemanticAnalyzer {
                 case NodoWhile nodeWhile ->
                         analyzeSymbols(nodeWhile.cuerpo().sentencias(), symbolsTable.abrirAmbito(), errorHandler);
 
+                //FOR: la variable y el cuerpo comparten un ámbito. Lo que se recorre se
+                //infiere antes de abrirlo: pertenece al ámbito exterior (for (x in x) es E303)
+                case NodoFor nodeFor -> {
+                    Type iterable = new Verificador(symbolsTable, null).tipo(nodeFor.iterable());
+                    SymbolTable ambito = symbolsTable.abrirAmbito();
+                    declarar(ambito, new Symbol(
+                            nodeFor.variable().lexema,
+                            iterable == Type.STRING ? Type.CHAR : null, // null: E319 lo reporta la fase 4
+                            SymbolCategory.ITERACION,
+                            nodeFor.variable().line,
+                            nodeFor.variable().column), errorHandler);
+                    analyzeSymbols(nodeFor.cuerpo().sentencias(), ambito, errorHandler);
+                }
+
                 //PRINT, ASIGNACIÓN, BREAK y CONTINUE: no declaran símbolos
                 case NodoImprimir print -> { }
                 case NodoAsignacion asignacion -> { }
@@ -158,7 +173,7 @@ public final class SemanticAnalyzer {
     /**
      * Fase 4: uso de identificadores (E301, E303, E305), división entre cero (E304),
      * tipos (E306, E307, E308, E312), break/continue fuera de un ciclo (E313),
-     * llamadas (E314, E315) y return (E316, E317, E318).
+     * llamadas (E314, E315), return (E316, E317, E318) y for (E319).
      * @param nodes sentencias del programa
      * @param symbolsTable tabla global, ya llenada por {@link #analyzeSymbols}
      * @param errorHandler destino de los errores
@@ -373,6 +388,9 @@ public final class SemanticAnalyzer {
                     if (symbol.getCategoria() == SymbolCategory.CONSTANTE) {
                         reportar("E305", "No se puede reasignar la constante '" + nombre.lexema
                                 + "' (declarada en la linea: " + symbol.getLinea() + ").", nombre);
+                    } else if (symbol.getCategoria() == SymbolCategory.ITERACION) {
+                        reportar("E305", "La variable de iteración '" + nombre.lexema
+                                + "' es de solo lectura.", nombre);
                     } else if (symbol.getCategoria() == SymbolCategory.FUNCION) {
                         reportar("E305", "No se puede asignar a la función '" + nombre.lexema + "'.", nombre);
                     } else if (!asignable(valor, symbol.getTipo())) {
@@ -393,6 +411,22 @@ public final class SemanticAnalyzer {
                     ciclos++;
                     bloque(nodoWhile.cuerpo());
                     ciclos--;
+                }
+
+                case NodoFor nodoFor -> {
+                    Type iterable = tipo(nodoFor.iterable());
+                    if (iterable != null && iterable != Type.STRING) {
+                        reportar("E319", "'for' no puede recorrer un valor " + nombreTipo(iterable) + ".",
+                                primerToken(nodoFor.iterable()));
+                    }
+
+                    SymbolTable padre = actual;
+                    actual = siguienteAmbito();
+                    declarados.add(actual.buscar(nodoFor.variable().lexema));
+                    ciclos++;
+                    sentencias(nodoFor.cuerpo().sentencias());
+                    ciclos--;
+                    actual = padre;
                 }
 
                 case NodoSalto salto -> {

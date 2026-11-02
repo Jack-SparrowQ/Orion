@@ -16,6 +16,7 @@ import com.compiler.lexer.Tokenizer;
 import com.compiler.parser.ast.NodoAsignacion;
 import com.compiler.parser.ast.NodoBloque;
 import com.compiler.parser.ast.NodoDeclaracion;
+import com.compiler.parser.ast.NodoFor;
 import com.compiler.parser.ast.NodoFuncion;
 import com.compiler.parser.ast.NodoIf;
 import com.compiler.parser.ast.NodoImprimir;
@@ -130,6 +131,39 @@ public class ParserTest {
         NodoWhile ciclo = assertInstanceOf(NodoWhile.class, programa.get(0));
         assertEquals(2, ciclo.cuerpo().sentencias().size());
         assertInstanceOf(NodoSalto.class, ciclo.cuerpo().sentencias().get(0));
+    }
+
+    @Test
+    void forIn() {
+        List<Sentencia> programa = parse("for (c in \"ab\" + s) { print(c); break; }");
+        assertEquals("", errores());
+        NodoFor ciclo = assertInstanceOf(NodoFor.class, programa.get(0));
+        assertEquals("c", ciclo.variable().lexema);
+        assertEquals("(\"ab\" + s)", ciclo.iterable().toString());
+        assertEquals(2, ciclo.cuerpo().sentencias().size());
+    }
+
+    @Test
+    void forIn_erroresDeCabecera() {
+        assertEquals("E201", codigos("for c in s { }"));
+        assertEquals("E201", codigos("for (in s) { }"));
+        assertEquals("E201", codigos("for (c of s) { }"));
+        assertEquals("E201", codigos("for (c in s { }"));
+        assertEquals("E201", codigos("for (c in s) print(c);"));
+        assertEquals("E203", codigos("for (c in) { }"));
+    }
+
+    /** El cuerpo de un for con la cabecera mal se descarta entero; lo que sigue se analiza. */
+    @Test
+    void forIn_seRecuperaTrasUnError() {
+        assertEquals("E201", codigos("for c in s { 1; }\nlet a = 2;"));
+        assertEquals("E201 E201", codigos("for c in s { 1; }\nlet = 2;"));
+    }
+
+    /** Un for de estilo C no existe en Orion. El modo pánico para en cada ';' de la cabecera: hay cascada. */
+    @Test
+    void forDeEstiloC_noEsValido() {
+        assertEquals("E201 E202 E201", codigos("for (let i = 0; i < 3; i += 1) { }"));
     }
 
     /** break sin ';' es E201; el parser no exige estar en un ciclo (eso es E313). */

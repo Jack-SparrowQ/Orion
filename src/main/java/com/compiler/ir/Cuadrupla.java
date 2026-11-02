@@ -14,6 +14,8 @@ package com.compiler.ir;
 //   (param,   a,  _,  _ )   ->  param a        (argumento de la próxima llamada)
 //   (call,    f,  2,  t4)   ->  t4 = call f, 2 (sin resultado: call f, 2)
 //   (return,  t4, _,  _ )   ->  return t4      (sin valor: return)
+//   (len,     t1, _,  t2)   ->  t2 = len t1    (número de caracteres Unicode)
+//   ([],      t1, t2, x )   ->  x = t1[t2]     (carácter en esa posición, contando desde 0)
 public class Cuadrupla {
     public final String op;
     public final String arg1;
@@ -51,6 +53,10 @@ public class Cuadrupla {
                 return (resultado == null ? "" : resultado + " = ") + "call " + arg1 + ", " + arg2;
             case "return":
                 return arg1 == null ? "return" : "return " + arg1;
+            case "len":
+                return resultado + " = len " + arg1;
+            case "[]":
+                return resultado + " = " + arg1 + "[" + arg2 + "]";
             default:
                 if (arg2 == null) { // operador unario
                     return resultado + " = " + op + arg1;

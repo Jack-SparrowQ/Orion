@@ -118,6 +118,103 @@ public class SemanticAnalyzerTest {
     }
 
     // ------------------------------------------------------------
+    // for ... in
+    // ------------------------------------------------------------
+
+    @Test
+    void forIn_variableEsChar() {
+        assertEquals("", analizar("""
+                let s = "ab";
+                for (c in s) {
+                    let d: char = c;
+                    print(c < 'b');
+                    if (c == 'a') { continue; }
+                    break;
+                }
+                """));
+        assertEquals("E307", analizar("for (c in \"ab\") { let i: int = c; }"));
+        assertEquals("E306", analizar("for (c in \"ab\") { let t = c + \"x\"; }"));
+    }
+
+    @Test
+    void forIn_recorreCualquierExpresionString() {
+        assertEquals("", analizar("""
+                fn nombre(): string { return "x"; }
+                fn f(p: string) {
+                    for (a in p) { print(a); }
+                    for (b in p + "z") { print(b); }
+                    for (c in nombre()) { print(c); }
+                }
+                """));
+    }
+
+    @Test
+    void forIn_noIterable_E319() {
+        assertEquals("E319", analizar("for (x in 5) { }"));
+        assertEquals("E319", analizar("for (x in 2.5) { }"));
+        assertEquals("E319", analizar("for (x in true) { }"));
+        assertEquals("E319", analizar("for (x in 'a') { }"));
+        assertEquals("E319", analizar("fn f() { }\nfor (x in f()) { }"));
+    }
+
+    /** Un iterable con error propio no repite el error en E319 ni en el cuerpo. */
+    @Test
+    void forIn_sinErroresEnCascada() {
+        assertEquals("E301", analizar("for (x in nada) { let i: int = x; }"));
+        assertEquals("E319", analizar("for (x in 5) { let i: int = x; let c: char = x; }"));
+    }
+
+    @Test
+    void forIn_variableDeSoloLectura_E305() {
+        assertEquals("E305", analizar("for (c in \"a\") { c = 'b'; }"));
+        // c += 'b' es c = c + 'b': además, char + char no es una operación válida
+        assertEquals("E306 E305", analizar("for (c in \"a\") { c += 'b'; }"));
+    }
+
+    /** La variable es local al ciclo y el iterable pertenece al ámbito exterior. */
+    @Test
+    void forIn_ambito() {
+        assertEquals("E303", analizar("for (c in \"a\") { }\nprint(c);"));
+        assertEquals("E303", analizar("for (c in c) { }"));
+        assertEquals("", analizar("for (c in \"a\") { }\nfor (c in \"b\") { }"));
+    }
+
+    @Test
+    void forIn_sinOcultamiento_E302() {
+        assertEquals("E302", analizar("let c = 1;\nfor (c in \"a\") { }"));
+        assertEquals("E302", analizar("for (c in \"a\") { let c = 1; }"));
+        assertEquals("E302", analizar("for (c in \"a\") { for (c in \"b\") { } }"));
+        assertEquals("E302", analizar("fn f(p: int) { for (p in \"a\") { } }"));
+        assertEquals("E302", analizar("fn c() { }\nfor (c in \"a\") { }"));
+    }
+
+    /** Reasignar lo que se recorre es válido: el iterable se evaluó antes de empezar. */
+    @Test
+    void forIn_reasignarElIterable() {
+        assertEquals("", analizar("let s = \"ab\";\nfor (c in s) { s = \"x\"; }"));
+    }
+
+    /** R(for ... B) es falso: el cuerpo puede no ejecutarse nunca. */
+    @Test
+    void forIn_noGarantizaRetorno_E318() {
+        assertEquals("E318", analizar("fn f(s: string): int { for (c in s) { return 1; } }"));
+        assertEquals("", analizar("fn f(s: string): int { for (c in s) { return 1; } return 0; }"));
+    }
+
+    @Test
+    void breakTrasUnFor_E313() {
+        assertEquals("E313", analizar("for (c in \"a\") { }\nbreak;"));
+    }
+
+    @Test
+    void forIn_categoriaEnLaTabla() {
+        assertEquals("", analizar("for (c in \"a\") { }"));
+        Symbol c = tabla.getHijos().get(0).buscar("c");
+        assertEquals(SymbolCategory.ITERACION, c.getCategoria());
+        assertEquals(Type.CHAR, c.getTipo());
+    }
+
+    // ------------------------------------------------------------
     // E306: operandos incompatibles
     // ------------------------------------------------------------
 

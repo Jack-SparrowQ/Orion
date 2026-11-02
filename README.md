@@ -117,11 +117,12 @@ if (c > max) {
 
 ```text
 programa     -> sentencia* EOF
-sentencia    -> declaracion | asignacion | imprimir | if
+sentencia    -> declaracion | asignacion | imprimir | if | for
 declaracion  -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
 asignacion   -> IDENTIFICADOR ("=" | "+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
 imprimir     -> "print" "(" expresion ")" ";"
 if           -> "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?
+for          -> "for" "(" IDENTIFICADOR "in" expresion ")" bloque
 bloque       -> "{" sentencia* "}"
 
 expresion    -> logicoOr
@@ -157,6 +158,7 @@ El análisis semántico se hace en dos pasadas:
 | `-x`                            | numérico                           | el tipo de `x`                                    |
 | `x = valor`                     | mismo tipo que `x`                 | se admite asignar un `int` a una variable `float` |
 | `if (condición)`                | `bool`                             | —                                                 |
+| `for (x in e)`                  | `e` es `string`                    | `x` es `char` y de solo lectura                   |
 
 Las variables declaradas dentro de un bloque solo son visibles en ese bloque, igual que `let`/`const` en el JavaScript generado. Cuando una expresión tiene un error, su tipo queda como desconocido y no provoca más errores en cascada.
 
@@ -181,6 +183,7 @@ Las variables declaradas dentro de un bloque solo son visibles en ese bloque, ig
 | E306   | Semántica   | Operador aplicado a tipos incompatibles.                                |
 | E307   | Semántica   | Asignación de un valor de tipo incompatible.                            |
 | E308   | Semántica   | La condición de un `if` no es `bool`.                                   |
+| E319   | Semántica   | `for ... in` sobre un valor que no se puede recorrer.                   |
 
 ## Generación de código intermedio
 
@@ -216,7 +219,7 @@ L4:
 L2:
 ```
 
-Los temporales (`t1`, `t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`L1`, `L2`...) implementan los saltos del `if`/`else`.
+Los temporales (`t1`, `t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`L1`, `L2`...) implementan los saltos del `if`/`else`. Un `for ... in` se traduce a un ciclo con índice mediante dos operaciones propias: `t2 = len t1` y `c = t1[t0]`.
 
 ## Ejecución
 
@@ -258,9 +261,7 @@ Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de 
 
 ## Alcance y trabajo futuro
 
-- Bucles (`while`, `for`) y funciones (`fn`, `return`): sus palabras reservadas ya se reconocen, pero no forman parte de la gramática.
-- Cadenas de texto.
-- Permitir reutilizar el nombre de una variable en bloques distintos (hoy los nombres son únicos en todo el programa).
+- Arreglos: `for ... in` solo recorre cadenas por ahora.
 - Optimizaciones sobre el código intermedio.
 
 ## Documentación académica

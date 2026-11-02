@@ -156,6 +156,9 @@ public class Parser {
         if (coinciden(TokenType.WHILE)) {
             return declaracionWhile();
         }
+        if (coinciden(TokenType.FOR)) {
+            return declaracionFor();
+        }
         if (coinciden(TokenType.BREAK, TokenType.CONTINUE)) {
             return declaracionSalto();
         }
@@ -352,6 +355,23 @@ public class Parser {
 
         consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' antes del cuerpo del while.");
         return new NodoWhile(condicion, parsearBloque());
+    }
+
+    /**
+     * Regla: "for" "(" IDENTIFICADOR "in" expresion ")" bloque.
+     * Quien la llama ya consumió el 'for'.
+     *
+     * @return el ciclo con su variable, lo que recorre y su cuerpo
+     */
+    private Sentencia declaracionFor() {
+        consumir(TokenType.PARENTESIS_IZQ, "Se esperaba '(' después de 'for'.");
+        Token variable = consumir(TokenType.IDENTIFICADOR, "Se esperaba el nombre de la variable de iteración.");
+        consumir(TokenType.IN, "Se esperaba 'in' después de la variable de iteración.");
+        Expresion iterable = expresion();
+        consumir(TokenType.PARENTESIS_DER, "Se esperaba ')' después de la expresión del for.");
+
+        consumir(TokenType.LLAVE_IZQ, "Se esperaba '{' antes del cuerpo del for.");
+        return new NodoFor(variable, iterable, parsearBloque());
     }
 
     /**

@@ -17,7 +17,7 @@ public class GeneradorCodigoIntermedio {
 
     /**
      * Etiquetas de los ciclos abiertos, el más interno arriba:
-     * [0] = inicio (destino de continue), [1] = fin (destino de break).
+     * [0] = destino de continue, [1] = fin (destino de break).
      */
     private final Deque<String[]> ciclos = new ArrayDeque<>();
 
@@ -103,7 +103,38 @@ public class GeneradorCodigoIntermedio {
                 emitir("goto", null, null, etiquetaInicio);
                 emitir("label", null, null, etiquetaFin);
             }
-            // break salta al fin del ciclo más interno; continue, a su inicio.
+            case NodoFor nFor -> {
+                //     e = iterable ; i = 0 ; n = len e
+                //     Linicio: ; c = i < n ; ifFalse c goto Lfin ; x = e[i] ; cuerpo
+                //     Lsiguiente: ; i = i + 1 ; goto Linicio ; Lfin:
+                // La copia en un temporal evalúa el iterable una sola vez: el cuerpo puede reasignar la variable
+                String iterable = nuevoTemporal();
+                emitir("=", generarExpresion(nFor.iterable()), null, iterable);
+                String indice = nuevoTemporal();
+                emitir("=", "0", null, indice);
+                String longitud = nuevoTemporal();
+                emitir("len", iterable, null, longitud);
+
+                String etiquetaInicio = nuevaEtiqueta();
+                String etiquetaSiguiente = nuevaEtiqueta();
+                String etiquetaFin = nuevaEtiqueta();
+                emitir("label", null, null, etiquetaInicio);
+                String condicion = nuevoTemporal();
+                emitir("<", indice, longitud, condicion);
+                emitir("ifFalse", condicion, null, etiquetaFin);
+                emitir("[]", iterable, indice, nFor.variable().lexema);
+
+                // continue debe pasar por el incremento: saltar a Linicio repetiría el elemento
+                ciclos.push(new String[] { etiquetaSiguiente, etiquetaFin });
+                nFor.cuerpo().sentencias().forEach(this::generarSentencia);
+                ciclos.pop();
+
+                emitir("label", null, null, etiquetaSiguiente);
+                emitir("+", indice, "1", indice);
+                emitir("goto", null, null, etiquetaInicio);
+                emitir("label", null, null, etiquetaFin);
+            }
+            // break salta al fin del ciclo más interno; continue, a su siguiente iteración.
             // El análisis semántico ya garantizó que hay un ciclo abierto (E313).
             case NodoSalto salto -> emitir("goto", null, null,
                     ciclos.peek()[salto.palabraClave().tipo == TokenType.BREAK ? 1 : 0]);

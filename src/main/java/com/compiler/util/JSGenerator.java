@@ -82,6 +82,17 @@ public class JSGenerator {
                 yield jsWhile.append(indentacion).append("}\n").toString();
             }
 
+            // Traducir un FOR: for...of evalúa la expresión una vez y recorre por carácter Unicode
+            case NodoFor nFor -> {
+                StringBuilder jsFor = new StringBuilder();
+                jsFor.append(indentacion).append("for (const ").append(nFor.variable().lexema)
+                        .append(" of ").append(generarExpresion(nFor.iterable())).append(") {\n");
+                for (Sentencia sentenciaInterna : nFor.cuerpo().sentencias()) {
+                    jsFor.append(visitarNodo(sentenciaInterna, nivelIndentacion + 1));
+                }
+                yield jsFor.append(indentacion).append("}\n").toString();
+            }
+
             // 6. break y continue son iguales en JS
             case NodoSalto salto -> indentacion + salto.palabraClave().lexema + ";\n";
 

@@ -874,7 +874,7 @@ compilador no genera código.
 | E316   | Semántica  | `return` fuera de una función                                             | Implementado                |
 | E317   | Semántica  | `return` con valor en una función `void`, o sin valor en una que no lo es | Implementado                |
 | E318   | Semántica  | Falta `return` en algún camino de ejecución                               | Implementado                |
-| E319   | Semántica  | `for … in` sobre un valor no iterable                                     | Propuesto                   |
+| E319   | Semántica  | `for … in` sobre un valor no iterable                                     | Implementado                |
 | W301   | Semántica  | Código inalcanzable (advertencia)                                         | Propuesto                   |
 
 ---
@@ -894,7 +894,8 @@ de `src/main/java/com/compiler`:
 | `print` con 0 o varios argumentos                 |                ✘ (falta `,`)                |                   ✘                   |     ✘     |       ✘       |
 | `if` / `else` / `else if`                         |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `Bloque` como sentencia independiente             |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
-| `while`, `for … in`, `break`, `continue`          |           ✔ (palabras reservadas)           |                   ✘                   |     ✘     |       ✘       |
+| `while`, `break`, `continue`                      |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
+| `for … in`                                        |                      ✔                      |                   ✔                   | ✔ (solo `string`) |       ✔       |
 | `fn`, parámetros, `return`, llamadas              |          ✔ / ✘ (falta `,`)                  |                   ✘                   |     ✘     |       ✘       |
 | `\|\|` `&&` `==` `!=` `<` `<=` `>` `>=`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `+` `-` `*` `/` `%`, `!` y `-` unarios            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |

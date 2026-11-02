@@ -25,6 +25,20 @@ public class JSGeneratorTest {
     }
 
     @Test
+    void forIn() {
+        assertEquals("""
+                function f(s) {
+                    for (const c of s + "!") {
+                        if (c == 'a') {
+                            continue;
+                        }
+                        console.log(c);
+                    }
+                }
+                """, js("fn f(s: string) { for (c in s + \"!\") { if (c == 'a') { continue; } print(c); } }"));
+    }
+
+    @Test
     void literalesSeCopianTalCual() {
         assertEquals("let s = \"a\\n\\\"b\" + 'c';\n", js("let s = \"a\\n\\\"b\" + 'c';"));
     }

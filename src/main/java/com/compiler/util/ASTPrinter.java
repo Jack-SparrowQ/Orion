@@ -133,6 +133,10 @@ public class ASTPrinter {
                     new Arbol("Condicion", SECCION, "", expresion(w.condicion())),
                     seccion("Cuerpo", w.cuerpo().sentencias()));
 
+            case NodoFor f -> new Arbol("For", SENTENCIA, pintar(f.variable().lexema, NOMBRE),
+                    new Arbol("Iterable", SECCION, "", expresion(f.iterable())),
+                    seccion("Cuerpo", f.cuerpo().sentencias()));
+
             case NodoSalto s -> new Arbol(capitalizar(s.palabraClave().lexema), SENTENCIA, "");
 
             case NodoBloque b -> new Arbol("Bloque", SENTENCIA, b.sentencias().isEmpty() ? "(vacio)" : "",

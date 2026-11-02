@@ -34,6 +34,50 @@ public class GeneradorCodigoIntermedioTest {
                 """, tac("print(\"t1\" + \"a b\");\nprint('c');"));
     }
 
+    /** El iterable se copia una vez; continue pasa por el incremento y break sale del ciclo. */
+    @Test
+    void forInConBreakYContinue() {
+        assertEquals("""
+                    t1 = s
+                    t2 = 0
+                    t3 = len t1
+                L1:
+                    t4 = t2 < t3
+                    ifFalse t4 goto L3
+                    c = t1[t2]
+                    goto L2
+                    goto L3
+                L2:
+                    t2 = t2 + 1
+                    goto L1
+                L3:
+                """, tac("for (c in s) { continue; break; }"));
+    }
+
+    /** continue en un while dentro de un for es del while: la pila de ciclos los separa. */
+    @Test
+    void forIn_anidadoConWhile() {
+        assertEquals("""
+                    t1 = "a"
+                    t2 = 0
+                    t3 = len t1
+                L1:
+                    t4 = t2 < t3
+                    ifFalse t4 goto L3
+                    c = t1[t2]
+                L4:
+                    ifFalse x goto L5
+                    goto L4
+                    goto L4
+                L5:
+                    goto L2
+                L2:
+                    t2 = t2 + 1
+                    goto L1
+                L3:
+                """, tac("for (c in \"a\") { while (x) { continue; } continue; }"));
+    }
+
     /** La condición se reevalúa tras Linicio; continue salta a Linicio y break a Lfin. */
     @Test
     void whileConBreakYContinue() {

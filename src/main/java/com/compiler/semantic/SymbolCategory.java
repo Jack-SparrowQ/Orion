@@ -5,5 +5,6 @@ public enum SymbolCategory {
     CONSTANTE,
     FUNCION,
     PARAMETRO,
+    ITERACION,
     TIPO
 }
