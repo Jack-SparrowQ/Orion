@@ -18,7 +18,7 @@ Detalle y justificación: ver la sección "Ruta" más abajo.
 
 ### Etapa 2 — Infraestructura de optimización
 - [x] 2.1 ADR 0001: pipeline `AST -> IR -> optimización -> JS` (decisión del usuario).
-- [ ] 2.2 Bloques básicos y grafo de flujo de control por función (líderes, sucesores/predecesores), con salida de depuración.
+- [x] 2.2 (hecho: `ir/GrafoFlujo`, `ir/BloqueBasico`) Bloques básicos y grafo de flujo de control por función (líderes, sucesores/predecesores), con salida de depuración.
 - [x] 2.3 (hecho: `Compiler.OPTIMIZACIONES`, lista vacía de `UnaryOperator<ProgramaIR>`) Contrato de una pasada; en `Compiler`, una lista de pasadas (vacía por ahora) entre el IR y el JS.
 - [x] 2.4 (hecho: `codegen/GeneradorJS`, prueba diferencial en `EjecucionTest`) Generador IR→JS: despachador, comprobaciones en tiempo de ejecución por operación, mismo formato de `print`.
 - [x] 2.5 (hecho) Cambiar `Compiler` para que el `.js` salga del IR; el generador AST→JS queda solo como oráculo de pruebas.

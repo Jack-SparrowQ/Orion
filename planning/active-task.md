@@ -1,3 +1,3 @@
 # Tarea activa
 
-Ninguna. Últimas cerradas: 2.4 + 2.5 JS generado desde el IR (revisadas y aceptadas). Siguiente: 2.2 (CFG) y etapa 3.
+Ninguna. Última cerrada: 2.2 Bloques básicos y grafo de flujo (revisada y aceptada). Etapas 0–2 completas; queda la etapa 3 (documentación y limpieza).
