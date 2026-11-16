@@ -1,6 +1,7 @@
 package com.compiler.ir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -13,6 +14,170 @@ import com.compiler.parser.Parser;
 import com.compiler.parser.ast.Sentencia;
 
 public class GeneradorCodigoIntermedioTest {
+
+    @Test
+    void localYGlobalPosterior_tienenNombresDistintos() {
+        assertEquals("""
+                func local, 0
+                    valor = 3
+                    return valor
+                endfunc
+                    valor$1 = 10
+                    $t1 = call local, 0
+                    print $t1
+                    print valor$1
+                """, tac("""
+                fn local(): int { let valor = 3; return valor; }
+                let valor = 10;
+                print(local());
+                print(valor);
+                """));
+    }
+
+    @Test
+    void funcionesDistintas_renombranParametrosYLocales() {
+        assertEquals("""
+                func primera, 1, [x]
+                    dato = x
+                    return dato
+                endfunc
+                func segunda, 1, [x$1]
+                    dato$1 = x$1
+                    return dato$1
+                endfunc
+                """, tac("""
+                fn primera(x: int): int { let dato = x; return dato; }
+                fn segunda(x: string): string { let dato = x; return dato; }
+                """));
+    }
+
+    @Test
+    void bloquesHermanos_separanDeclaracionesDeDistintoTipo() {
+        assertEquals("""
+                    ifFalse true goto $L1
+                    dato = 7
+                    print dato
+                    goto $L2
+                $L1:
+                    dato$1 = "texto"
+                    print dato$1
+                $L2:
+                """, tac("""
+                if (true) { let dato = 7; print(dato); }
+                else { let dato = "texto"; print(dato); }
+                """));
+    }
+
+    @Test
+    void ciclosDistintos_separanVariablesForYLocalesWhile() {
+        String codigo = tac("""
+                for (x in "a") { print(x); }
+                for (x in "b") { print(x); }
+                while (false) { let dato = 1; dato += 1; print(dato); }
+                while (false) { let dato = 2; dato += 1; print(dato); }
+                """);
+        assertTrue(codigo.contains("    x = $t1[$t2]\n    print x\n"), codigo);
+        assertTrue(codigo.contains("    x$1 = $t5[$t6]\n    print x$1\n"), codigo);
+        assertTrue(codigo.contains("    dato = 1\n"), codigo);
+        assertTrue(codigo.contains("    dato$1 = 2\n"), codigo);
+        assertTrue(codigo.contains(" = dato + 1\n"), codigo);
+        assertTrue(codigo.contains(" = dato$1 + 1\n"), codigo);
+        assertTrue(codigo.contains("    print dato$1\n"), codigo);
+    }
+
+    @Test
+    void sinRepeticiones_conservaNombresYGlobalVisible() {
+        assertEquals("""
+                    global = 10
+                func sumar, 1, [incremento]
+                    $t1 = global + incremento
+                    total = $t1
+                    return total
+                endfunc
+                    param 2
+                    $t2 = call sumar, 1
+                    print $t2
+                """, tac("""
+                let global = 10;
+                fn sumar(incremento: int): int { let total = global + incremento; return total; }
+                print(sumar(2));
+                """));
+    }
+
+    @Test
+    void recursion_usaParametroRenombradoSinCambiarNombreDeFuncion() {
+        assertEquals("""
+                func identidad, 1, [n]
+                    return n
+                endfunc
+                func recursiva, 1, [n$1]
+                    $t1 = n$1 <= 0
+                    ifFalse $t1 goto $L1
+                    return n$1
+                $L1:
+                    $t2 = n$1 - 1
+                    param $t2
+                    $t3 = call recursiva, 1
+                    return $t3
+                endfunc
+                """, tac("""
+                fn identidad(n: int): int { return n; }
+                fn recursiva(n: int): int {
+                    if (n <= 0) { return n; }
+                    return recursiva(n - 1);
+                }
+                """));
+    }
+
+    @Test
+    void bloquesIndependientes_reservanDeclaracionesSinInicializador() {
+        assertEquals("""
+                    x = 1
+                    print x
+                    x$1 = 2
+                    print x$1
+                    x$2 = 3
+                    print x$2
+                """, tac("""
+                { let x: int; x = 1; print(x); }
+                { let x: int; x = 2; print(x); }
+                let x = 3;
+                print(x);
+                """));
+    }
+
+    @Test
+    void arreglosRenombrados_resuelvenLecturaAsignacionYArgumentos() {
+        String codigo = tac("""
+                { let v = [1]; }
+                { let v = [2]; v[0] += 1; v[0] = 4; print(v.length, v[0]); usar(v); }
+                """);
+        assertTrue(codigo.contains("    v$1 = $t2\n"), codigo);
+        assertTrue(codigo.contains("    $t3 = v$1[0]\n"), codigo);
+        assertTrue(codigo.contains("    v$1[0] = $t4\n"), codigo);
+        assertTrue(codigo.contains("    v$1[0] = 4\n"), codigo);
+        assertTrue(codigo.contains("    $t5 = len v$1\n"), codigo);
+        assertTrue(codigo.contains("    $t6 = v$1[0]\n"), codigo);
+        assertTrue(codigo.contains("    param v$1\n    call usar, 1\n"), codigo);
+    }
+
+    @Test
+    void funcionResuelveGlobalRenombradaDeclaradaAntes() {
+        assertEquals("""
+                func primera, 0
+                    x = 1
+                    return x
+                endfunc
+                    x$1 = 2
+                func segunda, 0
+                    return x$1
+                endfunc
+                """, tac("""
+                fn primera(): int { let x = 1; return x; }
+                let x = 2;
+                fn segunda(): int { return x; }
+                """));
+    }
 
     @Test
     void andLogico_cortocircuito() {
@@ -268,7 +433,7 @@ public class GeneradorCodigoIntermedioTest {
     @Test
     void funcionesYLlamadas() {
         assertEquals("""
-                func sumar, 2
+                func sumar, 2, [a, b]
                     $t1 = a + b
                     return $t1
                 endfunc

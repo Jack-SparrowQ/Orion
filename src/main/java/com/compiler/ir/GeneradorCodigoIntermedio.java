@@ -3,7 +3,9 @@ package com.compiler.ir;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.compiler.lexer.TokenType;
 import com.compiler.parser.ast.*;
@@ -14,6 +16,8 @@ public class GeneradorCodigoIntermedio {
     private final List<Cuadrupla> codigo = new ArrayList<>();
     private int contadorTemporales = 0;
     private int contadorEtiquetas = 0;
+    private final Deque<Map<String, String>> ambitos = new ArrayDeque<>();
+    private final Map<String, Integer> declaraciones = new HashMap<>();
 
     /**
      * Etiquetas de los ciclos abiertos, el más interno arriba:
@@ -24,6 +28,9 @@ public class GeneradorCodigoIntermedio {
     public List<Cuadrupla> generar(List<Sentencia> programa) {
         codigo.clear();
         ciclos.clear();
+        ambitos.clear();
+        declaraciones.clear();
+        ambitos.push(new HashMap<>());
         contadorTemporales = 0;
         contadorEtiquetas = 0;
 
@@ -52,14 +59,15 @@ public class GeneradorCodigoIntermedio {
         switch (nodo) {
             case NodoDeclaracion dec -> {
                 // "let x: T;" no produce código: solo reserva el nombre
+                String nombre = declarar(dec.identificador().lexema);
                 if (dec.valor() != null) {
                     String valor = generarExpresion(dec.valor());
-                    emitir("=", valor, null, dec.identificador().lexema);
+                    emitir("=", valor, null, nombre);
                 }
             }
             case NodoAsignacion asig -> {
                 String valor = generarExpresion(asig.valor());
-                emitir("=", valor, null, asig.identificador().lexema);
+                emitir("=", valor, null, resolver(asig.identificador().lexema));
             }
             case NodoAsignacionElemento asig -> {
                 // Primero el destino: sus subíndices se evalúan una vez y antes que el valor
@@ -94,17 +102,17 @@ public class GeneradorCodigoIntermedio {
                     //     ifFalse c goto Lfin ; then ; Lfin:
                     String etiquetaFin = nuevaEtiqueta();
                     emitir("ifFalse", condicion, null, etiquetaFin);
-                    nIf.bloqueTrue().sentencias().forEach(this::generarSentencia);
+                    generarBloque(nIf.bloqueTrue());
                     emitir("label", null, null, etiquetaFin);
                 } else {
                     //     ifFalse c goto Lelse ; then ; goto Lfin ; Lelse: ; else ; Lfin:
                     String etiquetaElse = nuevaEtiqueta();
                     String etiquetaFin = nuevaEtiqueta();
                     emitir("ifFalse", condicion, null, etiquetaElse);
-                    nIf.bloqueTrue().sentencias().forEach(this::generarSentencia);
+                    generarBloque(nIf.bloqueTrue());
                     emitir("goto", null, null, etiquetaFin);
                     emitir("label", null, null, etiquetaElse);
-                    sino.forEach(this::generarSentencia);
+                    generarBloque(nIf.bloqueFalse());
                     emitir("label", null, null, etiquetaFin);
                 }
             }
@@ -118,7 +126,7 @@ public class GeneradorCodigoIntermedio {
                 emitir("ifFalse", condicion, null, etiquetaFin);
 
                 ciclos.push(new String[] { etiquetaInicio, etiquetaFin });
-                nWhile.cuerpo().sentencias().forEach(this::generarSentencia);
+                generarBloque(nWhile.cuerpo());
                 ciclos.pop();
 
                 emitir("goto", null, null, etiquetaInicio);
@@ -143,11 +151,13 @@ public class GeneradorCodigoIntermedio {
                 String condicion = nuevoTemporal();
                 emitir("<", indice, longitud, condicion);
                 emitir("ifFalse", condicion, null, etiquetaFin);
-                emitir("[]", iterable, indice, nFor.variable().lexema);
+                ambitos.push(new HashMap<>());
+                emitir("[]", iterable, indice, declarar(nFor.variable().lexema));
 
                 // continue debe pasar por el incremento: saltar a Linicio repetiría el elemento
                 ciclos.push(new String[] { etiquetaSiguiente, etiquetaFin });
                 nFor.cuerpo().sentencias().forEach(this::generarSentencia);
+                ambitos.pop();
                 ciclos.pop();
 
                 emitir("label", null, null, etiquetaSiguiente);
@@ -159,19 +169,23 @@ public class GeneradorCodigoIntermedio {
             // El análisis semántico ya garantizó que hay un ciclo abierto (E313).
             case NodoSalto salto -> emitir("goto", null, null,
                     ciclos.peek()[salto.palabraClave().tipo == TokenType.BREAK ? 1 : 0]);
-            // El código de tres direcciones no tiene ámbitos: el bloque se aplana
-            case NodoBloque bloque -> bloque.sentencias().forEach(this::generarSentencia);
-            //     func f, n ; cuerpo ; return ; endfunc
+            // El bloque se aplana, pero sus declaraciones conservan nombres IR distintos.
+            case NodoBloque bloque -> generarBloque(bloque);
+            //     func f, n, [parametros IR] ; cuerpo ; return ; endfunc
             // Se emite en su lugar: func/endfunc delimitan una definición, no código
-            // que se ejecute al pasar por ahí. Los parámetros se usan por su nombre.
+            // que se ejecute al pasar por ahí. Parámetros y cuerpo comparten ámbito.
             case NodoFuncion fn -> {
-                emitir("func", fn.nombre().lexema, String.valueOf(fn.parametros().size()), null);
+                ambitos.push(new HashMap<>());
+                List<String> parametros = fn.parametros().stream().map(p -> declarar(p.nombre().lexema)).toList();
+                emitir("func", fn.nombre().lexema, String.valueOf(parametros.size()),
+                        parametros.isEmpty() ? null : String.join(", ", parametros));
                 fn.cuerpo().sentencias().forEach(this::generarSentencia);
                 // Retorno implícito al final (las void pueden terminar sin return)
                 if (!codigo.get(codigo.size() - 1).op.equals("return")) {
                     emitir("return", null, null, null);
                 }
                 emitir("endfunc", null, null, null);
+                ambitos.pop();
             }
             case NodoReturn ret -> emitir("return",
                     ret.valor() == null ? null : generarExpresion(ret.valor()), null, null);
@@ -205,7 +219,7 @@ public class GeneradorCodigoIntermedio {
         return switch (expr) {
             case NodoLiteral l -> l.valor().lexema;
 
-            case NodoVariable v -> v.nombre().lexema;
+            case NodoVariable v -> resolver(v.nombre().lexema);
 
             case NodoBinario b -> {
                 String izquierda = generarExpresion(b.izquierda());
@@ -276,6 +290,29 @@ public class GeneradorCodigoIntermedio {
     }
 
     // ---------------- AUXILIARES ----------------
+
+    private void generarBloque(NodoBloque bloque) {
+        ambitos.push(new HashMap<>());
+        bloque.sentencias().forEach(this::generarSentencia);
+        ambitos.pop();
+    }
+
+    private String declarar(String nombre) {
+        int numero = declaraciones.getOrDefault(nombre, 0);
+        declaraciones.put(nombre, numero + 1);
+        String nombreIR = numero == 0 ? nombre : nombre + "$" + numero;
+        ambitos.peek().put(nombre, nombreIR);
+        return nombreIR;
+    }
+
+    private String resolver(String nombre) {
+        for (Map<String, String> ambito : ambitos) {
+            String nombreIR = ambito.get(nombre);
+            if (nombreIR != null) return nombreIR;
+        }
+        // Las pruebas aisladas de IR pueden omitir declaraciones; semántica las exige en la CLI.
+        return nombre;
+    }
 
     private void emitir(String op, String arg1, String arg2, String resultado) {
         codigo.add(new Cuadrupla(op, arg1, arg2, resultado));

@@ -10,7 +10,8 @@ package com.compiler.ir;
 //   (ifFalse, $t2, _,  $L1)   ->  ifFalse $t2 goto $L1
 //   (goto,    _,  _,  $L2)   ->  goto $L2
 //   (label,   _,  _,  $L1)   ->  $L1:
-//   (func,    f,  2,  _ )   ->  func f, 2      (inicio de la función f con 2 parámetros)
+//   (func,    f,  2,  "a, b$1") -> func f, 2, [a, b$1] (resultado lista los nombres IR de parámetros, en orden)
+// Sin parámetros, resultado es null y se imprime func f, 0.
 //   (endfunc, _,  _,  _ )   ->  endfunc
 //   (param,   a,  _,  _ )   ->  param a        (argumento de la próxima llamada)
 //   (call,    f,  2,  $t4)   ->  $t4 = call f, 2 (sin resultado: call f, 2)
@@ -50,7 +51,7 @@ public class Cuadrupla {
             case "=":
                 return resultado + " = " + arg1;
             case "func":
-                return "func " + arg1 + ", " + arg2;
+                return "func " + arg1 + ", " + arg2 + (resultado == null ? "" : ", [" + resultado + "]");
             case "endfunc":
                 return "endfunc";
             case "param":
