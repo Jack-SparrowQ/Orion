@@ -14,6 +14,61 @@ import com.compiler.parser.ast.Sentencia;
 
 public class GeneradorCodigoIntermedioTest {
 
+    @Test
+    void andLogico_cortocircuito() {
+        assertEquals("""
+                    $t1 = a
+                    ifFalse $t1 goto $L1
+                    $t1 = b
+                $L1:
+                    print $t1
+                """, tac("print(a && b);"));
+    }
+
+    @Test
+    void orLogico_cortocircuito() {
+        assertEquals("""
+                    $t1 = a
+                    ifFalse $t1 goto $L1
+                    goto $L2
+                $L1:
+                    $t1 = b
+                $L2:
+                    print $t1
+                """, tac("print(a || b);"));
+    }
+
+    /** El AND derecho conserva su propio resultado y queda dentro de la rama del OR. */
+    @Test
+    void logicosAnidados_respetanPrecedencia() {
+        assertEquals("""
+                    $t1 = a
+                    ifFalse $t1 goto $L1
+                    goto $L2
+                $L1:
+                    $t2 = b
+                    ifFalse $t2 goto $L3
+                    $t2 = c
+                $L3:
+                    $t1 = $t2
+                $L2:
+                    print $t1
+                """, tac("print(a || b && c);"));
+    }
+
+    /** La llamada derecha se omite en ejecucion cuando el izquierdo es false. */
+    @Test
+    void andLogico_llamadaDespuesDelSalto() {
+        assertEquals("""
+                    $t1 = false
+                    ifFalse $t1 goto $L1
+                    $t2 = call f, 0
+                    $t1 = $t2
+                $L1:
+                    print $t1
+                """, tac("print(false && f());"));
+    }
+
     /** Los nombres generados no pisan las variables del usuario t1 y L1. */
     @Test
     void temporalesYEtiquetas_noChocanConIdentificadores() {

@@ -237,6 +237,8 @@ $L2:
 
 Los temporales (`$t1`, `$t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`$L1`, `$L2`...) implementan los saltos del `if`/`else`. Llevan el prefijo `$`, que Orion no admite en identificadores, para que nunca coincidan con una variable del programa. Los arreglos usan `$t1 = array 3`, `x = $t1[i]`, `$t1[i] = x` y `$t2 = len $t1`, y un `for ... in` se traduce a un ciclo con índice mediante esas mismas operaciones.
 
+Los operadores `&&` y `||` usan cortocircuito con un temporal de resultado y saltos: `&&` salta al final si el izquierdo es falso; `||` salta a evaluar el derecho si el izquierdo es falso y, si es verdadero, salta al final; el código del derecho se emite después del salto condicional.
+
 ## Ejecución
 
 Requisitos: JDK 21 o superior y Maven.

@@ -209,6 +209,26 @@ public class GeneradorCodigoIntermedio {
 
             case NodoBinario b -> {
                 String izquierda = generarExpresion(b.izquierda());
+                if (b.operador().tipo == TokenType.AND_LOGICO || b.operador().tipo == TokenType.OR_LOGICO) {
+                    String temporal = nuevoTemporal();
+                    emitir("=", izquierda, null, temporal);
+                    String etiquetaFin;
+                    if (b.operador().tipo == TokenType.AND_LOGICO) {
+                        etiquetaFin = nuevaEtiqueta();
+                        emitir("ifFalse", temporal, null, etiquetaFin);
+                    } else {
+                        String etiquetaDerecha = nuevaEtiqueta();
+                        etiquetaFin = nuevaEtiqueta();
+                        emitir("ifFalse", temporal, null, etiquetaDerecha);
+                        emitir("goto", null, null, etiquetaFin);
+                        emitir("label", null, null, etiquetaDerecha);
+                    }
+                    // El salto debe preceder a todo el codigo del operando derecho.
+                    String derecha = generarExpresion(b.derecha());
+                    emitir("=", derecha, null, temporal);
+                    emitir("label", null, null, etiquetaFin);
+                    yield temporal;
+                }
                 String derecha = generarExpresion(b.derecha());
                 String temporal = nuevoTemporal(); // después de los hijos
                 emitir(b.operador().lexema, izquierda, derecha, temporal);

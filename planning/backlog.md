@@ -11,7 +11,7 @@ Detalle y justificación: ver la sección "Ruta" más abajo.
 
 ### Etapa 1 — Corrección del IR (errores confirmados)
 - [x] 1.1 (hecho) CRITICAL: los temporales/etiquetas chocan con identificadores del usuario (`let t1 = 5;` lo pisa `t1 = call f, 0`). Usar nombres que el lexer no pueda producir (p. ej. `%t1`, `%L1`).
-- [ ] 1.2 HIGH: `&&` y `||` no tienen cortocircuito en el IR (`false && f()` llama a `f`); el JS sí. Traducir con saltos.
+- [x] 1.2 (hecho) HIGH: `&&` y `||` no tienen cortocircuito en el IR (`false && f()` llama a `f`); el JS sí. Traducir con saltos.
 - [ ] 1.3 HIGH: el IR aplana los ámbitos: una local `x` de una función y una global `x`, o dos `let x` en bloques hermanos, comparten nombre. Renombrar a nombres únicos (`x`, `x.1`) usando la resolución del análisis semántico.
 - [ ] 1.4 MEDIUM: el IR no tiene tipos: `+` es suma o concatenación, los literales son lexemas. Emitir `concat` para cadenas y conservar el tipo de cada literal/temporal (necesario para plegar constantes).
 - [ ] 1.5 MEDIUM: las funciones se emiten intercaladas con el código principal. Estructurar el IR como lista de funciones + programa principal.
