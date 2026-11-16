@@ -1,3 +1,5 @@
 # The sh launcher must keep LF even with core.autocrlf=true; the cmd launcher uses CRLF.
 orion text eol=lf
 *.cmd text eol=crlf
+# Expected outputs are compared byte for byte with node stdout (LF)
+src/test/resources/programas/* text eol=lf
