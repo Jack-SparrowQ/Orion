@@ -1,3 +1,3 @@
 # Tarea activa
 
-Ninguna. Última cerrada: O.1 Plegado y propagación de constantes (revisada y aceptada). Siguiente: O.2.
+Ninguna. Última cerrada: O.2 Propagación de copias (revisada y aceptada). Siguiente: O.3.

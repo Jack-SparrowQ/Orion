@@ -43,7 +43,7 @@ El `.js` sale del IR (pasando por la lista de pasadas, aún vacía) y el corpus 
 
 ## Fase de optimización (ADR 0002)
 - [x] O.1 (hecho: `ir/opt/PlegadoConstantes`) Plegado y propagación de constantes local + condiciones constantes; opción `--no-opt`; `--emit-ir` muestra el IR optimizado.
-- [ ] O.2 Propagación de copias local y eliminación de copias redundantes.
+- [x] O.2 (hecho: `ir/opt/PropagacionCopias`) Propagación de copias local y eliminación de copias redundantes.
 - [ ] O.3 Código muerto global (vivacidad), bloques inalcanzables, simplificación de saltos; ¿punto fijo?
 - [ ] O.4 (opcional) Subexpresiones comunes locales.
 

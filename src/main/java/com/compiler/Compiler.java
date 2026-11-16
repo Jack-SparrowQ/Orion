@@ -19,6 +19,7 @@ import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.ir.ProgramaIR;
 import com.compiler.ir.opt.PlegadoConstantes;
+import com.compiler.ir.opt.PropagacionCopias;
 import com.compiler.codegen.GeneradorJS;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
@@ -31,7 +32,8 @@ import com.compiler.util.ConsoleColors;
 
 public class Compiler {
 
-        private static final List<UnaryOperator<ProgramaIR>> OPTIMIZACIONES = List.of(new PlegadoConstantes());
+        private static final List<UnaryOperator<ProgramaIR>> OPTIMIZACIONES = List.of(
+                new PlegadoConstantes(), new PropagacionCopias());
 
         static final int EXIT_OK = 0;
         static final int EXIT_SOURCE_ERRORS = 1;

@@ -1,0 +1,22 @@
+let g = 1;
+fn cambiar(): int { g = 9; return 2; }
+fn calcular(p: int) {
+    let x = p;
+    let y = x;
+    p += 1;
+    print(x, y, p);
+    let copia = p;
+    cambiar();
+    print(copia, p);
+    x = 7;
+    print(x, y);
+    let v = [x];
+    let alias = v;
+    alias[0] = p;
+    print(v[0]);
+    alias = [8];
+    print(v[0], alias[0]);
+    print(g + cambiar());
+}
+print(g + cambiar());
+calcular(3);
