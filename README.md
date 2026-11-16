@@ -17,30 +17,7 @@ El objetivo es construir una arquitectura modular que permita comprender cómo s
 
 El proceso de compilación se organiza en las siguientes etapas:
 
-```text
-Programa fuente
-      |
-      v
-Análisis léxico ........................ lista de tokens
-      |
-      v
-Análisis sintáctico .................... árbol de sintaxis abstracta (AST)
-      |
-      v
-Tabla de símbolos ...................... declaraciones con su tipo inferido
-      |
-      v
-Análisis semántico ..................... uso de identificadores y tipos
-      |
-      v
-Generación de código intermedio ........ código de tres direcciones (TAC)
-      |
-      v
-Optimización local .................... TAC optimizado
-      |
-      v
-Generación de JavaScript ............... programa .js, a partir del TAC
-```
+![alt text](image.png)
 
 Cada fase solo se ejecuta si las anteriores terminaron sin errores. Dentro de una fase se informan todos los errores encontrados, no solo el primero.
 
@@ -75,20 +52,20 @@ orion-compiler/
 
 ### Componentes principales
 
-| Componente                       | Responsabilidad                                                                                  |
-| -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `Compiler.java`                  | Interpreta la línea de comandos y coordina las fases de compilación.                             |
-| `Lexer.java`                     | Reconoce los tokens del programa fuente.                                                         |
-| `Parser.java`                    | Analiza la sintaxis, construye el AST y se recupera de errores para informar de todos.           |
-| `parser/ast`                     | `Sentencia` y `Expresion`: interfaces selladas cuyos nodos son `record`.                         |
-| `SymbolTable.java`               | Mantiene los identificadores declarados, su tipo y su categoría (variable o constante).          |
-| `SemanticAnalyzer.java`          | Comprueba el uso de identificadores, la división entre cero y los tipos.                         |
-| `GeneradorCodigoIntermedio.java` | Traduce el AST a instrucciones de código intermedio.                                             |
-| `Cuadrupla.java`                 | Representa una instrucción del código intermedio mediante operación, operandos y resultado.      |
-| `ProgramaIR.java`, `FuncionIR.java` | Código intermedio estructurado: funciones, programa principal y tabla de tipos.               |
-| `GrafoFlujo.java`                | Divide el código intermedio en bloques básicos y los conecta (base de las optimizaciones).        |
-| `GeneradorJS.java`               | Traduce el código intermedio a JavaScript.                                                       |
-| `JSGenerator.java`               | Traduce el AST a JavaScript; solo se usa en las pruebas para comparar resultados.                |
+| Componente                          | Responsabilidad                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `Compiler.java`                     | Interpreta la línea de comandos y coordina las fases de compilación.                        |
+| `Lexer.java`                        | Reconoce los tokens del programa fuente.                                                    |
+| `Parser.java`                       | Analiza la sintaxis, construye el AST y se recupera de errores para informar de todos.      |
+| `parser/ast`                        | `Sentencia` y `Expresion`: interfaces selladas cuyos nodos son `record`.                    |
+| `SymbolTable.java`                  | Mantiene los identificadores declarados, su tipo y su categoría (variable o constante).     |
+| `SemanticAnalyzer.java`             | Comprueba el uso de identificadores, la división entre cero y los tipos.                    |
+| `GeneradorCodigoIntermedio.java`    | Traduce el AST a instrucciones de código intermedio.                                        |
+| `Cuadrupla.java`                    | Representa una instrucción del código intermedio mediante operación, operandos y resultado. |
+| `ProgramaIR.java`, `FuncionIR.java` | Código intermedio estructurado: funciones, programa principal y tabla de tipos.             |
+| `GrafoFlujo.java`                   | Divide el código intermedio en bloques básicos y los conecta (base de las optimizaciones).  |
+| `GeneradorJS.java`                  | Traduce el código intermedio a JavaScript.                                                  |
+| `JSGenerator.java`                  | Traduce el AST a JavaScript; solo se usa en las pruebas para comparar resultados.           |
 
 Como `Sentencia` y `Expresion` son interfaces selladas, cada fase las recorre con un `switch` exhaustivo: al añadir un tipo de nodo nuevo, el proyecto no compila hasta que todas las fases lo manejen.
 
@@ -99,15 +76,15 @@ let a = 10;
 let b = 3.5;
 const max = 20;
 
-let c = a + b * 2;   // float
+let c = a + b * 2; // float
 a += 1;
 
 if (c > max) {
-    print(max);
+  print(max);
 } else if (c > 0) {
-    print(c);
+  print(c);
 } else {
-    print(0);
+  print(0);
 }
 ```
 
@@ -168,22 +145,22 @@ El análisis semántico se hace en dos pasadas:
 
 ### Tipos
 
-| Expresión                       | Operandos                          | Resultado                                         |
-| ------------------------------- | ---------------------------------- | ------------------------------------------------- |
-| `+ - * %`                       | numéricos                          | `int` si ambos son `int`; si no, `float`          |
-| `+`                             | `string`                           | `string` (concatenación)                          |
-| `/`                             | numéricos                          | `float` (en JavaScript, `7 / 2` es `3.5`)         |
-| `**`                            | numéricos                          | `float`, aunque ambos sean `int`                  |
-| `< <= > >=`                     | numéricos, o ambos `char`          | `bool`                                            |
-| `== !=`                         | del mismo tipo, o ambos numéricos  | `bool`; también `string` o `T[]` con `null`       |
-| `&& \|\|` y `!`                 | `bool`                             | `bool`                                            |
-| `-x`                            | numérico                           | el tipo de `x`                                    |
-| `x = valor`                     | mismo tipo que `x`                 | también `int` a `float` y `null` a `string`/`T[]` |
-| `if (condición)`                | `bool`                             | —                                                 |
-| `for (x in e)`                  | `e` es `string` o `T[]`            | `x` es `char` o `T`, de solo lectura              |
-| `[e1, e2]`                      | con un tipo común `T`              | `T[]`; `[]` toma el tipo del contexto             |
-| `a[i]`                          | `i` es `int`; `a` es `T[]`/`string`| `T`, o `char` en una cadena (no asignable)        |
-| `a.length`                      | `a` es `T[]` o `string`            | `int`                                             |
+| Expresión        | Operandos                           | Resultado                                         |
+| ---------------- | ----------------------------------- | ------------------------------------------------- |
+| `+ - * %`        | numéricos                           | `int` si ambos son `int`; si no, `float`          |
+| `+`              | `string`                            | `string` (concatenación)                          |
+| `/`              | numéricos                           | `float` (en JavaScript, `7 / 2` es `3.5`)         |
+| `**`             | numéricos                           | `float`, aunque ambos sean `int`                  |
+| `< <= > >=`      | numéricos, o ambos `char`           | `bool`                                            |
+| `== !=`          | del mismo tipo, o ambos numéricos   | `bool`; también `string` o `T[]` con `null`       |
+| `&& \|\|` y `!`  | `bool`                              | `bool`                                            |
+| `-x`             | numérico                            | el tipo de `x`                                    |
+| `x = valor`      | mismo tipo que `x`                  | también `int` a `float` y `null` a `string`/`T[]` |
+| `if (condición)` | `bool`                              | —                                                 |
+| `for (x in e)`   | `e` es `string` o `T[]`             | `x` es `char` o `T`, de solo lectura              |
+| `[e1, e2]`       | con un tipo común `T`               | `T[]`; `[]` toma el tipo del contexto             |
+| `a[i]`           | `i` es `int`; `a` es `T[]`/`string` | `T`, o `char` en una cadena (no asignable)        |
+| `a.length`       | `a` es `T[]` o `string`             | `int`                                             |
 
 Las variables declaradas dentro de un bloque solo son visibles en ese bloque, igual que `let`/`const` en el JavaScript generado. Cuando una expresión tiene un error, su tipo queda como desconocido y no provoca más errores en cascada.
 
@@ -191,38 +168,38 @@ Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por r
 
 ### Códigos de error
 
-| Código | Fase        | Significado                                                             |
-| ------ | ----------- | ----------------------------------------------------------------------- |
-| E100   | Léxica      | Carácter no reconocido.                                                 |
-| E101   | Léxica      | `&` suelto: se esperaba `&&`.                                           |
-| E102   | Léxica      | `\|` suelto: se esperaba `\|\|`.                                        |
-| E103   | Léxica      | Cadena o carácter sin cerrar.                                           |
-| E104   | Léxica      | Secuencia de escape no válida.                                          |
-| E105   | Léxica      | Comentario de bloque sin cerrar.                                        |
-| E107   | Léxica      | Literal de carácter vacío o con más de un carácter.                     |
-| E201   | Sintáctica  | Falta un elemento obligatorio (`;`, `=`, `)`, `}`...).                  |
-| E202   | Sintáctica  | Instrucción no reconocida.                                              |
-| E203   | Sintáctica  | Se esperaba una expresión.                                              |
-| E204   | Sintáctica  | Destino de asignación no válido.                                        |
-| E205   | Sintáctica  | Una expresión usada como sentencia debe ser una llamada.                |
-| E301   | Semántica   | Identificador no declarado.                                             |
-| E302   | Semántica   | Identificador declarado dos veces.                                      |
-| E303   | Semántica   | Identificador usado antes de su declaración o fuera de su bloque.       |
-| E304   | Semántica   | División entre una constante que vale cero.                             |
-| E305   | Semántica   | Reasignación de una constante.                                          |
-| E306   | Semántica   | Operador aplicado a tipos incompatibles.                                |
-| E307   | Semántica   | Asignación de un valor de tipo incompatible.                            |
-| E308   | Semántica   | La condición de un `if` no es `bool`.                                   |
-| E310   | Semántica   | Índice que no es `int` o valor que no se puede indexar.                 |
-| E311   | Semántica   | Propiedad inexistente: solo existe `.length`.                           |
-| E312   | Semántica   | No se puede inferir el tipo (`void`, `null` o `[]` sin contexto).       |
-| E313   | Semántica   | `break` o `continue` fuera de un ciclo.                                 |
-| E314   | Semántica   | Se llama a algo que no es una función.                                  |
-| E315   | Semántica   | Número de argumentos incorrecto.                                        |
-| E316   | Semántica   | `return` fuera de una función.                                          |
-| E317   | Semántica   | `return` con valor en una función `void`, o sin valor en una que no lo es. |
-| E318   | Semántica   | Falta `return` en algún camino de ejecución.                            |
-| E319   | Semántica   | `for ... in` sobre un valor que no se puede recorrer.                   |
+| Código | Fase       | Significado                                                                |
+| ------ | ---------- | -------------------------------------------------------------------------- |
+| E100   | Léxica     | Carácter no reconocido.                                                    |
+| E101   | Léxica     | `&` suelto: se esperaba `&&`.                                              |
+| E102   | Léxica     | `\|` suelto: se esperaba `\|\|`.                                           |
+| E103   | Léxica     | Cadena o carácter sin cerrar.                                              |
+| E104   | Léxica     | Secuencia de escape no válida.                                             |
+| E105   | Léxica     | Comentario de bloque sin cerrar.                                           |
+| E107   | Léxica     | Literal de carácter vacío o con más de un carácter.                        |
+| E201   | Sintáctica | Falta un elemento obligatorio (`;`, `=`, `)`, `}`...).                     |
+| E202   | Sintáctica | Instrucción no reconocida.                                                 |
+| E203   | Sintáctica | Se esperaba una expresión.                                                 |
+| E204   | Sintáctica | Destino de asignación no válido.                                           |
+| E205   | Sintáctica | Una expresión usada como sentencia debe ser una llamada.                   |
+| E301   | Semántica  | Identificador no declarado.                                                |
+| E302   | Semántica  | Identificador declarado dos veces.                                         |
+| E303   | Semántica  | Identificador usado antes de su declaración o fuera de su bloque.          |
+| E304   | Semántica  | División entre una constante que vale cero.                                |
+| E305   | Semántica  | Reasignación de una constante.                                             |
+| E306   | Semántica  | Operador aplicado a tipos incompatibles.                                   |
+| E307   | Semántica  | Asignación de un valor de tipo incompatible.                               |
+| E308   | Semántica  | La condición de un `if` no es `bool`.                                      |
+| E310   | Semántica  | Índice que no es `int` o valor que no se puede indexar.                    |
+| E311   | Semántica  | Propiedad inexistente: solo existe `.length`.                              |
+| E312   | Semántica  | No se puede inferir el tipo (`void`, `null` o `[]` sin contexto).          |
+| E313   | Semántica  | `break` o `continue` fuera de un ciclo.                                    |
+| E314   | Semántica  | Se llama a algo que no es una función.                                     |
+| E315   | Semántica  | Número de argumentos incorrecto.                                           |
+| E316   | Semántica  | `return` fuera de una función.                                             |
+| E317   | Semántica  | `return` con valor en una función `void`, o sin valor en una que no lo es. |
+| E318   | Semántica  | Falta `return` en algún camino de ejecución.                               |
+| E319   | Semántica  | `for ... in` sobre un valor que no se puede recorrer.                      |
 
 ## Generación de código intermedio
 
@@ -307,16 +284,16 @@ Códigos de salida: `0` éxito, `1` errores en el programa fuente, `2` uso incor
 mvn test
 ```
 
-| Suite                  | Qué cubre                                                                          |
-| ---------------------- | ---------------------------------------------------------------------------------- |
-| `LexerTest`            | Tokens, operadores, posiciones, comentarios, decimales y errores léxicos.          |
-| `ParserTest`           | Precedencia, asociatividad, sentencias, mensajes de error y recuperación.          |
-| `SemanticAnalyzerTest` | Inferencia y comprobación de tipos, ámbitos y errores semánticos.                  |
-| `GeneradorCodigoIntermedioTest`, `GrafoFlujoTest` | Código intermedio (nombres, cortocircuito, tipos) y bloques básicos.   |
-| `GeneradorJSTest`, `JSGeneratorTest` | Generación de JavaScript desde el código intermedio y desde el AST.             |
-| `EjecucionTest`        | Ejecuta con `node` los programas de `src/test/resources/programas/` y compara su salida; además compara el JS desde el código intermedio con el JS desde el AST. |
-| `CompilatorTest`       | Programas completos: salida, código de salida y archivos generados (golden files). |
-| `OptionsTest`, `CliTest` | Línea de comandos.                                                               |
+| Suite                                             | Qué cubre                                                                                                                                                        |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LexerTest`                                       | Tokens, operadores, posiciones, comentarios, decimales y errores léxicos.                                                                                        |
+| `ParserTest`                                      | Precedencia, asociatividad, sentencias, mensajes de error y recuperación.                                                                                        |
+| `SemanticAnalyzerTest`                            | Inferencia y comprobación de tipos, ámbitos y errores semánticos.                                                                                                |
+| `GeneradorCodigoIntermedioTest`, `GrafoFlujoTest` | Código intermedio (nombres, cortocircuito, tipos) y bloques básicos.                                                                                             |
+| `GeneradorJSTest`, `JSGeneratorTest`              | Generación de JavaScript desde el código intermedio y desde el AST.                                                                                              |
+| `EjecucionTest`                                   | Ejecuta con `node` los programas de `src/test/resources/programas/` y compara su salida; además compara el JS desde el código intermedio con el JS desde el AST. |
+| `CompilatorTest`                                  | Programas completos: salida, código de salida y archivos generados (golden files).                                                                               |
+| `OptionsTest`, `CliTest`                          | Línea de comandos.                                                                                                                                               |
 
 Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de programas completos. Tras un cambio de comportamiento deliberado se regeneran con `mvn test -Dgolden.update=true` y se revisan con `git diff`.
 
