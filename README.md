@@ -268,6 +268,16 @@ El opcode `concat` distingue la concatenación de cadenas de la suma numérica `
 
 La pasada de constantes trabaja por bloque básico: propaga literales, pliega operaciones seguras y simplifica condiciones constantes. Conserva las asignaciones sin uso y no propaga entre bloques. Tras una llamada descarta las constantes globales; conserva los locales y temporales. `--emit-ir` muestra el resultado optimizado y `--no-opt` desactiva las pasadas tanto para TAC como para JavaScript.
 
+## Optimización
+
+Antes de generar el JavaScript, el código intermedio pasa por cuatro pasadas que se repiten hasta que no
+cambia nada: plegado y propagación de constantes, propagación de copias, eliminación de código muerto y
+simplificación de saltos. Ninguna cambia lo que el programa imprime. Por ejemplo, un programa que calcula
+`neto = total - descuento` con valores conocidos y una rama que nunca se cumple queda reducido a `print 30`.
+
+La explicación paso a paso, con ejemplos reales antes y después de cada pasada, está en
+[`docs/optimizacion.md`](docs/optimizacion.md). `--no-opt` desactiva las pasadas para comparar.
+
 ## Ejecución
 
 Requisitos: JDK 21 o superior y Maven.
