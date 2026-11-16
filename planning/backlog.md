@@ -41,8 +41,11 @@ El `.js` sale del IR (pasando por la lista de pasadas, aún vacía) y el corpus 
 - LOW (previo): identificadores Orion que son palabras reservadas o globales de JS (`class`, `new`, `function`, `console`...) rompen el JS generado.
 - El JS desde IR es menos legible (despachador `switch`); si importa, reconstruir `if`/`while` desde el CFG.
 
-## Futuro
-- Optimizaciones del IR: plegado y propagación de constantes, propagación de copias, subexpresiones comunes, código muerto, saltos encadenados.
+## Fase de optimización (ADR 0002)
+- [x] O.1 (hecho: `ir/opt/PlegadoConstantes`) Plegado y propagación de constantes local + condiciones constantes; opción `--no-opt`; `--emit-ir` muestra el IR optimizado.
+- [ ] O.2 Propagación de copias local y eliminación de copias redundantes.
+- [ ] O.3 Código muerto global (vivacidad), bloques inalcanzables, simplificación de saltos; ¿punto fijo?
+- [ ] O.4 (opcional) Subexpresiones comunes locales.
 
 ## Done
 - Restored standard `src/` layout; untracked compiled `.class` files.

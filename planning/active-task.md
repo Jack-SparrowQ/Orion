@@ -1,3 +1,3 @@
 # Tarea activa
 
-Ninguna. Ruta hacia la optimización completa (etapas 0–3). Siguiente: fase de optimización del IR (`planning/backlog.md`, "Futuro" y "Notas para la fase de optimización").
+Ninguna. Última cerrada: O.1 Plegado y propagación de constantes (revisada y aceptada). Siguiente: O.2.

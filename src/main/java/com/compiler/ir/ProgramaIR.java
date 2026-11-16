@@ -22,7 +22,7 @@ public record ProgramaIR(List<FuncionIR> funciones, List<Cuadrupla> principal, M
         if (operando.equals("null")) return Type.NULL;
         if (operando.startsWith("\"") && operando.endsWith("\"") && operando.length() >= 2) return Type.STRING;
         if (operando.startsWith("'") && operando.endsWith("'") && operando.length() >= 3) return Type.CHAR;
-        if (operando.matches("[0-9]+(?:\\.[0-9]+)?")) return operando.contains(".") ? Type.FLOAT : Type.INT;
+        if (operando.matches("-?[0-9]+(?:\\.[0-9]+)?")) return operando.contains(".") ? Type.FLOAT : Type.INT;
         return null;
     }
 }

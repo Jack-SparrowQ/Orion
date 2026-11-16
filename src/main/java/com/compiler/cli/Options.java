@@ -44,6 +44,7 @@ public final class Options {
     private final boolean quiet;
     private final boolean help;
     private final boolean version;
+    private final boolean noOpt;
 
     /**
      * Constructor.
@@ -64,6 +65,12 @@ public final class Options {
         boolean help,
         boolean version
     ) {
+        this(inputFile, outputPath, mode, verbose, quiet, help, version, false);
+    }
+
+    public Options(Optional<Path> inputFile, Optional<Path> outputPath, Mode mode,
+            boolean verbose, boolean quiet, boolean help, boolean version, boolean noOpt) {
+        this.noOpt = noOpt;
         this.inputFile = requireOptional(inputFile, "inputFile");
         this.outputPath = requireOptional(outputPath, "outputPath");
 
@@ -99,6 +106,7 @@ public final class Options {
         Mode mode = null;
         boolean verbose = false;
         boolean quiet = false;
+        boolean noOpt = false;
 
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -116,6 +124,7 @@ public final class Options {
             switch (arg) {
                 case "--verbose" -> verbose = true;
                 case "--quiet" -> quiet = true;
+                case "--no-opt" -> noOpt = true;
                 case "--check" -> mode = setMode(mode, Mode.CHECK);
                 case "--emit-ir" -> mode = setMode(mode, Mode.EMIT_IR);
                 case "--tokens" -> mode = setMode(mode, Mode.TOKENS);
@@ -157,7 +166,7 @@ public final class Options {
             throw new UsageException("missing input file");
         }
 
-        return new Options(Optional.of(input), Optional.ofNullable(output), mode, verbose, quiet, false, false);
+        return new Options(Optional.of(input), Optional.ofNullable(output), mode, verbose, quiet, false, false, noOpt);
     }
 
     private static Mode setMode(Mode current, Mode requested) throws UsageException {
@@ -210,6 +219,10 @@ public final class Options {
 
     public boolean isHelp() {
         return help;
+    }
+
+    public boolean isNoOpt() {
+        return noOpt;
     }
 
     public boolean isVersion() {

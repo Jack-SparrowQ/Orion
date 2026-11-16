@@ -121,6 +121,13 @@ E301[SEMANTIC] Line 2, column 5: ...
 - **Behavior:** Create parent directories when necessary, overwrite an existing output file, and refuse to overwrite the input source file (exit code `2`).
 - **Errors:** Missing path argument: exit code `2`. Any output-write failure: exit code `3`.
 
+### `--no-opt`
+
+- **Purpose:** Disable all IR optimization passes for both JavaScript and `--emit-ir`.
+- **Arguments:** None. Optimizations are enabled by default.
+- **Compatibility:** Accepted with every mode; has no effect in modes that stop before IR generation.
+- **Output:** Preserve the original generated IR and compile JavaScript from that IR.
+
 ### `--verbose`
 
 - **Purpose:** Display additional process information.
@@ -151,7 +158,7 @@ E301[SEMANTIC] Line 2, column 5: ...
 
 ### `--emit-ir`
 
-- **Purpose:** Generate the textual intermediate representation (three-address code, or TAC).
+- **Purpose:** Generate the optimized textual intermediate representation (three-address code, or TAC); use `--no-opt` for the original IR.
 - **Arguments:** None.
 - **Compatibility:** Compatible with `-o`, `--verbose`, and `--quiet`. Exclusive with the other modes.
 - **Output:** Write `<basename>.tac`, or the path supplied by `-o`. Do not generate JavaScript. Display quadruples only with `--verbose`.
@@ -207,6 +214,7 @@ orion examples/hello.orion
 orion examples/hello.orion -o build/hello.js
 orion --check examples/hello.orion
 orion --emit-ir examples/hello.orion
+orion --emit-ir --no-opt examples/hello.orion
 orion --tokens examples/hello.orion
 orion --ast examples/hello.orion
 ```
@@ -232,7 +240,7 @@ The `.tac` extension follows the project's current naming convention; the extens
 
 ### Expected TAC output
 
-For `--emit-ir` with output directed to stdout (`-o -`), the expected output for the example program is (the generator indents each instruction with four spaces):
+For `--emit-ir --no-opt` with output directed to stdout (`-o -`), the expected output for the example program is (the generator indents each instruction with four spaces):
 
 ```text
 a = 10
@@ -266,6 +274,7 @@ Modes:
 
 Options:
   -o, --output <path>   Output path ('-' for stdout)
+      --no-opt          Disable IR optimization passes
       --verbose         Display process details
       --quiet           Suppress informational messages
   -h, --help            Display this help

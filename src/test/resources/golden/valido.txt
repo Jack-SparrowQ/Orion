@@ -11,13 +11,12 @@ $bucle: for (;;) switch ($pc) {
     case 0:
         a = 10;
         b = 3;
-        $t1 = b * 2;
-        $t2 = a + $t1;
-        c = $t2;
+        $t1 = 6;
+        $t2 = 16;
+        c = 16;
         ok = true;
-        console.log(c);
-        $t3 = a > 0;
-        if (!($t3)) { $pc = 1; continue $bucle; }
+        console.log(16);
+        $t3 = true;
         console.log(a);
     case 1:
         break $bucle;

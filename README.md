@@ -36,7 +36,7 @@ Análisis semántico ..................... uso de identificadores y tipos
 Generación de código intermedio ........ código de tres direcciones (TAC)
       |
       v
-Optimización (pendiente) ............... TAC optimizado
+Optimización local .................... TAC optimizado
       |
       v
 Generación de JavaScript ............... programa .js, a partir del TAC
@@ -232,7 +232,7 @@ El generador transforma el AST en código de tres direcciones (_Three-Address Co
 (operación, argumento1, argumento2, resultado)
 ```
 
-Para el programa de ejemplo de la sección anterior (`orion --emit-ir ejemplo.orion -o -`):
+Para el programa de ejemplo de la sección anterior (`orion --emit-ir --no-opt ejemplo.orion -o -`):
 
 ```text
     a = 10
@@ -266,6 +266,8 @@ Cada declaración conserva su nombre en su primera aparición y recibe sufijos `
 
 El opcode `concat` distingue la concatenación de cadenas de la suma numérica `+`; `ProgramaIR.tipos` guarda el tipo de cada variable, parámetro y temporal por nombre IR, y `tipo(operando)` también reconoce los literales.
 
+La pasada de constantes trabaja por bloque básico: propaga literales, pliega operaciones seguras y simplifica condiciones constantes. Conserva las asignaciones sin uso y no propaga entre bloques. Tras una llamada descarta las constantes globales; conserva los locales y temporales. `--emit-ir` muestra el resultado optimizado y `--no-opt` desactiva las pasadas tanto para TAC como para JavaScript.
+
 ## Ejecución
 
 Requisitos: JDK 21 o superior y Maven.
@@ -280,7 +282,8 @@ Modos principales (uno por invocación):
 ```bash
 orion programa.orion              # compila a programa.js
 orion --check programa.orion      # solo valida
-orion --emit-ir programa.orion    # genera programa.tac
+orion --emit-ir programa.orion    # genera programa.tac optimizado
+orion --emit-ir --no-opt programa.orion # muestra el IR sin optimizar
 orion --tokens programa.orion     # muestra los tokens
 orion --ast programa.orion        # muestra el AST
 orion --help                      # todas las opciones
@@ -309,7 +312,7 @@ Los _golden files_ (`src/test/resources/golden/`) guardan la salida esperada de 
 
 ## Alcance y trabajo futuro
 
-- Optimizaciones sobre el código intermedio.
+- Propagación de copias y eliminación de código muerto sobre el código intermedio.
 
 ## Documentación académica
 

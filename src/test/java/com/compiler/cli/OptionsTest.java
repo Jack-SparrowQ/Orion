@@ -15,6 +15,16 @@ import com.compiler.cli.Options.UsageException;
 
 public class OptionsTest {
 
+    @Test
+    void noOptEsUnaOpcionSinValorCompatibleConLosModos() throws UsageException {
+        assertFalse(Options.parse(new String[] {"a.orion"}).isNoOpt());
+        for (String modo : new String[] {"--emit-ir", "--check", "--tokens", "--ast"}) {
+            assertTrue(Options.parse(new String[] {modo, "a.orion", "--no-opt", "--no-opt"}).isNoOpt());
+        }
+        assertTrue(Options.parse(new String[] {"--no-opt", "a.orion"}).isNoOpt());
+        assertEquals("option '--no-opt' does not take a value", usageError("--no-opt=yes", "a.orion"));
+    }
+
     private static String usageError(String... args) {
         return assertThrows(UsageException.class, () -> Options.parse(args)).getMessage();
     }

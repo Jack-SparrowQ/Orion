@@ -13,6 +13,21 @@ import org.junit.jupiter.api.io.TempDir;
 /** Comportamiento de Compiler.run: ayuda, version, lectura de archivos y rutas de salida. */
 public class CliTest {
 
+    @Test
+    void noOptDesactivaPasadasEnIrYJavaScript() throws IOException {
+        Path src = fuente("opt.orion", "print(2 + 3);");
+        for (boolean ir : new boolean[] {true, false}) {
+            String modo = ir ? "--emit-ir" : "--quiet";
+            ResultadoCompilacion optimizado = ResultadoCompilacion.ejecutarCli(modo, src.toString(), "-o", "-");
+            ResultadoCompilacion original = ResultadoCompilacion.ejecutarCli(modo, "--no-opt", src.toString(), "-o", "-");
+            assertEquals(0, optimizado.exitCode);
+            assertEquals(0, original.exitCode);
+            assertTrue(optimizado.stdout.contains("$t1 = 5"), optimizado.stdout);
+            assertTrue(original.stdout.contains("$t1 = 2 + 3"), original.stdout);
+        }
+        assertTrue(ResultadoCompilacion.ejecutarCli("--help").stdout.contains("--no-opt"));
+    }
+
     @TempDir
     Path dir;
 
@@ -71,7 +86,7 @@ public class CliTest {
         ResultadoCompilacion r = ResultadoCompilacion.ejecutarCli(src.toString(), "-o", out.toString(), "--quiet");
         assertEquals(0, r.exitCode);
         assertEquals("", r.stderr);
-        assertTrue(Files.readString(out).contains("console.log(a)"));
+        assertTrue(Files.readString(out).contains("console.log(10)"));
     }
 
     @Test
@@ -79,7 +94,7 @@ public class CliTest {
         Path src = fuente("hello.orion", "let a = 10;\nlet b = 3;\nprint(a + b * 2);\n");
         ResultadoCompilacion r = ResultadoCompilacion.ejecutarCli("--emit-ir", src.toString(), "-o", "-");
         assertEquals(0, r.exitCode);
-        assertTrue(r.stdout.contains("$t1 = b * 2"), r.stdout);
+        assertTrue(r.stdout.contains("$t1 = 6"), r.stdout);
         assertEquals("", r.stderr);
     }
 

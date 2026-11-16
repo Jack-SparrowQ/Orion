@@ -18,6 +18,7 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.ir.ProgramaIR;
+import com.compiler.ir.opt.PlegadoConstantes;
 import com.compiler.codegen.GeneradorJS;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
@@ -30,7 +31,7 @@ import com.compiler.util.ConsoleColors;
 
 public class Compiler {
 
-        private static final List<UnaryOperator<ProgramaIR>> OPTIMIZACIONES = List.of();
+        private static final List<UnaryOperator<ProgramaIR>> OPTIMIZACIONES = List.of(new PlegadoConstantes());
 
         static final int EXIT_OK = 0;
         static final int EXIT_SOURCE_ERRORS = 1;
@@ -51,6 +52,7 @@ public class Compiler {
 
                 Options:
                   -o, --output <path>   Output path ('-' for stdout)
+                      --no-opt          Disable IR optimization passes
                       --verbose         Display process details
                       --quiet           Suppress informational messages
                   -h, --help            Display this help
@@ -123,7 +125,7 @@ public class Compiler {
             return EXIT_IO;
         }
 
-        return compile(orionCode, mode, output, options.isVerbose(), options.isQuiet());
+        return compile(orionCode, mode, output, options.isVerbose(), options.isQuiet(), options.isNoOpt());
     }
 
     /**
@@ -137,6 +139,10 @@ public class Compiler {
      */
     static int compile(String orionCode, Mode mode, Path output, boolean verbose, boolean quiet) {
 
+        return compile(orionCode, mode, output, verbose, quiet, false);
+    }
+
+    static int compile(String orionCode, Mode mode, Path output, boolean verbose, boolean quiet, boolean noOpt) {
         info = verbose ? System.err : new PrintStream(OutputStream.nullOutputStream());
 
         showHeader(orionCode);
@@ -176,8 +182,10 @@ public class Compiler {
 
         ProgramaIR programaIR = generateIntermediateCode(ASTTree.get(), tipos.get());
 
+        if (!noOpt) programaIR = optimizar(programaIR);
+
         String artifact = mode == Mode.EMIT_IR ? GeneradorCodigoIntermedio.aTexto(programaIR)
-                : generarJavaScript(optimizar(programaIR));
+                : generarJavaScript(programaIR);
 
         int exitCode = writeArtifact(artifact, output, quiet);
 

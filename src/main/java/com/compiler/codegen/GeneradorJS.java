@@ -64,6 +64,8 @@ public class GeneradorJS {
         List<String> parametros = new ArrayList<>();
         for (Cuadrupla c : cuerpo) {
             String a = operando(c.arg1);
+            // JS exige parentesis para una base negativa literal en una potencia.
+            if (c.op.equals("**") && c.arg1.startsWith("-")) a = "(" + a + ")";
             String b = operando(c.arg2);
             String r = c.resultado;
             String sentencia = switch (c.op) {
