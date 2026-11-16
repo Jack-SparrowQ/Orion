@@ -1,0 +1,11 @@
+let vuelta = 0;
+let suma = 0;
+while (vuelta < 3) {
+    vuelta += 1;
+    for (n in [1, 2, 3, 4]) {
+        if (n == 2) { continue; }
+        if (vuelta == 2 && n == 3) { break; }
+        suma += n;
+    }
+}
+print(suma, vuelta);

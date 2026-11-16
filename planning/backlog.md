@@ -19,9 +19,9 @@ Detalle y justificación: ver la sección "Ruta" más abajo.
 ### Etapa 2 — Infraestructura de optimización
 - [x] 2.1 ADR 0001: pipeline `AST -> IR -> optimización -> JS` (decisión del usuario).
 - [ ] 2.2 Bloques básicos y grafo de flujo de control por función (líderes, sucesores/predecesores), con salida de depuración.
-- [ ] 2.3 Contrato de una pasada: `List<Cuadrupla> -> List<Cuadrupla>`; en `Compiler`, una lista de pasadas (vacía por ahora) entre el IR y el JS.
-- [ ] 2.4 Generador IR→JS (`codegen` nuevo): despachador por bloque básico, comprobaciones en tiempo de ejecución por operación, mismo formato de `print`. Prueba diferencial contra el generador AST→JS sobre todo el corpus.
-- [ ] 2.5 Cambiar `Compiler` para que el `.js` salga del IR; el generador AST→JS queda solo como oráculo de pruebas.
+- [x] 2.3 (hecho: `Compiler.OPTIMIZACIONES`, lista vacía de `UnaryOperator<ProgramaIR>`) Contrato de una pasada; en `Compiler`, una lista de pasadas (vacía por ahora) entre el IR y el JS.
+- [x] 2.4 (hecho: `codegen/GeneradorJS`, prueba diferencial en `EjecucionTest`) Generador IR→JS: despachador, comprobaciones en tiempo de ejecución por operación, mismo formato de `print`.
+- [x] 2.5 (hecho) Cambiar `Compiler` para que el `.js` salga del IR; el generador AST→JS queda solo como oráculo de pruebas.
 
 ### Etapa 3 — Cierre y documentación (en paralelo, sin dependencias)
 - [ ] 3.1 README desactualizado: la gramática no incluye `while`, `fn`, `return`, `break`/`continue`, `let x: T;`; faltan los códigos E309, E313–E318; enlace roto `orion-compiler/docs/CLI.md`.
@@ -30,6 +30,15 @@ Detalle y justificación: ver la sección "Ruta" más abajo.
 
 ### Criterio de "listo para optimizar"
 El `.js` sale del IR (pasando por la lista de pasadas, aún vacía) y el corpus da la misma salida en `node` que con el generador AST→JS; ningún hallazgo CRITICAL/HIGH abierto; IR con nombres únicos, cortocircuito, tipos y funciones separadas; CFG disponible.
+
+## Notas para la fase de optimización
+- `[]`, `[]=`, `len`, `concat` y `call` pueden lanzar o tener efectos: una pasada de código muerto no debe eliminarlos aunque su resultado no se use (la comprobación de índice que precede a `[]=` depende de ello).
+- Una declaración sin valor emite `x = void 0` para reiniciarla en cada vuelta de un ciclo; `ProgramaIR.tipo("void 0")` devuelve null.
+- Las pasadas reciben y devuelven `ProgramaIR` (`UnaryOperator<ProgramaIR>`); verificación: `EjecucionTest` (corpus + diferencial).
+
+## Otros pendientes
+- LOW (previo): identificadores Orion que son palabras reservadas o globales de JS (`class`, `new`, `function`, `console`...) rompen el JS generado.
+- El JS desde IR es menos legible (despachador `switch`); si importa, reconstruir `if`/`while` desde el CFG.
 
 ## Futuro
 - Optimizaciones del IR: plegado y propagación de constantes, propagación de copias, subexpresiones comunes, código muerto, saltos encadenados.

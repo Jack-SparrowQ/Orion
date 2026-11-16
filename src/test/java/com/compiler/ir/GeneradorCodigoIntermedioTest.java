@@ -31,6 +31,23 @@ import com.compiler.semantic.Type;
 public class GeneradorCodigoIntermedioTest {
 
     @Test
+    void localesDeFuncion_incluyenVariablesForYTemporalesPeroNoParametrosNiGlobales() {
+        ProgramaIR programa = ir("""
+                let global = 1;
+                fn f(p: int): int {
+                    let x = p;
+                    for (c in "ab") { let z = c; }
+                    global += x;
+                    return global;
+                }
+                """);
+        FuncionIR funcion = programa.funciones().get(0);
+        assertEquals(List.of("p"), funcion.parametros());
+        assertEquals(List.of("x", "$t1", "$t2", "$t3", "$t4", "c", "z", "$t5"), funcion.locales());
+        assertEquals(Type.INT, programa.tipo("global"));
+    }
+
+    @Test
     void concatSeDistingueDeSumaNumerica() {
         ProgramaIR programa = ir("print(\"a\" + \"b\", 1 + 2, 1 + 2.5);");
         assertEquals(List.of("concat", "+", "+", "param", "param", "param", "printn"),
@@ -231,22 +248,26 @@ public class GeneradorCodigoIntermedioTest {
     void records_copianListasYExponenListasInmutables() {
         List<String> parametros = new ArrayList<>(List.of("x"));
         List<Cuadrupla> cuerpo = new ArrayList<>(List.of(new Cuadrupla("return", "x", null, null)));
-        FuncionIR funcion = new FuncionIR("f", parametros, cuerpo);
+        List<String> locales = new ArrayList<>(List.of("$t1"));
+        FuncionIR funcion = new FuncionIR("f", parametros, locales, cuerpo);
         List<FuncionIR> funciones = new ArrayList<>(List.of(funcion));
         List<Cuadrupla> principal = new ArrayList<>(List.of(new Cuadrupla("print", "1", null, null)));
         Map<String, Type> tipos = new HashMap<>(Map.of("x", Type.INT));
         ProgramaIR programa = new ProgramaIR(funciones, principal, tipos);
         parametros.clear();
+        locales.clear();
         cuerpo.clear();
         funciones.clear();
         principal.clear();
         tipos.clear();
         assertEquals(List.of("x"), funcion.parametros());
+        assertEquals(List.of("$t1"), funcion.locales());
         assertEquals(1, funcion.cuerpo().size());
         assertEquals(List.of(funcion), programa.funciones());
         assertEquals(1, programa.principal().size());
         assertEquals(Map.of("x", Type.INT), programa.tipos());
         assertThrows(UnsupportedOperationException.class, () -> funcion.parametros().clear());
+        assertThrows(UnsupportedOperationException.class, () -> funcion.locales().clear());
         assertThrows(UnsupportedOperationException.class, () -> funcion.cuerpo().clear());
         assertThrows(UnsupportedOperationException.class, () -> programa.funciones().clear());
         assertThrows(UnsupportedOperationException.class, () -> programa.principal().clear());
@@ -370,8 +391,10 @@ public class GeneradorCodigoIntermedioTest {
     @Test
     void bloquesIndependientes_reservanDeclaracionesSinInicializador() {
         assertEquals("""
+                    x = void 0
                     x = 1
                     print x
+                    x$1 = void 0
                     x$1 = 2
                     print x$1
                     x$2 = 3
@@ -394,8 +417,8 @@ public class GeneradorCodigoIntermedioTest {
         assertTrue(codigo.contains("    $t3 = v$1[0]\n"), codigo);
         assertTrue(codigo.contains("    v$1[0] = $t4\n"), codigo);
         assertTrue(codigo.contains("    v$1[0] = 4\n"), codigo);
-        assertTrue(codigo.contains("    $t5 = len v$1\n"), codigo);
-        assertTrue(codigo.contains("    $t6 = v$1[0]\n"), codigo);
+        assertTrue(codigo.contains("    $t6 = len v$1\n"), codigo);
+        assertTrue(codigo.contains("    $t7 = v$1[0]\n"), codigo);
         assertTrue(codigo.contains("    param v$1\n    call usar, 1\n"), codigo);
     }
 
@@ -619,8 +642,9 @@ public class GeneradorCodigoIntermedioTest {
     void asignacionAElemento() {
         assertEquals("""
                     $t1 = m[0]
-                    $t2 = a + 1
-                    $t1[i] = $t2
+                    $t2 = $t1[i]
+                    $t3 = a + 1
+                    $t1[i] = $t3
                 """, tac("m[0][i] = a + 1;", "let m = [[1]]; let i = 0; let a = 2;"));
     }
 

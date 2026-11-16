@@ -5,10 +5,17 @@
 orion: generated programa.js
 === FILES ===
 --- programa.js ---
-let a = 1;
-if (a > 0) {
-    let b = 2;
-    console.log(b);
-    console.log(a);
+let $t1, a, b;
+let $pc = 0;
+$bucle: for (;;) switch ($pc) {
+    case 0:
+        a = 1;
+        $t1 = a > 0;
+        if (!($t1)) { $pc = 1; continue $bucle; }
+        b = 2;
+        console.log(b);
+        console.log(a);
+    case 1:
+        break $bucle;
 }
 

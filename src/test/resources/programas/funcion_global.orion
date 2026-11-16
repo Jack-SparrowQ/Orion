@@ -1,0 +1,16 @@
+let contador = 1;
+fn incrementar(paso: int): int {
+    contador += paso;
+    return contador;
+}
+print(incrementar(2));
+print(contador);
+print(contador, incrementar(1), contador);
+print(contador + incrementar(2));
+print(contador);
+print([contador, incrementar(1)][0]);
+fn sumar(a: int, b: int): int { return a + b; }
+print(sumar(contador, incrementar(1)));
+print(contador);
+incrementar(4);
+print(contador);

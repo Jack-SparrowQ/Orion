@@ -1,0 +1,15 @@
+let llamadas = 0;
+fn seguir(): bool {
+    llamadas += 1;
+    return true;
+}
+let n = 0;
+while (n < 2 && seguir()) { n += 1; }
+print(n, llamadas);
+let c = '%';
+print(c, "literal", 7);
+print("100%d");
+print("nul\01");
+print("\\01");
+print("crfin");
+print("A😀B".length, "A😀B"[1]);

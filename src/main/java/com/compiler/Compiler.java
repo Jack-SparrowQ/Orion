@@ -3,6 +3,7 @@ package com.compiler;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -17,17 +18,19 @@ import com.compiler.error.ErrorHandler;
 import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.ir.ProgramaIR;
+import com.compiler.codegen.GeneradorJS;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
 import com.compiler.parser.ast.Expresion;
 import com.compiler.parser.ast.Sentencia;
 import com.compiler.semantic.*;
 import com.compiler.util.ASTPrinter;
-import com.compiler.util.JSGenerator;
 
 import com.compiler.util.ConsoleColors;
 
 public class Compiler {
+
+        private static final List<UnaryOperator<ProgramaIR>> OPTIMIZACIONES = List.of();
 
         static final int EXIT_OK = 0;
         static final int EXIT_SOURCE_ERRORS = 1;
@@ -171,9 +174,10 @@ public class Compiler {
             return EXIT_OK;
         }
 
-        String tacCode = generateIntermediateCode(ASTTree.get(), tipos.get());
+        ProgramaIR programaIR = generateIntermediateCode(ASTTree.get(), tipos.get());
 
-        String artifact = mode == Mode.EMIT_IR ? tacCode : generarJavaScript(ASTTree.get(), tipos.get());
+        String artifact = mode == Mode.EMIT_IR ? GeneradorCodigoIntermedio.aTexto(programaIR)
+                : generarJavaScript(optimizar(programaIR));
 
         int exitCode = writeArtifact(artifact, output, quiet);
 
@@ -417,9 +421,9 @@ public class Compiler {
     /**
      * Phase 5: Intermediate code generation (TAC and quadruples)
      * @param arbolAST
-     * @return the three-address code as text.
+     * @return the structured intermediate program.
      */
-    private static String generateIntermediateCode(List<Sentencia> arbolAST, Map<Expresion, Type> tipos) {
+    private static ProgramaIR generateIntermediateCode(List<Sentencia> arbolAST, Map<Expresion, Type> tipos) {
         info.println("=== 5. GENERACION DE CODIGO INTERMEDIO ===");
 
         GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
@@ -445,22 +449,21 @@ public class Compiler {
         }
         info.println();
 
-        return textoTAC;
+        return codigoIntermedio;
     }
 
     /**
      * Phase 6: JS code generation.
-     * @param arbolAST list of AST elements.
-     * @param tipos type of each expression, from the semantic analysis.
+     * @param programa intermediate program after optimization passes.
      * @return JavaScript code.
      */
-    private static String generarJavaScript(List<Sentencia> arbolAST, Map<Expresion, Type> tipos) {
+    private static String generarJavaScript(ProgramaIR programa) {
         info.println("=== 6. GENERACION DE CODIGO JAVASCRIPT ===");
 
-        JSGenerator generador = new JSGenerator(tipos);
+        GeneradorJS generador = new GeneradorJS();
 
         String JavaScriptCode =
-                generador.generar(arbolAST);
+                generador.generar(programa);
 
         info.println();
         info.println(
@@ -479,5 +482,10 @@ public class Compiler {
     private static void mostrarFinal() {
         info.println();
         info.println(ConsoleColors.GREEN + "Compilation completed successfully." + ConsoleColors.RESET);
+    }
+
+    private static ProgramaIR optimizar(ProgramaIR programa) {
+        for (UnaryOperator<ProgramaIR> pasada : OPTIMIZACIONES) programa = pasada.apply(programa);
+        return programa;
     }
 }

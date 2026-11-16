@@ -18,7 +18,7 @@ public class JSGenerator {
     // el programa; y .length y s[i] de JS cuentan unidades UTF-16, mientras for...of recorre
     // caracteres Unicode. Orion no admite '$' en un identificador: estos nombres no pueden
     // chocar con los del programa.
-    private static final String AYUDANTES = """
+    public static final String AYUDANTES = """
             function $elementos(v) {
                 return typeof v === "string" ? Array.from(v) : v;
             }
@@ -208,7 +208,7 @@ public class JSGenerator {
 
     // Un literal de Orion ya es válido en JS, salvo dos casos que aquí cambian de forma:
     // "\01" sería un escape octal (en Orion es NUL y '1') y un CR crudo cortaría la cadena.
-    private static String literalJS(String lexema) {
+    public static String literalJS(String lexema) {
         return ESCAPE_O_CR.matcher(lexema).replaceAll(m -> switch (m.group()) {
             case "\\0" -> "\\\\x00";
             case "\r" -> "\\\\r";

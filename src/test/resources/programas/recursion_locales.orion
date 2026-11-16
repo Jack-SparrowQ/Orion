@@ -1,0 +1,7 @@
+fn sumar(n: int): int {
+    let actual = n;
+    if (n <= 0) { return 0; }
+    let resto = sumar(n - 1);
+    return actual + resto;
+}
+print(sumar(4), sumar(2));

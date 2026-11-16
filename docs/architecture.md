@@ -15,8 +15,9 @@ errors are collected in `error/ErrorHandler` and reported together.
 | Syntax | `parser/Parser` (recursive descent, error recovery) | tokens → AST (`parser/ast`) |
 | Symbols | `semantic/SymbolTable` (`Symbol`, `SymbolCategory`, `Type`) | AST → declarations with inferred types |
 | Semantic | `semantic/SemanticAnalyzer` | AST + symbols → type/scope errors |
-| IR | `ir/GeneradorCodigoIntermedio` (`Cuadrupla`) | AST → three-address code (`.tac`) |
-| Codegen | `util/JSGenerator` | AST → JavaScript (`.js`) — being replaced by IR → optimization → JS, see `docs/decisions/0001-js-desde-ir.md` |
+| IR | `ir/GeneradorCodigoIntermedio` (`Cuadrupla`, `FuncionIR`, `ProgramaIR`) | AST + types → `ProgramaIR`: functions + main, unique names, type table (`--emit-ir` prints it as `.tac`) |
+| Optimization | `Compiler.OPTIMIZACIONES` (empty for now) | `ProgramaIR` → `ProgramaIR` |
+| Codegen | `codegen/GeneradorJS` | `ProgramaIR` → JavaScript (`.js`): linear code, or a `switch` dispatcher when a body has labels. `util/JSGenerator` (AST → JS) is kept only as a test oracle — see `docs/decisions/0001-js-desde-ir.md` |
 | Debug output | `util/ASTPrinter` | AST → text (`--ast`) |
 
 ## Key invariant: sealed AST
