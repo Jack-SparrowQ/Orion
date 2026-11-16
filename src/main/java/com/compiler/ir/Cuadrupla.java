@@ -10,9 +10,6 @@ package com.compiler.ir;
 //   (ifFalse, $t2, _,  $L1)   ->  ifFalse $t2 goto $L1
 //   (goto,    _,  _,  $L2)   ->  goto $L2
 //   (label,   _,  _,  $L1)   ->  $L1:
-//   (func,    f,  2,  "a, b$1") -> func f, 2, [a, b$1] (resultado lista los nombres IR de parámetros, en orden)
-// Sin parámetros, resultado es null y se imprime func f, 0.
-//   (endfunc, _,  _,  _ )   ->  endfunc
 //   (param,   a,  _,  _ )   ->  param a        (argumento de la próxima llamada)
 //   (call,    f,  2,  $t4)   ->  $t4 = call f, 2 (sin resultado: call f, 2)
 //   (return,  $t4, _,  _ )   ->  return $t4      (sin valor: return)
@@ -21,6 +18,7 @@ package com.compiler.ir;
 //   ([]=,     $t1, $t2, x )   ->  $t1[$t2] = x
 //   (array,   3,  _,  $t1)   ->  $t1 = array 3   (arreglo nuevo de 3 elementos)
 // Un índice fuera de rango en [] o []= detiene el programa, igual que usar null en [], []=, len o '+'.
+// Las funciones y sus parametros viven en FuncionIR; no hay cuadruplas func/endfunc.
 public class Cuadrupla {
     public final String op;
     public final String arg1;
@@ -50,10 +48,6 @@ public class Cuadrupla {
                 return "goto " + resultado;
             case "=":
                 return resultado + " = " + arg1;
-            case "func":
-                return "func " + arg1 + ", " + arg2 + (resultado == null ? "" : ", [" + resultado + "]");
-            case "endfunc":
-                return "endfunc";
             case "param":
                 return "param " + arg1;
             case "call":

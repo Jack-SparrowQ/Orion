@@ -16,6 +16,7 @@ import com.compiler.cli.Options.Mode;
 import com.compiler.error.ErrorHandler;
 import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.GeneradorCodigoIntermedio;
+import com.compiler.ir.ProgramaIR;
 import com.compiler.lexer.*;
 import com.compiler.parser.*;
 import com.compiler.parser.ast.Expresion;
@@ -422,7 +423,7 @@ public class Compiler {
         info.println("=== 5. GENERACION DE CODIGO INTERMEDIO ===");
 
         GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
-        List<Cuadrupla> codigoIntermedio = generadorIR.generar(arbolAST);
+        ProgramaIR codigoIntermedio = generadorIR.generar(arbolAST);
         String textoTAC = GeneradorCodigoIntermedio.aTexto(codigoIntermedio);
 
         info.println();
@@ -433,8 +434,14 @@ public class Compiler {
         info.println();
 
         info.println("Cuadruplas (op, arg1, arg2, resultado):");
-        for (int i = 0; i < codigoIntermedio.size(); i++) {
-            info.println(String.format("%3d  %s", i, codigoIntermedio.get(i).comoTupla()));
+        int indice = 0;
+        for (var funcion : codigoIntermedio.funciones()) {
+            for (Cuadrupla instruccion : funcion.cuerpo()) {
+                info.println(String.format("%3d  %s", indice++, instruccion.comoTupla()));
+            }
+        }
+        for (Cuadrupla instruccion : codigoIntermedio.principal()) {
+            info.println(String.format("%3d  %s", indice++, instruccion.comoTupla()));
         }
         info.println();
 

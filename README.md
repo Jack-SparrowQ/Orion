@@ -239,7 +239,7 @@ Los temporales (`$t1`, `$t2`...) dividen las expresiones respetando la precedenc
 
 Los operadores `&&` y `||` usan cortocircuito con un temporal de resultado y saltos: `&&` salta al final si el izquierdo es falso; `||` salta a evaluar el derecho si el izquierdo es falso y, si es verdadero, salta al final; el código del derecho se emite después del salto condicional.
 
-Cada declaración conserva su nombre en su primera aparición y recibe sufijos `$1`, `$2`… si el nombre se repite en otros ámbitos; las lecturas y asignaciones usan el nombre IR de la declaración visible, y `func f, n, [parametros IR]` lista los parámetros en orden sin renombrar la función.
+Cada declaración conserva su nombre en su primera aparición y recibe sufijos `$1`, `$2`… si el nombre se repite en otros ámbitos; las lecturas y asignaciones usan el nombre IR de la declaración visible. `ProgramaIR` separa las funciones (`FuncionIR`, con nombre, lista de parámetros IR y cuerpo) del código principal; al imprimir, las funciones se listan primero, en orden de declaración, como `func f, n, [parametros IR]` … `endfunc` (sin lista si no hay parámetros), sin que esos delimitadores sean cuádruplas.
 
 ## Ejecución
 

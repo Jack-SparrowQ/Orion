@@ -1,9 +1,12 @@
 package com.compiler.ir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +17,101 @@ import com.compiler.parser.Parser;
 import com.compiler.parser.ast.Sentencia;
 
 public class GeneradorCodigoIntermedioTest {
+
+    @Test
+    void programaIR_separaFuncionesConParametrosEstructurados() {
+        ProgramaIR programa = ir("""
+                print(primera(2));
+                fn primera(x: int): int { return x; }
+                print(3);
+                fn segunda(x: int, y: int): int { return x + y; }
+                """);
+        assertEquals(List.of("primera", "segunda"),
+                programa.funciones().stream().map(FuncionIR::nombre).toList());
+        assertEquals(List.of("x"), programa.funciones().get(0).parametros());
+        assertEquals(List.of("x$1", "y"), programa.funciones().get(1).parametros());
+        assertEquals(List.of("param", "call", "print", "print"),
+                programa.principal().stream().map(c -> c.op).toList());
+        assertEquals("x", programa.funciones().get(0).cuerpo().get(0).arg1);
+        assertEquals("x$1", programa.funciones().get(1).cuerpo().get(0).arg1);
+        assertTrue(Stream.concat(programa.principal().stream(),
+                programa.funciones().stream().flatMap(f -> f.cuerpo().stream()))
+                .noneMatch(c -> c.op.equals("func") || c.op.equals("endfunc")));
+    }
+
+    @Test
+    void texto_listaFuncionPosteriorAntesDelPrincipal() {
+        assertEquals("""
+                func doble, 1, [x]
+                    $t2 = x * 2
+                    return $t2
+                endfunc
+                    param 3
+                    $t1 = call doble, 1
+                    print $t1
+                    print 4
+                """, tac("""
+                print(doble(3));
+                fn doble(x: int): int { return x * 2; }
+                print(4);
+                """));
+    }
+
+    @Test
+    void funcionesVacias_conservanReturnImplicito() {
+        ProgramaIR programa = ir("fn primera() {} print(1); fn segunda() {}");
+        assertEquals(2, programa.funciones().size());
+        for (FuncionIR funcion : programa.funciones()) {
+            assertTrue(funcion.parametros().isEmpty());
+            assertEquals(1, funcion.cuerpo().size());
+            assertEquals("return", funcion.cuerpo().get(0).op);
+            assertEquals(null, funcion.cuerpo().get(0).arg1);
+        }
+        assertEquals(1, programa.principal().size());
+    }
+
+    @Test
+    void numeracionSigueSiendoGlobalAunqueSeSeparenLosCuerpos() {
+        ProgramaIR programa = ir("""
+                if (true) { print(1 + 2); }
+                fn primera(x: int): int { if (x > 0) { return x + 1; } return 0; }
+                if (true) { print(3 + 4); }
+                fn segunda(x: int): int { if (x > 0) { return x + 2; } return 0; }
+                """);
+        assertEquals(List.of("x"), programa.funciones().get(0).parametros());
+        assertEquals(List.of("x$1"), programa.funciones().get(1).parametros());
+        List<Cuadrupla> instrucciones = Stream.concat(programa.principal().stream(),
+                programa.funciones().stream().flatMap(f -> f.cuerpo().stream())).toList();
+        List<String> temporales = instrucciones.stream().map(c -> c.resultado)
+                .filter(r -> r != null && r.startsWith("$t")).toList();
+        assertEquals(6, temporales.size());
+        assertEquals(6, temporales.stream().distinct().count());
+        List<String> etiquetas = instrucciones.stream().filter(c -> c.op.equals("label"))
+                .map(c -> c.resultado).toList();
+        assertEquals(List.of("$L1", "$L3", "$L2", "$L4"), etiquetas);
+    }
+
+    @Test
+    void records_copianListasYExponenListasInmutables() {
+        List<String> parametros = new ArrayList<>(List.of("x"));
+        List<Cuadrupla> cuerpo = new ArrayList<>(List.of(new Cuadrupla("return", "x", null, null)));
+        FuncionIR funcion = new FuncionIR("f", parametros, cuerpo);
+        List<FuncionIR> funciones = new ArrayList<>(List.of(funcion));
+        List<Cuadrupla> principal = new ArrayList<>(List.of(new Cuadrupla("print", "1", null, null)));
+        ProgramaIR programa = new ProgramaIR(funciones, principal);
+        parametros.clear();
+        cuerpo.clear();
+        funciones.clear();
+        principal.clear();
+        assertEquals(List.of("x"), funcion.parametros());
+        assertEquals(1, funcion.cuerpo().size());
+        assertEquals(List.of(funcion), programa.funciones());
+        assertEquals(1, programa.principal().size());
+        assertThrows(UnsupportedOperationException.class, () -> funcion.parametros().clear());
+        assertThrows(UnsupportedOperationException.class, () -> funcion.cuerpo().clear());
+        assertThrows(UnsupportedOperationException.class, () -> programa.funciones().clear());
+        assertThrows(UnsupportedOperationException.class, () -> programa.principal().clear());
+    }
 
     @Test
     void localYGlobalPosterior_tienenNombresDistintos() {
@@ -88,12 +186,12 @@ public class GeneradorCodigoIntermedioTest {
     @Test
     void sinRepeticiones_conservaNombresYGlobalVisible() {
         assertEquals("""
-                    global = 10
                 func sumar, 1, [incremento]
                     $t1 = global + incremento
                     total = $t1
                     return total
                 endfunc
+                    global = 10
                     param 2
                     $t2 = call sumar, 1
                     print $t2
@@ -168,10 +266,10 @@ public class GeneradorCodigoIntermedioTest {
                     x = 1
                     return x
                 endfunc
-                    x$1 = 2
                 func segunda, 0
                     return x$1
                 endfunc
+                    x$1 = 2
                 """, tac("""
                 fn primera(): int { let x = 1; return x; }
                 let x = 2;
@@ -262,12 +360,16 @@ public class GeneradorCodigoIntermedioTest {
 
     /** Código de tres direcciones de un programa sin errores. */
     private String tac(String codigo) {
+        return GeneradorCodigoIntermedio.aTexto(ir(codigo));
+    }
+
+    private ProgramaIR ir(String codigo) {
         ErrorHandler errores = new ErrorHandler();
         Tokenizer tokenizer = new Tokenizer(new Lexer(codigo, errores));
         tokenizer.run();
         List<Sentencia> programa = new Parser(tokenizer.getTokensList(), errores).parsear();
         assertEquals(List.of(), errores.obtenerErrores());
-        return GeneradorCodigoIntermedio.aTexto(new GeneradorCodigoIntermedio().generar(programa));
+        return new GeneradorCodigoIntermedio().generar(programa);
     }
 
     /** Los literales conservan sus comillas: "t1" no se confunde con el temporal $t1. */

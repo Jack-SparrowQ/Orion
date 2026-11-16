@@ -14,7 +14,7 @@ Detalle y justificación: ver la sección "Ruta" más abajo.
 - [x] 1.2 (hecho) HIGH: `&&` y `||` no tienen cortocircuito en el IR (`false && f()` llama a `f`); el JS sí. Traducir con saltos.
 - [x] 1.3 (hecho) HIGH: el IR aplana los ámbitos: una local `x` de una función y una global `x`, o dos `let x` en bloques hermanos, comparten nombre. Renombrar a nombres únicos (`x`, `x.1`) usando la resolución del análisis semántico.
 - [ ] 1.4 MEDIUM: el IR no tiene tipos: `+` es suma o concatenación, los literales son lexemas. Emitir `concat` para cadenas y conservar el tipo de cada literal/temporal (necesario para plegar constantes).
-- [ ] 1.5 MEDIUM: las funciones se emiten intercaladas con el código principal. Estructurar el IR como lista de funciones + programa principal. Incluir la lista de parámetros como dato estructurado (hoy va como texto "a, b$1" en el resultado de `func`).
+- [x] 1.5 (hecho) MEDIUM: las funciones se emiten intercaladas con el código principal. Estructurar el IR como lista de funciones + programa principal. Incluir la lista de parámetros como dato estructurado (hoy va como texto "a, b$1" en el resultado de `func`).
 
 ### Etapa 2 — Infraestructura de optimización
 - [x] 2.1 ADR 0001: pipeline `AST -> IR -> optimización -> JS` (decisión del usuario).

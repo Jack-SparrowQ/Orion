@@ -10,10 +10,11 @@ import java.util.Map;
 import com.compiler.lexer.TokenType;
 import com.compiler.parser.ast.*;
 
-// Traduce el AST a código de tres direcciones (lista de cuádruplas).
+// Traduce el AST a funciones IR y codigo principal con cuerpos de cuadruplas.
 public class GeneradorCodigoIntermedio {
 
-    private final List<Cuadrupla> codigo = new ArrayList<>();
+    private List<Cuadrupla> codigo = new ArrayList<>();
+    private final List<FuncionIR> funciones = new ArrayList<>();
     private int contadorTemporales = 0;
     private int contadorEtiquetas = 0;
     private final Deque<Map<String, String>> ambitos = new ArrayDeque<>();
@@ -25,8 +26,9 @@ public class GeneradorCodigoIntermedio {
      */
     private final Deque<String[]> ciclos = new ArrayDeque<>();
 
-    public List<Cuadrupla> generar(List<Sentencia> programa) {
-        codigo.clear();
+    public ProgramaIR generar(List<Sentencia> programa) {
+        codigo = new ArrayList<>();
+        funciones.clear();
         ciclos.clear();
         ambitos.clear();
         declaraciones.clear();
@@ -37,19 +39,32 @@ public class GeneradorCodigoIntermedio {
         for (Sentencia nodo : programa) {
             generarSentencia(nodo);
         }
-        return new ArrayList<>(codigo);
+        return new ProgramaIR(funciones, codigo);
     }
 
     // Texto listo para mostrar o guardar (etiquetas y delimitadores de función sin sangría)
-    public static String aTexto(List<Cuadrupla> codigo) {
+    public static String aTexto(ProgramaIR programa) {
         StringBuilder sb = new StringBuilder();
+        for (FuncionIR funcion : programa.funciones()) {
+            sb.append("func ").append(funcion.nombre()).append(", ").append(funcion.parametros().size());
+            if (!funcion.parametros().isEmpty()) {
+                sb.append(", [").append(String.join(", ", funcion.parametros())).append("]");
+            }
+            sb.append("\n");
+            agregarTexto(sb, funcion.cuerpo());
+            sb.append("endfunc\n");
+        }
+        agregarTexto(sb, programa.principal());
+        return sb.toString();
+    }
+
+    private static void agregarTexto(StringBuilder sb, List<Cuadrupla> codigo) {
         for (Cuadrupla c : codigo) {
-            if (!c.op.equals("label") && !c.op.equals("func") && !c.op.equals("endfunc")) {
+            if (!c.op.equals("label")) {
                 sb.append("    ");
             }
             sb.append(c).append("\n");
         }
-        return sb.toString();
     }
 
     // ---------------- SENTENCIAS ----------------
@@ -171,21 +186,24 @@ public class GeneradorCodigoIntermedio {
                     ciclos.peek()[salto.palabraClave().tipo == TokenType.BREAK ? 1 : 0]);
             // El bloque se aplana, pero sus declaraciones conservan nombres IR distintos.
             case NodoBloque bloque -> generarBloque(bloque);
-            //     func f, n, [parametros IR] ; cuerpo ; return ; endfunc
-            // Se emite en su lugar: func/endfunc delimitan una definición, no código
-            // que se ejecute al pasar por ahí. Parámetros y cuerpo comparten ámbito.
+            // Se recorre en su lugar para conservar visibilidad y numeracion global.
+            // El cuerpo se guarda aparte; parametros y cuerpo comparten ambito.
             case NodoFuncion fn -> {
                 ambitos.push(new HashMap<>());
                 List<String> parametros = fn.parametros().stream().map(p -> declarar(p.nombre().lexema)).toList();
-                emitir("func", fn.nombre().lexema, String.valueOf(parametros.size()),
-                        parametros.isEmpty() ? null : String.join(", ", parametros));
-                fn.cuerpo().sentencias().forEach(this::generarSentencia);
-                // Retorno implícito al final (las void pueden terminar sin return)
-                if (!codigo.get(codigo.size() - 1).op.equals("return")) {
-                    emitir("return", null, null, null);
+                List<Cuadrupla> principal = codigo;
+                codigo = new ArrayList<>();
+                try {
+                    fn.cuerpo().sentencias().forEach(this::generarSentencia);
+                    // Retorno implicito al final, tambien para una funcion vacia.
+                    if (codigo.isEmpty() || !codigo.get(codigo.size() - 1).op.equals("return")) {
+                        emitir("return", null, null, null);
+                    }
+                    funciones.add(new FuncionIR(fn.nombre().lexema, parametros, codigo));
+                } finally {
+                    codigo = principal;
+                    ambitos.pop();
                 }
-                emitir("endfunc", null, null, null);
-                ambitos.pop();
             }
             case NodoReturn ret -> emitir("return",
                     ret.valor() == null ? null : generarExpresion(ret.valor()), null, null);
