@@ -171,7 +171,7 @@ public class Compiler {
             return EXIT_OK;
         }
 
-        String tacCode = generateIntermediateCode(ASTTree.get());
+        String tacCode = generateIntermediateCode(ASTTree.get(), tipos.get());
 
         String artifact = mode == Mode.EMIT_IR ? tacCode : generarJavaScript(ASTTree.get(), tipos.get());
 
@@ -419,11 +419,11 @@ public class Compiler {
      * @param arbolAST
      * @return the three-address code as text.
      */
-    private static String generateIntermediateCode(List<Sentencia> arbolAST) {
+    private static String generateIntermediateCode(List<Sentencia> arbolAST, Map<Expresion, Type> tipos) {
         info.println("=== 5. GENERACION DE CODIGO INTERMEDIO ===");
 
         GeneradorCodigoIntermedio generadorIR = new GeneradorCodigoIntermedio();
-        ProgramaIR codigoIntermedio = generadorIR.generar(arbolAST);
+        ProgramaIR codigoIntermedio = generadorIR.generar(arbolAST, tipos);
         String textoTAC = GeneradorCodigoIntermedio.aTexto(codigoIntermedio);
 
         info.println();

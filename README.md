@@ -241,6 +241,8 @@ Los operadores `&&` y `||` usan cortocircuito con un temporal de resultado y sal
 
 Cada declaración conserva su nombre en su primera aparición y recibe sufijos `$1`, `$2`… si el nombre se repite en otros ámbitos; las lecturas y asignaciones usan el nombre IR de la declaración visible. `ProgramaIR` separa las funciones (`FuncionIR`, con nombre, lista de parámetros IR y cuerpo) del código principal; al imprimir, las funciones se listan primero, en orden de declaración, como `func f, n, [parametros IR]` … `endfunc` (sin lista si no hay parámetros), sin que esos delimitadores sean cuádruplas.
 
+El opcode `concat` distingue la concatenación de cadenas de la suma numérica `+`; `ProgramaIR.tipos` guarda el tipo de cada variable, parámetro y temporal por nombre IR, y `tipo(operando)` también reconoce los literales.
+
 ## Ejecución
 
 Requisitos: JDK 21 o superior y Maven.

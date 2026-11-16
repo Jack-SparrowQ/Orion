@@ -6,9 +6,12 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.compiler.lexer.TokenType;
 import com.compiler.parser.ast.*;
+import com.compiler.semantic.SemanticAnalyzer;
+import com.compiler.semantic.Type;
 
 // Traduce el AST a funciones IR y codigo principal con cuerpos de cuadruplas.
 public class GeneradorCodigoIntermedio {
@@ -19,6 +22,8 @@ public class GeneradorCodigoIntermedio {
     private int contadorEtiquetas = 0;
     private final Deque<Map<String, String>> ambitos = new ArrayDeque<>();
     private final Map<String, Integer> declaraciones = new HashMap<>();
+    private final Map<String, Type> tiposIR = new HashMap<>();
+    private Map<Expresion, Type> tiposExpresiones;
 
     /**
      * Etiquetas de los ciclos abiertos, el más interno arriba:
@@ -26,12 +31,14 @@ public class GeneradorCodigoIntermedio {
      */
     private final Deque<String[]> ciclos = new ArrayDeque<>();
 
-    public ProgramaIR generar(List<Sentencia> programa) {
+    public ProgramaIR generar(List<Sentencia> programa, Map<Expresion, Type> tipos) {
         codigo = new ArrayList<>();
         funciones.clear();
         ciclos.clear();
         ambitos.clear();
         declaraciones.clear();
+        tiposIR.clear();
+        tiposExpresiones = tipos;
         ambitos.push(new HashMap<>());
         contadorTemporales = 0;
         contadorEtiquetas = 0;
@@ -39,7 +46,7 @@ public class GeneradorCodigoIntermedio {
         for (Sentencia nodo : programa) {
             generarSentencia(nodo);
         }
-        return new ProgramaIR(funciones, codigo);
+        return new ProgramaIR(funciones, codigo, tiposIR);
     }
 
     // Texto listo para mostrar o guardar (etiquetas y delimitadores de función sin sangría)
@@ -74,7 +81,8 @@ public class GeneradorCodigoIntermedio {
         switch (nodo) {
             case NodoDeclaracion dec -> {
                 // "let x: T;" no produce código: solo reserva el nombre
-                String nombre = declarar(dec.identificador().lexema);
+                Type tipo = dec.tipo() != null ? SemanticAnalyzer.tipoAnotado(dec.tipo()) : tipoExpresion(dec.valor());
+                String nombre = declarar(dec.identificador().lexema, tipo);
                 if (dec.valor() != null) {
                     String valor = generarExpresion(dec.valor());
                     emitir("=", valor, null, nombre);
@@ -91,11 +99,12 @@ public class GeneradorCodigoIntermedio {
                 if (asig.operador() == null) {
                     emitir("[]=", objeto, indice, generarExpresion(asig.valor()));
                 } else {
-                    String anterior = nuevoTemporal();
+                    Type tipoElemento = tipoExpresion(asig.destino().objeto()).elemento();
+                    String anterior = nuevoTemporal(tipoElemento);
                     emitir("[]", objeto, indice, anterior);
                     String derecha = generarExpresion(asig.valor());
-                    String resultado = nuevoTemporal();
-                    emitir(asig.operador().lexema, anterior, derecha, resultado);
+                    String resultado = nuevoTemporal(tipoElemento);
+                    emitir(operacion(asig.operador().tipo, asig.operador().lexema, tipoElemento), anterior, derecha, resultado);
                     emitir("[]=", objeto, indice, resultado);
                 }
             }
@@ -152,22 +161,24 @@ public class GeneradorCodigoIntermedio {
                 //     Linicio: ; c = i < n ; ifFalse c goto Lfin ; x = e[i] ; cuerpo
                 //     Lsiguiente: ; i = i + 1 ; goto Linicio ; Lfin:
                 // La copia en un temporal evalúa el iterable una sola vez: el cuerpo puede reasignar la variable
-                String iterable = nuevoTemporal();
+                Type tipoIterable = tipoExpresion(nFor.iterable());
+                String iterable = nuevoTemporal(tipoIterable);
                 emitir("=", generarExpresion(nFor.iterable()), null, iterable);
-                String indice = nuevoTemporal();
+                String indice = nuevoTemporal(Type.INT);
                 emitir("=", "0", null, indice);
-                String longitud = nuevoTemporal();
+                String longitud = nuevoTemporal(Type.INT);
                 emitir("len", iterable, null, longitud);
 
                 String etiquetaInicio = nuevaEtiqueta();
                 String etiquetaSiguiente = nuevaEtiqueta();
                 String etiquetaFin = nuevaEtiqueta();
                 emitir("label", null, null, etiquetaInicio);
-                String condicion = nuevoTemporal();
+                String condicion = nuevoTemporal(Type.BOOL);
                 emitir("<", indice, longitud, condicion);
                 emitir("ifFalse", condicion, null, etiquetaFin);
                 ambitos.push(new HashMap<>());
-                emitir("[]", iterable, indice, declarar(nFor.variable().lexema));
+                Type tipoElemento = tipoIterable == Type.STRING ? Type.CHAR : tipoIterable.elemento();
+                emitir("[]", iterable, indice, declarar(nFor.variable().lexema, tipoElemento));
 
                 // continue debe pasar por el incremento: saltar a Linicio repetiría el elemento
                 ciclos.push(new String[] { etiquetaSiguiente, etiquetaFin });
@@ -190,7 +201,8 @@ public class GeneradorCodigoIntermedio {
             // El cuerpo se guarda aparte; parametros y cuerpo comparten ambito.
             case NodoFuncion fn -> {
                 ambitos.push(new HashMap<>());
-                List<String> parametros = fn.parametros().stream().map(p -> declarar(p.nombre().lexema)).toList();
+                List<String> parametros = fn.parametros().stream()
+                        .map(p -> declarar(p.nombre().lexema, SemanticAnalyzer.tipoAnotado(p.tipo()))).toList();
                 List<Cuadrupla> principal = codigo;
                 codigo = new ArrayList<>();
                 try {
@@ -223,7 +235,7 @@ public class GeneradorCodigoIntermedio {
         // Se evalúan todos antes del primer param: un argumento puede contener otra llamada
         List<String> argumentos = llamada.argumentos().stream().map(this::generarExpresion).toList();
         argumentos.forEach(a -> emitir("param", a, null, null));
-        String temporal = usarValor ? nuevoTemporal() : null; // después de los hijos
+        String temporal = usarValor ? nuevoTemporal(tipoExpresion(llamada)) : null; // después de los hijos
         emitir("call", llamada.nombre().lexema, String.valueOf(argumentos.size()), temporal);
         return temporal;
     }
@@ -242,7 +254,7 @@ public class GeneradorCodigoIntermedio {
             case NodoBinario b -> {
                 String izquierda = generarExpresion(b.izquierda());
                 if (b.operador().tipo == TokenType.AND_LOGICO || b.operador().tipo == TokenType.OR_LOGICO) {
-                    String temporal = nuevoTemporal();
+                    String temporal = nuevoTemporal(Type.BOOL);
                     emitir("=", izquierda, null, temporal);
                     String etiquetaFin;
                     if (b.operador().tipo == TokenType.AND_LOGICO) {
@@ -262,14 +274,15 @@ public class GeneradorCodigoIntermedio {
                     yield temporal;
                 }
                 String derecha = generarExpresion(b.derecha());
-                String temporal = nuevoTemporal(); // después de los hijos
-                emitir(b.operador().lexema, izquierda, derecha, temporal);
+                Type tipo = tipoExpresion(b);
+                String temporal = nuevoTemporal(tipo); // después de los hijos
+                emitir(operacion(b.operador().tipo, b.operador().lexema, tipo), izquierda, derecha, temporal);
                 yield temporal;
             }
 
             case NodoUnario u -> {
                 String operando = generarExpresion(u.operando());
-                String temporal = nuevoTemporal();
+                String temporal = nuevoTemporal(tipoExpresion(u));
                 emitir(u.operador().lexema, operando, null, temporal);
                 yield temporal;
             }
@@ -282,7 +295,7 @@ public class GeneradorCodigoIntermedio {
             case NodoArreglo arreglo -> {
                 // Se evalúan todos antes de crearlo: un elemento puede ser otro arreglo
                 List<String> elementos = arreglo.elementos().stream().map(this::generarExpresion).toList();
-                String temporal = nuevoTemporal();
+                String temporal = nuevoTemporal(tipoExpresion(arreglo));
                 emitir("array", String.valueOf(elementos.size()), null, temporal);
                 for (int i = 0; i < elementos.size(); i++) {
                     emitir("[]=", temporal, String.valueOf(i), elementos.get(i));
@@ -293,14 +306,14 @@ public class GeneradorCodigoIntermedio {
             case NodoIndice i -> {
                 String objeto = generarExpresion(i.objeto());
                 String indice = generarExpresion(i.indice());
-                String temporal = nuevoTemporal();
+                String temporal = nuevoTemporal(tipoExpresion(i));
                 emitir("[]", objeto, indice, temporal);
                 yield temporal;
             }
 
             case NodoPropiedad p -> {
                 String objeto = generarExpresion(p.objeto());
-                String temporal = nuevoTemporal();
+                String temporal = nuevoTemporal(tipoExpresion(p));
                 emitir("len", objeto, null, temporal);
                 yield temporal;
             }
@@ -315,11 +328,12 @@ public class GeneradorCodigoIntermedio {
         ambitos.pop();
     }
 
-    private String declarar(String nombre) {
+    private String declarar(String nombre, Type tipo) {
         int numero = declaraciones.getOrDefault(nombre, 0);
         declaraciones.put(nombre, numero + 1);
         String nombreIR = numero == 0 ? nombre : nombre + "$" + numero;
         ambitos.peek().put(nombre, nombreIR);
+        tiposIR.put(nombreIR, Objects.requireNonNull(tipo, "Tipo ausente para " + nombreIR));
         return nombreIR;
     }
 
@@ -336,8 +350,18 @@ public class GeneradorCodigoIntermedio {
         codigo.add(new Cuadrupla(op, arg1, arg2, resultado));
     }
 
-    private String nuevoTemporal() {
-        return "$t" + (++contadorTemporales);
+    private Type tipoExpresion(Expresion expresion) {
+        return Objects.requireNonNull(tiposExpresiones.get(expresion), "Tipo ausente para " + expresion);
+    }
+
+    private String operacion(TokenType operador, String lexema, Type tipo) {
+        return operador == TokenType.SUMA && tipo == Type.STRING ? "concat" : lexema;
+    }
+
+    private String nuevoTemporal(Type tipo) {
+        String nombre = "$t" + (++contadorTemporales);
+        tiposIR.put(nombre, Objects.requireNonNull(tipo, "Tipo ausente para " + nombre));
+        return nombre;
     }
 
     private String nuevaEtiqueta() {

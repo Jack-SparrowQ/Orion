@@ -847,7 +847,7 @@ public final class SemanticAnalyzer {
     }
 
     /** Tipo de una anotación: el token es el del tipo base y cada "[]" del lexema añade una dimensión. */
-    private static Type tipoAnotado(Token tipo) {
+    public static Type tipoAnotado(Token tipo) {
         Type resultado = switch (tipo.tipo) {
             case INT -> Type.INT;
             case FLOAT -> Type.FLOAT;

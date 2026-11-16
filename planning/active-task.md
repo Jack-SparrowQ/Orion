@@ -1,49 +1,49 @@
-# Tarea activa — 1.5 Estructura del IR: funciones separadas del programa principal
+# Tarea activa — 1.4 Tipos en el IR
 
 Asignada a: Codex · Revisa: Claude · Contexto: `planning/backlog.md` (etapa 1), `docs/decisions/0001-js-desde-ir.md`
 
 ## Problema
-`GeneradorCodigoIntermedio.generar` devuelve una sola `List<Cuadrupla>` donde las funciones aparecen
-intercaladas con el código principal entre `func`/`endfunc`, y los parámetros van como texto
-(`"a, b$1"`) en el `resultado` de `func`. Las pasadas de optimización y el futuro generador IR→JS
-necesitan trabajar por función (bloques básicos, CFG) sin tener que reconocer delimitadores ni parsear texto.
+El IR no tiene tipos. El futuro generador IR→JS los necesita igual que hoy `JSGenerator` (que recibe
+`Map<Expresion, Type>` del análisis semántico):
+- `+` de cadenas debe llamar a `$concatenar` (error en tiempo de ejecución si un operando es `null`);
+  `+` numérico no. Incluye `+=` sobre elemento de arreglo de `string` (`NodoAsignacionElemento`).
+- `print`/`printn` usan `"%s"` cuando el primer argumento es `string`/`char` (ver `JSGenerator`, ~línea 200).
+Las optimizaciones (plegado de constantes) también necesitarán saber qué es cada operando.
 
 ## Decisión
-Nuevos records en `com.compiler.ir` (inmutables, listas copiadas con `List.copyOf`):
-
-```java
-public record FuncionIR(String nombre, List<String> parametros, List<Cuadrupla> cuerpo) {}
-public record ProgramaIR(List<FuncionIR> funciones, List<Cuadrupla> principal) {}
-```
-
-- `generar(List<Sentencia>)` devuelve `ProgramaIR`. Las funciones van en orden de declaración.
-- Se eliminan los opcodes `func` y `endfunc` de las cuádruplas. El cuerpo conserva el `return` implícito final.
-- Los temporales, etiquetas y nombres IR siguen siendo únicos en **todo** el programa (contadores y tabla de
-  declaraciones compartidos), para que una tabla global por nombre siga siendo válida.
-- `aTexto(ProgramaIR)`: imprime primero cada función como hasta ahora, `func f, n, [params]` ... `endfunc`
-  (o `func f, 0` sin parámetros), y después el programa principal, con la misma sangría actual.
-  Es el único cambio de formato visible: las funciones pasan al principio.
+1. **Opcode `concat`** para el `+` cuyo resultado es `string`, en lugar de `+`
+   (`$t3 = a concat b`, tupla `(concat, a, b, $t3)`). Así el IR→JS no tiene que consultar tipos para decidirlo.
+2. **Tabla de tipos** `Map<String, Type> tipos` en `ProgramaIR` (tercer componente, copiada inmutable):
+   nombre IR → `Type` para **cada** variable, parámetro y temporal. Los nombres IR ya son únicos en todo
+   el programa (1.3), así que una sola tabla basta. Se añade también
+   `Type tipo(String operando)` en `ProgramaIR`: busca en la tabla y, si no está, deduce el tipo del
+   lexema de un literal (`10`→INT, `3.5`→FLOAT, `"..."`→STRING, `'a'`→CHAR, `true`/`false`→BOOL, `null`→NULL).
+3. `generar(List<Sentencia>, Map<Expresion, Type>)`: el generador recibe los tipos del análisis semántico.
+   - Temporal: tipo de la expresión que lo produce (los temporales de `&&`/`||`: BOOL; índice/longitud del
+     `for`: INT; condición del `for`: BOOL; copia del iterable: tipo del iterable).
+   - Variable: la anotación si existe (`let x: string = null;` es STRING, no NULL); si no, el tipo del inicializador.
+     Busca cómo convierte el análisis semántico una anotación en `Type` y reutilízalo, no lo dupliques.
+   - Parámetro: su anotación. Variable del `for`: elemento del iterable (`string`→CHAR, `T[]`→T).
+4. `Compiler.java` pasa al generador el mapa que ya obtiene de `analizarSemantica`.
 
 ## Qué hacer
-1. `FuncionIR.java`, `ProgramaIR.java` nuevos; `GeneradorCodigoIntermedio` y `Cuadrupla` (quitar `func`/`endfunc`
-   de `toString` y del comentario de ejemplos; documentar en el comentario que las funciones viven en `FuncionIR`).
-2. `Compiler.java`: adaptar la llamada a `generar`/`aTexto`. Ningún otro cambio de comportamiento.
-3. Pruebas: adaptar las existentes; añadir que `ProgramaIR.funciones()` tiene nombre y parámetros estructurados,
-   que `principal()` no contiene cuádruplas de funciones, y que una función declarada después de código principal
-   aparece primero en el texto.
-4. Goldens con IR, si los hay: regenerar y verificar con `git diff` que solo cambia la posición de las funciones.
-5. `README.md` (sección de código intermedio): ajustar la frase sobre `func` y decir que las funciones se listan primero.
+Implementación en `ir/` y `Compiler.java`; comentario de ejemplos de `Cuadrupla` con `concat`; pruebas en
+`GeneradorCodigoIntermedioTest` (concat vs suma, `+=` de elemento string, tipos de: variable anotada con null,
+parámetro, variable del `for` sobre cadena y sobre arreglo, temporal de llamada, temporal lógico, literales vía
+`tipo()`). Adapta las pruebas que llaman a `generar` sin tipos (un helper que corra el análisis semántico real es
+mejor que mapas a mano). README: una frase sobre `concat` y la tabla de tipos.
 
 ## Fuera de alcance
-Tipos en el IR (1.4, va después y añadirá la tabla de tipos a `ProgramaIR`). `JSGenerator` y demás fases.
+Generador IR→JS, optimizaciones, `JSGenerator` y demás fases (salvo leerlas).
 
 ## Reglas
 Las de `AGENTS.md`. Sin dependencias nuevas. Sin commit.
 
 ## Criterios de aceptación
 - `mvn -q test` con código 0 (reporta tests run / failures / skipped).
-- `grep -rn '"func"\|"endfunc"' src/main` no encuentra opcodes de cuádrupla (solo el texto que imprime `aTexto`, si aplica).
-- `--emit-ir` de `src/test/resources/programas/funciones.orion` en el reporte.
+- Cada nombre IR que aparece como destino en `--emit-ir` de `null_print.orion` y `for_arreglo_cadena.orion`
+  tiene entrada en la tabla (añade una prueba que lo compruebe para todo el corpus de `src/test/resources/programas/`).
+- `--emit-ir` de `escapes_concatenacion.orion` en el reporte.
 
 ## Reporte
 Formato de `AGENTS.md`.

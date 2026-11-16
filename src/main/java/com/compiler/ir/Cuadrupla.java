@@ -4,6 +4,7 @@ package com.compiler.ir;
 //
 //   (=,       10, _,  a )   ->  a = 10
 //   (+,       a,  $t1, $t2)   ->  $t2 = a + $t1
+//   (concat,  a,  b,   $t3)   ->  $t3 = a concat b (cadenas; error en ejecucion si alguna es null)
 //   (!,       b,  _,  $t3)   ->  $t3 = !b
 //   (print,   a,  _,  _ )   ->  print a
 //   (printn,  2,  _,  _ )   ->  printn 2       (escribe los 2 últimos param, separados por un espacio)
