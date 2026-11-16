@@ -1,3 +1,3 @@
 # Tarea activa
 
-Ninguna. Última cerrada: O.3 Código muerto, saltos y punto fijo (revisada y aceptada). Siguiente (opcional): O.4.
+Ninguna. Última cerrada: O.3b temporales fuera de las globales en la vivacidad (revisada y aceptada).

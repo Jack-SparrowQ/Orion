@@ -45,7 +45,7 @@ El `.js` sale del IR (pasando por la lista de pasadas, aún vacía) y el corpus 
 - [x] O.1 (hecho: `ir/opt/PlegadoConstantes`) Plegado y propagación de constantes local + condiciones constantes; opción `--no-opt`; `--emit-ir` muestra el IR optimizado.
 - [x] O.2 (hecho: `ir/opt/PropagacionCopias`) Propagación de copias local y eliminación de copias redundantes.
 - [x] O.3 (hecho: `EliminacionCodigoMuerto`, `SimplificacionSaltos`, punto fijo de 10 vueltas en `Compiler.optimizar`) Código muerto global (vivacidad), bloques inalcanzables, simplificación de saltos; ¿punto fijo?
-  - LOW: `x = call f` con `x` muerto conserva el destino (podría quedar `call f`); los temporales del principal se tratan como globales en la vivacidad (conservador); `GeneradorJS` emite `break $bucle;` inalcanzable tras un `return` final.
+  - LOW: `x = call f` con `x` muerto conserva el destino (podría quedar `call f`); `GeneradorJS` emite `break $bucle;` inalcanzable tras un `return` final.
 - [ ] O.4 (opcional) Subexpresiones comunes locales.
 
 ## Done

@@ -20,6 +20,7 @@ public final class EliminacionCodigoMuerto implements UnaryOperator<ProgramaIR> 
     @Override
     public ProgramaIR apply(ProgramaIR programa) {
         Set<String> globales = new HashSet<>(programa.tipos().keySet());
+        globales.removeIf(nombre -> nombre.startsWith("$t"));
         for (FuncionIR f : programa.funciones()) {
             globales.removeAll(f.locales());
             globales.removeAll(f.parametros());

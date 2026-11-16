@@ -9,10 +9,45 @@ import org.junit.jupiter.api.Test;
 
 import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.FuncionIR;
+import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.ir.ProgramaIR;
+import com.compiler.error.ErrorHandler;
+import com.compiler.lexer.Lexer;
+import com.compiler.lexer.Tokenizer;
+import com.compiler.parser.Parser;
+import com.compiler.semantic.SemanticAnalyzer;
+import com.compiler.semantic.SymbolTable;
 import com.compiler.semantic.Type;
 
 class EliminacionCodigoMuertoTest {
+    @Test
+    void temporalMuertoDelPrincipalNoEsGlobalAunqueHayaUnaLlamadaEnElWhile() {
+        String fuente = """
+                let rondas = 1 + 2;
+                fn ganar() { rondas = 0; }
+                while (rondas > 0) { ganar(); }
+                """;
+        ErrorHandler errores = new ErrorHandler();
+        Tokenizer tokenizer = new Tokenizer(new Lexer(fuente, errores));
+        tokenizer.run();
+        var ast = new Parser(tokenizer.getTokensList(), errores).parsear();
+        SymbolTable tabla = new SymbolTable();
+        SemanticAnalyzer.analyzeSymbols(ast, tabla, errores);
+        var tipos = SemanticAnalyzer.analyzeSemantic(ast, tabla, errores);
+        assertEquals(List.of(), errores.obtenerErrores());
+        ProgramaIR entrada = new PlegadoConstantes().apply(new GeneradorCodigoIntermedio().generar(ast, tipos));
+        Cuadrupla temporalMuerto = entrada.principal().stream().filter(c -> c.op.equals("=")
+                && c.resultado.startsWith("$t") && "3".equals(c.arg1)).findFirst().orElseThrow();
+        ProgramaIR salida = new EliminacionCodigoMuerto().apply(entrada);
+        assertFalse(salida.principal().stream().anyMatch(c -> temporalMuerto.resultado.equals(c.resultado)));
+        assertFalse(salida.tipos().containsKey(temporalMuerto.resultado));
+        assertTrue(salida.principal().stream().anyMatch(c -> c.op.equals("=")
+                && "rondas".equals(c.resultado) && "3".equals(c.arg1)));
+        assertTrue(salida.principal().stream().anyMatch(c -> c.op.equals("call") && "ganar".equals(c.arg1)));
+        assertTrue(salida.funciones().getFirst().cuerpo().stream().anyMatch(c -> c.op.equals("=")
+                && "rondas".equals(c.resultado) && "0".equals(c.arg1)));
+    }
+
     private Cuadrupla c(String op, String a, String b, String r) {
         return new Cuadrupla(op, a, b, r);
     }
