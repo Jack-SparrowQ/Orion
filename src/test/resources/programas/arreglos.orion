@@ -1,0 +1,9 @@
+let v = [10, 20, 30];
+print(v.length, v[0], v[2]);
+v[1] = 7;
+v[1] += 1;
+print(v[1]);
+let matriz = [[1, 2], [3, 4]];
+matriz[1][0] += 5;
+print(matriz.length, matriz[0].length, matriz[1][0]);
+print("hola".length, "hola"[1]);

@@ -1,0 +1,13 @@
+print(factorial(5));
+fn factorial(n: int): int {
+    if (n <= 1) { return 1; }
+    return n * factorial(n - 1);
+}
+fn sumar(a: int, b: int): int { return a + b; }
+fn saludar(nombre: string): void {
+    print("hola " + nombre);
+    return;
+}
+print(sumar(2, 3));
+saludar("Orion");
+sumar(8, 9);

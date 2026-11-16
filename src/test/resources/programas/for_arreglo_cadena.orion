@@ -1,0 +1,10 @@
+let suma = 0;
+for (n in [1, 2, 3, 4]) {
+    if (n == 2) { continue; }
+    suma += n;
+}
+print(suma);
+for (c in "abc") {
+    if (c == 'b') { continue; }
+    print(c);
+}

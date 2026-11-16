@@ -1,0 +1,10 @@
+let n = 0;
+let suma = 0;
+while (n < 8) {
+    n += 1;
+    if (n == 2) { continue; }
+    if (n == 5) { break; }
+    suma += n;
+    print(n);
+}
+print(suma, n);

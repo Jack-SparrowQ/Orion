@@ -1,0 +1,4 @@
+let texto: string = null;
+print("antes");
+print("hola" + texto);
+print("despues");

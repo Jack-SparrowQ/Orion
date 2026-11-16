@@ -1,0 +1,4 @@
+let v = [1, 2];
+print("antes");
+print(v[2]);
+print("despues");

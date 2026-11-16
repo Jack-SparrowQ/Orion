@@ -1,0 +1,18 @@
+fn local(): int {
+    let valor = 3;
+    valor += 1;
+    print(valor);
+    return valor;
+}
+let valor = 10;
+print(local());
+print(valor);
+for (bandera in [true, false]) {
+    if (bandera) {
+        let dato = 7;
+        print(dato + 1);
+    } else {
+        let dato = "texto";
+        print(dato + "!");
+    }
+}

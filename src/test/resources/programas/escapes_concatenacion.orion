@@ -1,0 +1,9 @@
+print("hola\nmundo");
+print("a\tb", '"', '\'', '\\');
+print("retorno\rfin");
+print("nul\0fin");
+print('\n');
+print("\"cita\"", "barra\\fin");
+let texto = "Or";
+texto += "ion";
+print(texto);

@@ -1,0 +1,9 @@
+let texto: string = null;
+let vector: int[] = null;
+print(texto, vector, null);
+print(texto == null, vector == null);
+texto = "vivo";
+vector = [4];
+print(texto, vector[0], true);
+print();
+print("%s %d", "literal", 2);

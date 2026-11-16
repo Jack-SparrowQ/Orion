@@ -1,3 +1,4 @@
 # Build output (Maven and the VS Code Java extension)
 target/
 bin/
+*.class

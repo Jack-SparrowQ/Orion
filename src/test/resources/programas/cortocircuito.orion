@@ -1,0 +1,8 @@
+fn visible(): bool {
+    print("llamada");
+    return true;
+}
+print(false && visible());
+print(true || visible());
+print(true && visible());
+print(false || visible());
