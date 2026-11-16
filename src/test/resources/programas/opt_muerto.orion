@@ -1,0 +1,21 @@
+let g = 0;
+fn actualizar() {
+    g = 7;
+    return;
+    g = 99;
+    print("inalcanzable");
+}
+fn valor(): int {
+    if (false) { print("rama muerta"); return 0; }
+    print("llamada");
+    return 3;
+    print("despues de return");
+}
+if (false) { print([1][4]); } else { print("rama"); }
+actualizar();
+print(g);
+let ignorado = valor();
+let v = [1];
+let sinUso = v[0];
+while (false) { print("ciclo muerto"); }
+print("fin");

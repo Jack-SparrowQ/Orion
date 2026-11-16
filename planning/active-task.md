@@ -1,3 +1,3 @@
 # Tarea activa
 
-Ninguna. Última cerrada: O.2 Propagación de copias (revisada y aceptada). Siguiente: O.3.
+Ninguna. Última cerrada: O.3 Código muerto, saltos y punto fijo (revisada y aceptada). Siguiente (opcional): O.4.

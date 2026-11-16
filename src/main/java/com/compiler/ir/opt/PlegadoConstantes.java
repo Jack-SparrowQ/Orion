@@ -1,5 +1,7 @@
 package com.compiler.ir.opt;
 
+import static com.compiler.ir.opt.OperacionesIR.define;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,10 +59,6 @@ public final class PlegadoConstantes implements UnaryOperator<ProgramaIR> {
             bloques.add(new BloqueBasico(bloque.id(), instrucciones, bloque.sucesores(), bloque.predecesores()));
         }
         return new GrafoFlujo(bloques).aplanar();
-    }
-
-    private boolean define(Cuadrupla c) {
-        return c.resultado != null && !Set.of("label", "goto", "ifFalse", "[]=").contains(c.op);
     }
 
     private static boolean numero(String s) {

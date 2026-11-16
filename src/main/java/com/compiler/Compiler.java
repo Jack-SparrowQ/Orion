@@ -19,6 +19,8 @@ import com.compiler.ir.Cuadrupla;
 import com.compiler.ir.GeneradorCodigoIntermedio;
 import com.compiler.ir.ProgramaIR;
 import com.compiler.ir.opt.PlegadoConstantes;
+import com.compiler.ir.opt.EliminacionCodigoMuerto;
+import com.compiler.ir.opt.SimplificacionSaltos;
 import com.compiler.ir.opt.PropagacionCopias;
 import com.compiler.codegen.GeneradorJS;
 import com.compiler.lexer.*;
@@ -33,7 +35,8 @@ import com.compiler.util.ConsoleColors;
 public class Compiler {
 
         private static final List<UnaryOperator<ProgramaIR>> OPTIMIZACIONES = List.of(
-                new PlegadoConstantes(), new PropagacionCopias());
+                new PlegadoConstantes(), new PropagacionCopias(),
+                new EliminacionCodigoMuerto(), new SimplificacionSaltos());
 
         static final int EXIT_OK = 0;
         static final int EXIT_SOURCE_ERRORS = 1;
@@ -495,7 +498,12 @@ public class Compiler {
     }
 
     private static ProgramaIR optimizar(ProgramaIR programa) {
-        for (UnaryOperator<ProgramaIR> pasada : OPTIMIZACIONES) programa = pasada.apply(programa);
+        // Repetimos porque una pasada habilita a otra; 10 vueltas acotan el coste sin exigir convergencia.
+        for (int vuelta = 0; vuelta < 10; vuelta++) {
+            String anterior = GeneradorCodigoIntermedio.aTexto(programa);
+            for (UnaryOperator<ProgramaIR> pasada : OPTIMIZACIONES) programa = pasada.apply(programa);
+            if (anterior.equals(GeneradorCodigoIntermedio.aTexto(programa))) break;
+        }
         return programa;
     }
 }

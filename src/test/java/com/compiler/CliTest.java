@@ -22,7 +22,7 @@ public class CliTest {
             ResultadoCompilacion original = ResultadoCompilacion.ejecutarCli(modo, "--no-opt", src.toString(), "-o", "-");
             assertEquals(0, optimizado.exitCode);
             assertEquals(0, original.exitCode);
-            assertTrue(optimizado.stdout.contains("$t1 = 5"), optimizado.stdout);
+            assertTrue(optimizado.stdout.contains(ir ? "print 5" : "console.log(5)"), optimizado.stdout);
             assertTrue(original.stdout.contains("$t1 = 2 + 3"), original.stdout);
         }
         assertTrue(ResultadoCompilacion.ejecutarCli("--help").stdout.contains("--no-opt"));
@@ -94,7 +94,7 @@ public class CliTest {
         Path src = fuente("hello.orion", "let a = 10;\nlet b = 3;\nprint(a + b * 2);\n");
         ResultadoCompilacion r = ResultadoCompilacion.ejecutarCli("--emit-ir", src.toString(), "-o", "-");
         assertEquals(0, r.exitCode);
-        assertTrue(r.stdout.contains("$t1 = 6"), r.stdout);
+        assertEquals("    print 16\n", r.stdout);
         assertEquals("", r.stderr);
     }
 
