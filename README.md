@@ -36,7 +36,10 @@ Análisis semántico ..................... uso de identificadores y tipos
 Generación de código intermedio ........ código de tres direcciones (TAC)
       |
       v
-Generación de JavaScript ............... programa .js
+Optimización (pendiente) ............... TAC optimizado
+      |
+      v
+Generación de JavaScript ............... programa .js, a partir del TAC
 ```
 
 Cada fase solo se ejecuta si las anteriores terminaron sin errores. Dentro de una fase se informan todos los errores encontrados, no solo el primero.
@@ -63,9 +66,10 @@ orion-compiler/
     │   ├── parser/            Parser (descendente recursivo)
     │   │   └── ast/           Nodos del AST (records sellados)
     │   ├── semantic/          Tabla de símbolos y análisis semántico
-    │   ├── ir/                Código intermedio (cuádruplas / TAC)
+    │   ├── ir/                Código intermedio (cuádruplas / TAC), bloques básicos y grafo de flujo
+    │   ├── codegen/           Generación de JavaScript desde el código intermedio
     │   ├── error/             Gestión de errores de compilación
-    │   └── util/              Generador de JavaScript e impresión del AST
+    │   └── util/              Impresión del AST y generador AST → JS (solo como referencia en pruebas)
     └── test/                  Pruebas unitarias y de extremo a extremo
 ```
 
@@ -81,7 +85,10 @@ orion-compiler/
 | `SemanticAnalyzer.java`          | Comprueba el uso de identificadores, la división entre cero y los tipos.                         |
 | `GeneradorCodigoIntermedio.java` | Traduce el AST a instrucciones de código intermedio.                                             |
 | `Cuadrupla.java`                 | Representa una instrucción del código intermedio mediante operación, operandos y resultado.      |
-| `JSGenerator.java`               | Traduce el AST a JavaScript.                                                                     |
+| `ProgramaIR.java`, `FuncionIR.java` | Código intermedio estructurado: funciones, programa principal y tabla de tipos.               |
+| `GrafoFlujo.java`                | Divide el código intermedio en bloques básicos y los conecta (base de las optimizaciones).        |
+| `GeneradorJS.java`               | Traduce el código intermedio a JavaScript.                                                       |
+| `JSGenerator.java`               | Traduce el AST a JavaScript; solo se usa en las pruebas para comparar resultados.                |
 
 Como `Sentencia` y `Expresion` son interfaces selladas, cada fase las recorre con un `switch` exhaustivo: al añadir un tipo de nodo nuevo, el proyecto no compila hasta que todas las fases lo manejen.
 
@@ -116,16 +123,25 @@ if (c > max) {
 
 ### Gramática
 
+Resumen de la gramática que acepta el parser. La especificación completa (EBNF, reglas de ámbito y de tipos, estado de implementación) está en [`docs/grammar.md`](docs/grammar.md).
+
 ```text
-programa     -> sentencia* EOF
-sentencia    -> declaracion | asignacion | imprimir | if | for
-declaracion  -> ("let" | "const") IDENTIFICADOR "=" expresion ";"
+programa     -> ( funcion | sentencia )* EOF
+funcion      -> "fn" IDENTIFICADOR "(" ( parametro ( "," parametro )* )? ")" ( ":" ( tipo | "void" ) )? bloque
+parametro    -> IDENTIFICADOR ":" tipo
+sentencia    -> declaracion | asignacion | llamada ";" | imprimir | if | while | for
+              | "break" ";" | "continue" ";" | "return" expresion? ";" | bloque
+declaracion  -> "let" IDENTIFICADOR ( ":" tipo ( "=" expresion )? | "=" expresion ) ";"
+              | "const" IDENTIFICADOR ( ":" tipo )? "=" expresion ";"
+tipo         -> ( "int" | "float" | "char" | "string" | "bool" ) ( "[" "]" )*
 asignacion   -> destino ("=" | "+=" | "-=" | "*=" | "/=" | "%=") expresion ";"
 destino      -> IDENTIFICADOR ( "[" expresion "]" )*
 imprimir     -> "print" "(" ( expresion ( "," expresion )* )? ")" ";"
 if           -> "if" "(" expresion ")" bloque ( "else" ( bloque | if ) )?
+while        -> "while" "(" expresion ")" bloque
 for          -> "for" "(" IDENTIFICADOR "in" expresion ")" bloque
 bloque       -> "{" sentencia* "}"
+llamada      -> IDENTIFICADOR "(" ( expresion ( "," expresion )* )? ")"
 
 expresion    -> logicoOr
 logicoOr     -> logicoAnd ( "||" logicoAnd )*
@@ -137,11 +153,11 @@ factor       -> unario ( ("*" | "/" | "%") unario )*
 unario       -> ("!" | "-") unario | potencia
 potencia     -> postfija ( "**" unario )?
 postfija     -> primario ( "[" expresion "]" | "." IDENTIFICADOR )*
-primario     -> NUMERO | CADENA | CARACTER | IDENTIFICADOR | "true" | "false" | "null" | "(" expresion ")"
+primario     -> NUMERO | CADENA | CARACTER | IDENTIFICADOR | llamada | "true" | "false" | "null" | "(" expresion ")"
               | "[" ( expresion ( "," expresion )* )? "]"
 ```
 
-La precedencia y la asociatividad (por la izquierda, salvo `**`, que asocia por la derecha) coinciden con las de JavaScript. Una asignación compuesta `a += b` se traduce a `a = a + b`.
+La precedencia y la asociatividad (por la izquierda, salvo `**`, que asocia por la derecha) coinciden con las de JavaScript. Una asignación compuesta `a += b` se traduce a `a = a + b`. Las funciones solo se declaran en el nivel superior y se pueden llamar antes de su declaración; dentro de una función solo son visibles las globales declaradas antes que ella. Las palabras `import`, `from` y `export` están reservadas pero aún no tienen significado.
 
 ## Análisis semántico
 
@@ -188,6 +204,7 @@ Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por r
 | E202   | Sintáctica  | Instrucción no reconocida.                                              |
 | E203   | Sintáctica  | Se esperaba una expresión.                                              |
 | E204   | Sintáctica  | Destino de asignación no válido.                                        |
+| E205   | Sintáctica  | Una expresión usada como sentencia debe ser una llamada.                |
 | E301   | Semántica   | Identificador no declarado.                                             |
 | E302   | Semántica   | Identificador declarado dos veces.                                      |
 | E303   | Semántica   | Identificador usado antes de su declaración o fuera de su bloque.       |
@@ -199,6 +216,12 @@ Los arreglos son invariantes (`int[]` no se asigna a `float[]`) y se pasan por r
 | E310   | Semántica   | Índice que no es `int` o valor que no se puede indexar.                 |
 | E311   | Semántica   | Propiedad inexistente: solo existe `.length`.                           |
 | E312   | Semántica   | No se puede inferir el tipo (`void`, `null` o `[]` sin contexto).       |
+| E313   | Semántica   | `break` o `continue` fuera de un ciclo.                                 |
+| E314   | Semántica   | Se llama a algo que no es una función.                                  |
+| E315   | Semántica   | Número de argumentos incorrecto.                                        |
+| E316   | Semántica   | `return` fuera de una función.                                          |
+| E317   | Semántica   | `return` con valor en una función `void`, o sin valor en una que no lo es. |
+| E318   | Semántica   | Falta `return` en algún camino de ejecución.                            |
 | E319   | Semántica   | `for ... in` sobre un valor que no se puede recorrer.                   |
 
 ## Generación de código intermedio
@@ -263,7 +286,7 @@ orion --ast programa.orion        # muestra el AST
 orion --help                      # todas las opciones
 ```
 
-Códigos de salida: `0` éxito, `1` errores en el programa fuente, `2` uso incorrecto, `3` error de E/S. El diseño completo está en [`docs/CLI.md`](orion-compiler/docs/CLI.md).
+Códigos de salida: `0` éxito, `1` errores en el programa fuente, `2` uso incorrecto, `3` error de E/S. El diseño completo está en [`docs/CLI.md`](docs/CLI.md).
 
 ## Pruebas
 
@@ -276,6 +299,9 @@ mvn test
 | `LexerTest`            | Tokens, operadores, posiciones, comentarios, decimales y errores léxicos.          |
 | `ParserTest`           | Precedencia, asociatividad, sentencias, mensajes de error y recuperación.          |
 | `SemanticAnalyzerTest` | Inferencia y comprobación de tipos, ámbitos y errores semánticos.                  |
+| `GeneradorCodigoIntermedioTest`, `GrafoFlujoTest` | Código intermedio (nombres, cortocircuito, tipos) y bloques básicos.   |
+| `GeneradorJSTest`, `JSGeneratorTest` | Generación de JavaScript desde el código intermedio y desde el AST.             |
+| `EjecucionTest`        | Ejecuta con `node` los programas de `src/test/resources/programas/` y compara su salida; además compara el JS desde el código intermedio con el JS desde el AST. |
 | `CompilatorTest`       | Programas completos: salida, código de salida y archivos generados (golden files). |
 | `OptionsTest`, `CliTest` | Línea de comandos.                                                               |
 

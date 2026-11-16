@@ -904,7 +904,9 @@ compilador no genera código.
 ## 16. Estado de implementación
 
 Estado del compilador respecto a esta especificación, según el código
-de `src/main/java/com/compiler`:
+de `src/main/java/com/compiler` (revisado el 2026-11-16). La columna
+«Generación JS» se refiere a la ruta AST → código intermedio → JS
+(ver `docs/decisions/0001-js-desde-ir.md`):
 
 | Construcción                                      |                    Lexer                    |                Parser                 | Semántico | Generación JS |
 | ------------------------------------------------- | :-----------------------------------------: | :-----------------------------------: | :-------: | :-----------: |
@@ -914,10 +916,10 @@ de `src/main/java/com/compiler`:
 | Asignación a `v[i]`                               |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `print` con cualquier número de argumentos        |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `if` / `else` / `else if`                         |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| `Bloque` como sentencia independiente             |                      ✔                      |                   ✘                   |     ✘     |       ✘       |
+| `Bloque` como sentencia independiente             |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `while`, `break`, `continue`                      |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `for … in`                                        |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
-| `fn`, parámetros, `return`, llamadas              |          ✔ / ✘ (falta `,`)                  |                   ✘                   |     ✘     |       ✘       |
+| `fn`, parámetros, `return`, llamadas              |                      ✔                      |    ✔ (solo en el nivel superior)      |     ✔     |       ✔       |
 | `\|\|` `&&` `==` `!=` `<` `<=` `>` `>=`           |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `+` `-` `*` `/` `%`, `!` y `-` unarios            |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
 | `**`                                              |                      ✔                      |                   ✔                   |     ✔     |       ✔       |
@@ -931,21 +933,14 @@ de `src/main/java/com/compiler`:
 
 Diferencias del compilador actual que deben corregirse:
 
-1. **Ámbitos.** `SymbolTable` es una tabla plana. Por eso dos bloques
-   hermanos no pueden declarar el mismo nombre (E302), lo cual la
-   regla 10.2.4 sí permite. Se necesita una tabla con un nivel por
-   ámbito.
-2. **`int` y `float` léxicos.** El lexer produce un único token
+1. **`int` y `float` léxicos.** El lexer produce un único token
    `NUMERO` y el analizador semántico distingue `int` de `float` por la
    presencia de un `.` en el lexema. Es equivalente a esta
    especificación, pero conviene separar los tokens `ENTERO` y
    `DECIMAL`.
-3. **E304** solo se comprueba para `/`. Debe extenderse a `%`.
-4. **E308** solo se comprueba en `if`. Debe aplicarse también a
-   `while`.
-5. **Recuperación de errores.** El conjunto de sincronización del
-   parser (`let`, `const`, `print`, `if`, `}`) debe ampliarse con las
-   palabras de la sección 9.1 a medida que se implementen.
+2. **E304** solo se comprueba para `/`. Debe extenderse a `%`
+   (`5 % z` con `const z = 0` hoy no da error).
+3. **E309** (variable leída sin haber sido asignada) no está implementado.
 
 **Criterio de aceptación:** una construcción se considera implementada
 cuando tiene pruebas de lexer y parser, una representación en el AST,
