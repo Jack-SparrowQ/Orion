@@ -1,3 +1,3 @@
 # Tarea activa
 
-Ninguna. Última cerrada: 2.2 Bloques básicos y grafo de flujo (revisada y aceptada). Etapas 0–2 completas; queda la etapa 3 (documentación y limpieza).
+Ninguna. Ruta hacia la optimización completa (etapas 0–3). Siguiente: fase de optimización del IR (`planning/backlog.md`, "Futuro" y "Notas para la fase de optimización").

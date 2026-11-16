@@ -26,7 +26,7 @@ Detalle y justificación: ver la sección "Ruta" más abajo.
 ### Etapa 3 — Cierre y documentación (en paralelo, sin dependencias)
 - [x] 3.1 (hecho; también sección 16 de `docs/grammar.md`) README desactualizado: la gramática no incluye `while`, `fn`, `return`, `break`/`continue`, `let x: T;`; faltan los códigos E205, E313–E318; enlace roto `orion-compiler/docs/CLI.md`.
 - [x] 3.2 (hecho) `import`/`from`/`export` son palabras reservadas sin implementar: documentarlas como reservadas (fuera de alcance).
-- [ ] 3.3 Limpiar Javadoc HTML obsoleto en `docs/` y archivos sueltos de la raíz (`repomix-output.xml`, `hello.js`, `hello.tac`, `code.js`, `program.js`, `programa.tac`, carpeta vacía `orion-compiler/`) — confirmar con el usuario.
+- [x] 3.3 (hecho, confirmado por el usuario; `graphify-out/` se conserva) Limpiar Javadoc HTML obsoleto en `docs/` y archivos sueltos de la raíz (`repomix-output.xml`, `hello.js`, `hello.tac`, `code.js`, `program.js`, `programa.tac`, carpeta vacía `orion-compiler/`) — confirmar con el usuario.
 
 ### Criterio de "listo para optimizar"
 El `.js` sale del IR (pasando por la lista de pasadas, aún vacía) y el corpus da la misma salida en `node` que con el generador AST→JS; ningún hallazgo CRITICAL/HIGH abierto; IR con nombres únicos, cortocircuito, tipos y funciones separadas; CFG disponible.

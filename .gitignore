@@ -2,3 +2,6 @@
 target/
 bin/
 *.class
+# Compiler output written to the working directory when trying it out
+/*.js
+/*.tac

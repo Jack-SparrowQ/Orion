@@ -1,6 +1,0 @@
-let a =1 /* Comment */ + 2;
-/* varias
-    lines */
-print(a);
-/***/
-/* con ** dentro **/
