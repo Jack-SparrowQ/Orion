@@ -199,7 +199,7 @@ public class GeneradorCodigoIntermedio {
     // ---------------- EXPRESIONES ----------------
 
     // Genera las cuádruplas de la expresión y devuelve dónde queda su valor:
-    // un literal, una variable o un temporal (t1, t2, ...).
+    // un literal, una variable o un temporal ($t1, $t2, ...).
     private String generarExpresion(Expresion expr) {
 
         return switch (expr) {
@@ -262,10 +262,10 @@ public class GeneradorCodigoIntermedio {
     }
 
     private String nuevoTemporal() {
-        return "t" + (++contadorTemporales);
+        return "$t" + (++contadorTemporales);
     }
 
     private String nuevaEtiqueta() {
-        return "L" + (++contadorEtiquetas);
+        return "$L" + (++contadorEtiquetas);
     }
 }

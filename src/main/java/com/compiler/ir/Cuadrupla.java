@@ -3,22 +3,22 @@ package com.compiler.ir;
 // Una instrucción de código intermedio: (op, arg1, arg2, resultado)
 //
 //   (=,       10, _,  a )   ->  a = 10
-//   (+,       a,  t1, t2)   ->  t2 = a + t1
-//   (!,       b,  _,  t3)   ->  t3 = !b
+//   (+,       a,  $t1, $t2)   ->  $t2 = a + $t1
+//   (!,       b,  _,  $t3)   ->  $t3 = !b
 //   (print,   a,  _,  _ )   ->  print a
 //   (printn,  2,  _,  _ )   ->  printn 2       (escribe los 2 últimos param, separados por un espacio)
-//   (ifFalse, t2, _,  L1)   ->  ifFalse t2 goto L1
-//   (goto,    _,  _,  L2)   ->  goto L2
-//   (label,   _,  _,  L1)   ->  L1:
+//   (ifFalse, $t2, _,  $L1)   ->  ifFalse $t2 goto $L1
+//   (goto,    _,  _,  $L2)   ->  goto $L2
+//   (label,   _,  _,  $L1)   ->  $L1:
 //   (func,    f,  2,  _ )   ->  func f, 2      (inicio de la función f con 2 parámetros)
 //   (endfunc, _,  _,  _ )   ->  endfunc
 //   (param,   a,  _,  _ )   ->  param a        (argumento de la próxima llamada)
-//   (call,    f,  2,  t4)   ->  t4 = call f, 2 (sin resultado: call f, 2)
-//   (return,  t4, _,  _ )   ->  return t4      (sin valor: return)
-//   (len,     t1, _,  t2)   ->  t2 = len t1    (elementos de un arreglo o caracteres Unicode de una cadena)
-//   ([],      t1, t2, x )   ->  x = t1[t2]     (elemento en esa posición, contando desde 0)
-//   ([]=,     t1, t2, x )   ->  t1[t2] = x
-//   (array,   3,  _,  t1)   ->  t1 = array 3   (arreglo nuevo de 3 elementos)
+//   (call,    f,  2,  $t4)   ->  $t4 = call f, 2 (sin resultado: call f, 2)
+//   (return,  $t4, _,  _ )   ->  return $t4      (sin valor: return)
+//   (len,     $t1, _,  $t2)   ->  $t2 = len $t1    (elementos de un arreglo o caracteres Unicode de una cadena)
+//   ([],      $t1, $t2, x )   ->  x = $t1[$t2]     (elemento en esa posición, contando desde 0)
+//   ([]=,     $t1, $t2, x )   ->  $t1[$t2] = x
+//   (array,   3,  _,  $t1)   ->  $t1 = array 3   (arreglo nuevo de 3 elementos)
 // Un índice fuera de rango en [] o []= detiene el programa, igual que usar null en [], []=, len o '+'.
 public class Cuadrupla {
     public final String op;
@@ -33,7 +33,7 @@ public class Cuadrupla {
         this.resultado = resultado;
     }
 
-    // Formato de tres direcciones: t1 = a + b
+    // Formato de tres direcciones: $t1 = a + b
     @Override
     public String toString() {
         switch (op) {

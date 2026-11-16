@@ -10,7 +10,7 @@ Detalle y justificación: ver la sección "Ruta" más abajo.
 - [ ] 0.2 (Reemplazado por ADR 0001) El oráculo es el generador actual AST→JS: la prueba diferencial compara la salida de `node` del JS desde AST con la del JS desde IR (etapa 2.4).
 
 ### Etapa 1 — Corrección del IR (errores confirmados)
-- [ ] 1.1 CRITICAL: los temporales/etiquetas chocan con identificadores del usuario (`let t1 = 5;` lo pisa `t1 = call f, 0`). Usar nombres que el lexer no pueda producir (p. ej. `%t1`, `%L1`).
+- [x] 1.1 (hecho) CRITICAL: los temporales/etiquetas chocan con identificadores del usuario (`let t1 = 5;` lo pisa `t1 = call f, 0`). Usar nombres que el lexer no pueda producir (p. ej. `%t1`, `%L1`).
 - [ ] 1.2 HIGH: `&&` y `||` no tienen cortocircuito en el IR (`false && f()` llama a `f`); el JS sí. Traducir con saltos.
 - [ ] 1.3 HIGH: el IR aplana los ámbitos: una local `x` de una función y una global `x`, o dos `let x` en bloques hermanos, comparten nombre. Renombrar a nombres únicos (`x`, `x.1`) usando la resolución del análisis semántico.
 - [ ] 1.4 MEDIUM: el IR no tiene tipos: `+` es suma o concatenación, los literales son lexemas. Emitir `concat` para cadenas y conservar el tipo de cada literal/temporal (necesario para plegar constantes).

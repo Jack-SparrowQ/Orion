@@ -79,7 +79,7 @@ public class CliTest {
         Path src = fuente("hello.orion", "let a = 10;\nlet b = 3;\nprint(a + b * 2);\n");
         ResultadoCompilacion r = ResultadoCompilacion.ejecutarCli("--emit-ir", src.toString(), "-o", "-");
         assertEquals(0, r.exitCode);
-        assertTrue(r.stdout.contains("t1 = b * 2"), r.stdout);
+        assertTrue(r.stdout.contains("$t1 = b * 2"), r.stdout);
         assertEquals("", r.stderr);
     }
 

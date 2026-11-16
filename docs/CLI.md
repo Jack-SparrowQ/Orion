@@ -237,9 +237,9 @@ For `--emit-ir` with output directed to stdout (`-o -`), the expected output for
 ```text
 a = 10
 b = 3
-t1 = b * 2
-t2 = a + t1
-print t2
+$t1 = b * 2
+$t2 = a + $t1
+print $t2
 ```
 
 ### Expected AST output

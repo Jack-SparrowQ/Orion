@@ -215,27 +215,27 @@ Para el programa de ejemplo de la sección anterior (`orion --emit-ir ejemplo.or
     a = 10
     b = 3.5
     max = 20
-    t1 = b * 2
-    t2 = a + t1
-    c = t2
-    t3 = a + 1
-    a = t3
-    t4 = c > max
-    ifFalse t4 goto L1
+    $t1 = b * 2
+    $t2 = a + $t1
+    c = $t2
+    $t3 = a + 1
+    a = $t3
+    $t4 = c > max
+    ifFalse $t4 goto $L1
     print max
-    goto L2
-L1:
-    t5 = c > 0
-    ifFalse t5 goto L3
+    goto $L2
+$L1:
+    $t5 = c > 0
+    ifFalse $t5 goto $L3
     print c
-    goto L4
-L3:
+    goto $L4
+$L3:
     print 0
-L4:
-L2:
+$L4:
+$L2:
 ```
 
-Los temporales (`t1`, `t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`L1`, `L2`...) implementan los saltos del `if`/`else`. Los arreglos usan `t1 = array 3`, `x = t1[i]`, `t1[i] = x` y `t2 = len t1`, y un `for ... in` se traduce a un ciclo con índice mediante esas mismas operaciones.
+Los temporales (`$t1`, `$t2`...) dividen las expresiones respetando la precedencia, y las etiquetas (`$L1`, `$L2`...) implementan los saltos del `if`/`else`. Llevan el prefijo `$`, que Orion no admite en identificadores, para que nunca coincidan con una variable del programa. Los arreglos usan `$t1 = array 3`, `x = $t1[i]`, `$t1[i] = x` y `$t2 = len $t1`, y un `for ... in` se traduce a un ciclo con índice mediante esas mismas operaciones.
 
 ## Ejecución
 
